@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gocarriage_universal/provider_service/driver_update_profile_provider.dart';
+import 'package:gocarriage_universal/resource/Utils.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -17,7 +18,8 @@ import '../../../resource/image_paths.dart';
 class DriverProfile extends StatefulWidget {
   String userId;
   String comeFrom;
-  DriverProfile(this.comeFrom,this.userId);
+
+  DriverProfile(this.comeFrom, this.userId);
 
   @override
   State<DriverProfile> createState() => _DriverProfileState();
@@ -82,6 +84,19 @@ class _DriverProfileState extends State<DriverProfile> {
   bool isPanLoading = false;
   bool isInsuranceLoading = false;
   bool isSameNumber = false;
+  int _currentStep = 0;
+
+  void _nextStep() {
+    if (_currentStep < 6) {
+      setState(() => _currentStep++);
+    }
+  }
+
+  void _prevStep() {
+    if (_currentStep > 0) {
+      setState(() => _currentStep--);
+    }
+  }
 
   // ---------------------- PICK IMAGE ------------------------
   Future<void> showUploadingDialog(BuildContext context) async {
@@ -289,6 +304,7 @@ class _DriverProfileState extends State<DriverProfile> {
       ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
+
   void showImagePreview(BuildContext context, String imageUrl) {
     final size = MediaQuery.of(context).size;
 
@@ -298,164 +314,163 @@ class _DriverProfileState extends State<DriverProfile> {
       barrierColor: Colors.black.withOpacity(0.85), // Darker elegant overlay
       builder:
           (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: EdgeInsets.symmetric(
-          horizontal: size.width * 0.05, // 5% margin from sides
-          vertical: size.height * 0.1, // 10% from top & bottom
-        ),
-        child: Container(
-          width: size.width * 0.9,
-          // 90% of screen width
-          height: size.height * 0.75,
-          // 75% of screen height (you can adjust)
-          decoration: BoxDecoration(
-            color: Colors.black,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.6),
-                blurRadius: 30,
-                spreadRadius: 5,
+            backgroundColor: Colors.transparent,
+            insetPadding: EdgeInsets.symmetric(
+              horizontal: size.width * 0.05, // 5% margin from sides
+              vertical: size.height * 0.1, // 10% from top & bottom
+            ),
+            child: Container(
+              width: size.width * 0.9,
+              // 90% of screen width
+              height: size.height * 0.75,
+              // 75% of screen height (you can adjust)
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.6),
+                    blurRadius: 30,
+                    spreadRadius: 5,
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: Stack(
-              children: [
-                // Main Image with Interactive Zoom
-                InteractiveViewer(
-                  minScale: 0.5,
-                  maxScale: 5.0,
-                  child: Container(
-                    width: double.infinity,
-                    height: double.infinity,
-                    color: Colors.black,
-                    child: Image.network(
-                      imageUrl,
-                      fit: BoxFit.contain,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return const Center(
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                          ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.broken_image,
-                                color: Colors.white70,
-                                size: 60,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Stack(
+                  children: [
+                    // Main Image with Interactive Zoom
+                    InteractiveViewer(
+                      minScale: 0.5,
+                      maxScale: 5.0,
+                      child: Container(
+                        width: double.infinity,
+                        height: double.infinity,
+                        color: Colors.black,
+                        child: Image.network(
+                          imageUrl,
+                          fit: BoxFit.contain,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
                               ),
-                              SizedBox(height: 10),
-                              Text(
-                                "Failed to load image",
-                                style: TextStyle(color: Colors.white70),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.broken_image,
+                                    color: Colors.white70,
+                                    size: 60,
+                                  ),
+                                  SizedBox(height: 10),
+                                  Text(
+                                    "Failed to load image",
+                                    style: TextStyle(color: Colors.white70),
+                                  ),
+                                ],
                               ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+
+                    // Top Bar with Title & Close Button
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withOpacity(0.8),
+                              Colors.transparent,
                             ],
                           ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-
-                // Top Bar with Title & Close Button
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withOpacity(0.8),
-                          Colors.transparent,
-                        ],
+                        ),
+                        child: Row(
+                          children: [
+                            const Text(
+                              "Preview",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const Spacer(),
+                            GestureDetector(
+                              onTap: () => Navigator.pop(context),
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.close,
+                                  color: Colors.white,
+                                  size: 22,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        const Text(
-                          "Preview",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
+
+                    // Optional: Bottom indicator
+                    Positioned(
+                      bottom: 16,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.6),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Text(
+                            "Pinch to zoom • Drag to move",
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
-                        const Spacer(),
-                        GestureDetector(
-                          onTap: () => Navigator.pop(context),
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.close,
-                              color: Colors.white,
-                              size: 22,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Optional: Bottom indicator
-                Positioned(
-                  bottom: 16,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.6),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        "Pinch to zoom • Drag to move",
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
     );
   }
 
   // ---------------------- LOAD DATA ------------------------
   void setProfileData(Map data) {
-
     _nameController.text = data["fullName"] ?? data["ownerName"] ?? "";
     _emailController.text = data["email"] ?? "";
     _phoneController.text = data["mobileNo"] ?? data['user']?["phone"] ?? "";
-    _alternateNumberController.text = data["alternateNumber"] ??"";
+    _alternateNumberController.text = data["alternateNumber"] ?? "";
 
     _cityController.text = data["city"] ?? "";
     _stateController.text = data["state"] ?? "";
@@ -481,6 +496,13 @@ class _DriverProfileState extends State<DriverProfile> {
     vehicleNumberController.text = data["vehicleNumber"] ?? "";
     vehicleModelController.text = data["vehicleModel"] ?? "";
     vehicleOwnerController.text = data["vehicleOwner"] ?? "";
+    license_from_date=data["license_from_date"] ?? "";
+    license_to_date=data["license_expiry_date"] ?? "";
+    if (data['service_type']?.toString() == 'in_city') {
+      service = 'Within City';
+    } else {
+      service = data['service_type']?.toString();
+    }
 
     // Image URLs for Driver
     profile_pictureUrl = data["profile_picture"] ?? "";
@@ -498,7 +520,7 @@ class _DriverProfileState extends State<DriverProfile> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final provider = Provider.of<ProfileProvider>(context, listen: false);
-      await provider.fetchProfile(widget.comeFrom,"driver",widget.userId);
+      await provider.fetchProfile(widget.comeFrom, "driver", widget.userId);
       if (provider.profileData.isNotEmpty) {
         setProfileData(provider.profileData);
       }
@@ -552,8 +574,8 @@ class _DriverProfileState extends State<DriverProfile> {
       vehicleDetails: 'vehicleDetails',
 
       licenseNumber: drivingLicenseController.text,
-      license_expiry_date: license_to_date??"",
-      license_from_date: license_from_date??"",
+      license_expiry_date: license_to_date ?? "",
+      license_from_date: license_from_date ?? "",
       experience_in_yrs: experienceController.text,
 
       vehicle_type_preference: 'vehicle_type_preference',
@@ -570,18 +592,19 @@ class _DriverProfileState extends State<DriverProfile> {
       profile_picture: profile_pictureUrl ?? "",
     );
 
-    final success = Provider.of<DriverUpdateProfileProvider>(
+    final success =
+        Provider.of<DriverUpdateProfileProvider>(
           context,
           listen: false,
         ).success;
 
     setState(() => isLoading = false);
 
-
-    if (success == 'Driver updated successfully') {
+    if (success == true) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Driver updated successfully')));
+      Navigator.pop(context);
       Navigator.pop(context);
     }
   }
@@ -589,267 +612,107 @@ class _DriverProfileState extends State<DriverProfile> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(200),
-        child: header(),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: 40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-
-              // Personal Information
-              sectionTitle("Personal Information"),
-              textField("Full Name", _nameController, Icons.person),
-              textField(
-                "Email ID",
-                _emailController,
-                Icons.email,
-                keyboard: TextInputType.emailAddress,
-              ),
-              textField(
-                "Phone Number",
-                _phoneController,
-                Icons.phone,
-                enabled: false,
-                keyboard: TextInputType.phone,
-              ),
-              textField(
-                "Alternate Number",
-                _alternateNumberController,
-                Icons.phone,
-                enabled: true,
-                keyboard: TextInputType.phone,
-              ),
-
-              const SizedBox(height: 10),
-
-              // Address Details
-              sectionTitle("Address Details"),
-              textField(
-                "Complete Address",
-                _addressController,
-                Icons.location_on,
-              ),
-              textField("House No. / Flat No.", _houseNoController, Icons.home),
-              textField("Area / Locality", _areaController, Icons.map),
-              textField("City", _cityController, Icons.location_city),
-              textField("State", _stateController, Icons.location_city),
-              textField(
-                "Pin Code",
-                _postalCodeController,
-                Icons.pin,
-                keyboard: TextInputType.number,
-              ),
-              const SizedBox(height: 10),
-              sectionTitle("Emergency Contact"),
-              textField(
-                "Contact Person Name",
-                emergencyNameController,
-                Icons.person,
-              ),
-              textField(
-                "Contact Phone Number",
-                emergencyPhoneController,
-                Icons.phone,
-                keyboard: TextInputType.phone,
-              ),
-
-              const SizedBox(height: 10),
-              sectionTitle("Vehicle Details"),
-              textField(
-                "Vehicle Type",
-                vehicleTypeController,
-                Icons.directions_car,
-                formatters: [UpperCaseTextFormatter()],
-              ),
-              textField(
-                "Vehicle Model",
-                vehicleModelController,
-                Icons.build,
-                formatters: [UpperCaseTextFormatter()],
-              ),
-              textField(
-                "Vehicle Number",
-                vehicleNumberController,
-                Icons.confirmation_number,
-                formatters: [UpperCaseTextFormatter()],
-              ),
-              textField(
-                "Vehicle Owner Name",
-                vehicleOwnerController,
-                Icons.person,
-              ),
-
-              const SizedBox(height: 10),
-
-              // Identity Verification
-              sectionTitle("Identity Verification"),
-              textField(
-                "Aadhaar Number",
-                aadhaarNumberController,
-                Icons.credit_card,
-                keyboard: TextInputType.number,
-              ),
-              textField(
-                "PAN Number",
-                panNumberController,
-                Icons.credit_card,
-                formatters: [UpperCaseTextFormatter()],
-              ),
-              textField(
-                "Experience",
-                experienceController,
-                Icons.car_rental,
-                formatters: [UpperCaseTextFormatter()],
-              ),
-              textField(
-                "Driving License Number",
-                drivingLicenseController,
-                Icons.badge,
-                formatters: [UpperCaseTextFormatter()],
-              ),
-              Container(
-                margin: EdgeInsets.fromLTRB(20, 10, 20, 0),
-                child: Row(
-                  children: [
-                    Expanded(child: date("From", license_from_date, (v) => license_from_date = v)),
-                    SizedBox(width: 10,),
-                    Expanded(child: date("To", license_to_date, (v) => license_to_date = v)),
-                  ],
-                ),
-              ),
-              Container(
-                margin: EdgeInsets.fromLTRB(20, 10, 20, 0),
-                child: radioRow(
-                  "Service Type *",
-                  ["Within City", "Outside City"],
-                  service,
-                  (v) => setState(() => service = v),
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              // Document Uploads
-              sectionTitle("Document Uploads"),
-
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                children: [
-                  buildUploadBox(
-                    "Profile Photo",
-                    profile_pictureFile,
-                    profile_pictureUrl,
-                    (f) => setState(() => profile_pictureFile = f),
-                    isProfileLoading,
-                    (loading) => setState(() => isProfileLoading = loading),
-                  ),
-
-                  buildUploadBox(
-                    "Aadhaar",
-                    aadhaarCardUploadFile,
-                    aadhaarCardUploadUrl,
-                    (f) => setState(() => aadhaarCardUploadFile = f),
-                    isAadhaarLoading,
-                    (loading) => setState(() => isAadhaarLoading = loading),
-                  ),
-
-                  buildUploadBox(
-                    "License",
-                    driversLicenseUploadFile,
-                    driversLicenseUploadUrl,
-                    (f) => setState(() => driversLicenseUploadFile = f),
-                    isLicenseLoading,
-                    (loading) => setState(() => isLicenseLoading = loading),
-                  ),
-
-                  buildUploadBox(
-                    "PAN Document",
-                    panCardUploadFile,
-                    panCardUploadUrl,
-                    (f) => setState(() => panCardUploadFile = f),
-                    isPanLoading,
-                    (loading) => setState(() => isPanLoading = loading),
-                  ),
-
-                  buildUploadBox(
-                    "Insurance",
-                    insuranceDocumentUploadFile,
-                    insuranceDocumentUploadUrl,
-                    (f) => setState(() => insuranceDocumentUploadFile = f),
-                    isInsuranceLoading,
-                    (loading) => setState(() => isInsuranceLoading = loading),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 10),
-
-              // Bank Details + Cancelled Cheque (Only for Owner)
-              sectionTitle("Bank Details"),
-              textField(
-                "Bank Account Number",
-                bankAccountController,
-                Icons.account_balance,
-                keyboard: TextInputType.number,
-              ),
-              textField(
-                "IFSC Code",
-                ifscController,
-                Icons.numbers,
-                formatters: [UpperCaseTextFormatter()],
-              ),
-              textField(
-                "Bank Name / Branch",
-                branchAddressController,
-                Icons.account_balance,
-              ),
-
-              const SizedBox(height: 40),
-
-              // Update Button
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: isLoading ? null : _updateProfile,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child:
-                        isLoading
-                            ? const CircularProgressIndicator(
-                              color: Colors.white,
-                            )
-                            : const Text(
-                              "Update Profile",
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.white,
-                              ),
-                            ),
-                  ),
-                ),
-              ),
-            ],
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          "My profile",
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
         ),
+        backgroundColor: AppColors.primaryColor,
+      ),
+      body: Stepper(
+        type: StepperType.horizontal,
+        currentStep: _currentStep,
+        onStepContinue: () {
+          if (_currentStep == 2) {
+            if(bankAccountController.text.isEmpty){
+              Utils.showErrorMessage(context, 'Please enter account number');
+              return;
+            }else if(ifscController.text.isEmpty){
+              Utils.showErrorMessage(context, 'Please enter ifsc code');
+              return;
+            }else if(branchAddressController.text.isEmpty){
+              Utils.showErrorMessage(context, 'Please enter bank name / branch');
+              return;
+            }
+            _updateProfile();
+            showUploadingDialog(context);
+          } else {
+            if(_currentStep==0){
+              if(_addressController.text.isEmpty){
+                Utils.showErrorMessage(context, 'Please enter address');
+                return;
+              }else if(_cityController.text.isEmpty){
+                Utils.showErrorMessage(context, 'Please enter city');
+                return;
+              }else if(_stateController.text.isEmpty){
+                Utils.showErrorMessage(context, 'Please enter state');
+                return;
+              }else if(_postalCodeController.text.isEmpty){
+                Utils.showErrorMessage(context, 'Please enter pin code');
+                return;
+              }
+            }else if(_currentStep==1){
+              if(vehicleNumberController.text.isEmpty){
+                Utils.showErrorMessage(context, 'Please enter vehicle number');
+                return;
+              } else if(aadhaarNumberController.text.isEmpty){
+                Utils.showErrorMessage(context, 'Please enter Aadhar number');
+                return;
+              }else if(drivingLicenseController.text.isEmpty){
+                Utils.showErrorMessage(context, 'Please enter license number');
+                return;
+              }else if(license_from_date==null){
+                Utils.showErrorMessage(context, 'Please enter license from date');
+                return;
+              }else if(license_to_date==null){
+                Utils.showErrorMessage(context, 'Please enter license to date');
+                return;
+              }
+            }
+            _nextStep();
+          }
+        },
+        onStepCancel: _prevStep,
+        controlsBuilder: (context, details) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 20),
+            child: Row(
+              children: [
+                if (_currentStep != 0)
+                  TextButton(
+                    onPressed: details.onStepCancel,
+                    child: const Text("Back"),
+                  ),
+
+                const Spacer(), // ✅ THIS IS WHAT YOU WANT
+
+                ElevatedButton(
+                  onPressed: details.onStepContinue,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryColor,
+                  ),
+                  child: Text(
+                    _currentStep == 2 ? "Update Profile" : "Next",
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+        steps: _buildSteps(),
       ),
     );
   }
+
   Widget date(String label, String? value, Function(String) onPick) {
     return TextFormField(
       readOnly: true,
@@ -872,6 +735,7 @@ class _DriverProfileState extends State<DriverProfile> {
       },
     );
   }
+
   // Header
   Widget header() {
     return Stack(
@@ -927,15 +791,15 @@ class _DriverProfileState extends State<DriverProfile> {
   }
 
   Widget textField(
-    String hint,
-    TextEditingController controller,
-    IconData icon, {
-    TextInputType keyboard = TextInputType.text,
-    List<TextInputFormatter>? formatters,
-    bool enabled = true,
-  }) {
+      String hint,
+      TextEditingController controller,
+      IconData icon, {
+        TextInputType keyboard = TextInputType.text,
+        List<TextInputFormatter>? formatters,
+        bool enabled = true,
+      }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6), // ✅ FIXED
       child: TextField(
         controller: controller,
         keyboardType: keyboard,
@@ -944,14 +808,23 @@ class _DriverProfileState extends State<DriverProfile> {
         decoration: InputDecoration(
           prefixIcon: Icon(icon, color: AppColors.primaryColor),
           hintText: hint,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 10,
+            vertical: 12,
+          ), // ✅ ALSO CONTROL INNER SPACE
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10), // slightly tighter UI
+          ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide(color: Colors.grey.shade400),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppColors.primaryColor, width: 2),
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(
+              color: AppColors.primaryColor,
+              width: 1.5,
+            ),
           ),
         ),
       ),
@@ -1002,10 +875,208 @@ class _DriverProfileState extends State<DriverProfile> {
   }
 
   Widget text(String t) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Text(t, style: TextStyle(fontWeight: FontWeight.w600)),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6), // ✅ FIXED
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(t, style: TextStyle(fontWeight: FontWeight.w600)),
+      ),
     );
+  }
+
+  List<Step> _buildSteps() {
+    return [
+      Step(
+        title: Text("Personal Info"),
+        isActive: _currentStep >= 0,
+        content: Column(
+          children: [
+            textField("Full Name", _nameController, Icons.person),
+            textField("Email ID", _emailController, Icons.email),
+            textField(
+              "Phone Number",
+              _phoneController,
+              Icons.phone,
+              enabled: false,
+            ),
+            textField(
+              "Alternate Number",
+              _alternateNumberController,
+              Icons.phone,
+            ),
+            text("Complete Address *"),
+            textField(
+              "Complete Address",
+              _addressController,
+              Icons.location_on,
+            ),
+            textField("House No. / Flat No.", _houseNoController, Icons.home),
+            textField("Area / Locality", _areaController, Icons.map),
+            text("City *"),
+            textField("City", _cityController, Icons.location_city),
+            text("State *"),
+            textField("State", _stateController, Icons.location_city),
+            text("Pin Code *"),
+            textField("Pin Code", _postalCodeController, Icons.pin),
+
+            textField(
+              "Contact Person Name",
+              emergencyNameController,
+              Icons.person,
+            ),
+            textField(
+              "Contact Phone Number",
+              emergencyPhoneController,
+              Icons.phone,
+            ),
+          ],
+        ),
+      ),
+
+
+      Step(
+        title: Text("Vehicle"),
+        isActive: _currentStep >= 3,
+        content: Column(
+          children: [
+            textField(
+              "Vehicle Type",
+              vehicleTypeController,
+              Icons.directions_car,
+            ),
+            textField("Vehicle Model", vehicleModelController, Icons.build),
+            text("Vehicle Number *"),
+            textField(
+              "Vehicle Number",
+              vehicleNumberController,
+              Icons.confirmation_number,
+            ),
+            textField(
+              "Vehicle Owner Name",
+              vehicleOwnerController,
+              Icons.person,
+            ),
+
+            text("Aadhaar Number *"),
+
+            textField(
+              "Aadhaar Number",
+              aadhaarNumberController,
+              Icons.credit_card,
+            ),
+            textField("PAN Number", panNumberController, Icons.credit_card),
+
+            text("Driving License Number *"),
+            textField(
+              "Driving License Number",
+              drivingLicenseController,
+              Icons.badge,
+            ),
+            SizedBox(height: 10,),
+            Row(
+              children: [
+                Expanded(
+                  child: date(
+                    "From *",
+                    license_from_date,
+                        (v) => license_from_date = v,
+                  ),
+                ),
+                SizedBox(width: 10),
+                Expanded(
+                  child: date(
+                    "To *",
+                    license_to_date,
+                        (v) => license_to_date = v,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 10,),
+            radioRow(
+              "Service Type *",
+              ["Within City", "Outside City"],
+              service,
+                  (v) => setState(() => service = v),
+            ),
+          ],
+        ),
+      ),
+
+
+      Step(
+        title: Text("Documents"),
+        isActive: _currentStep >= 5,
+        content: Column(
+          children: [
+            text("Bank Account Number *"),
+            textField(
+              "Bank Account Number",
+              bankAccountController,
+              Icons.account_balance,
+            ),
+            text("IFSC Code *"),
+            textField("IFSC Code", ifscController, Icons.numbers),
+            text("Bank Name / Branch *"),
+            textField(
+              "Bank Name / Branch",
+              branchAddressController,
+              Icons.account_balance,
+            ),
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: NeverScrollableScrollPhysics(),
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              children: [
+                buildUploadBox(
+                  "Profile Photo",
+                  profile_pictureFile,
+                  profile_pictureUrl,
+                  (f) => setState(() => profile_pictureFile = f),
+                  isProfileLoading,
+                  (v) => setState(() => isProfileLoading = v),
+                ),
+                buildUploadBox(
+                  "Aadhaar",
+                  aadhaarCardUploadFile,
+                  aadhaarCardUploadUrl,
+                  (f) => setState(() => aadhaarCardUploadFile = f),
+                  isAadhaarLoading,
+                  (v) => setState(() => isAadhaarLoading = v),
+                ),
+                buildUploadBox(
+                  "License",
+                  driversLicenseUploadFile,
+                  driversLicenseUploadUrl,
+                  (f) => setState(() => driversLicenseUploadFile = f),
+                  isLicenseLoading,
+                  (v) => setState(() => isLicenseLoading = v),
+                ),
+                buildUploadBox(
+                  "PAN Document",
+                  panCardUploadFile,
+                  panCardUploadUrl,
+                  (f) => setState(() => panCardUploadFile = f),
+                  isPanLoading,
+                  (v) => setState(() => isPanLoading = v),
+                ),
+                buildUploadBox(
+                  "Insurance",
+                  insuranceDocumentUploadFile,
+                  insuranceDocumentUploadUrl,
+                  (f) => setState(() => insuranceDocumentUploadFile = f),
+                  isInsuranceLoading,
+                  (v) => setState(() => isInsuranceLoading = v),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+
+    ];
   }
 }
 

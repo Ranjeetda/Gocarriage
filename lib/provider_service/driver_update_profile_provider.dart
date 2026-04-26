@@ -98,7 +98,6 @@ class DriverUpdateProfileProvider with ChangeNotifier {
         "licenseNumber": licenseNumber,
         "license_expiry_date": license_expiry_date,
         "license_from_date": license_from_date,
-        "experience_in_yrs": experience_in_yrs,
         "vehicle_type_preference": vehicle_type_preference,
         "service_type": service_type,
         "aadhaarCardNumber": aadhaarCardNumber,
@@ -112,6 +111,7 @@ class DriverUpdateProfileProvider with ChangeNotifier {
         "insuranceDocumentUpload": insuranceDocumentUpload,
         "profile_picture": profile_picture,
       };
+     // "experience_in_yrs": "5",
 
       final String body = jsonEncode(requestBody);
 

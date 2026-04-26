@@ -46,7 +46,7 @@ class OperatorProfileUpdateProvider with ChangeNotifier {
     _isUpdating = true;
     notifyListeners();
 
-    final Uri url = Uri.parse(URLS.registerOperator + PrefUtils.getUserId());
+    final Uri url = Uri.parse("${URLS.registerOperator}/${PrefUtils.getUserId()}");
 
     final Map<String, String> headers = {
       "Content-Type": "application/json",
@@ -59,26 +59,26 @@ class OperatorProfileUpdateProvider with ChangeNotifier {
 
     try {
       final Map<String, dynamic> requestBody = {
-        "ownerName": "Sunidhi Chaturvedi",
-        "email": "paridhichaturvedi595@gmail.com",
-        "companyName": "Gocarriage",
-        "contactPersonName": "Manis",
-        "contactPersonEmail": "manish@gmail.com",
-        "contactPersonPhone": "8888888888",
-        "whatsappNumber": "8888888888",
-        "address": "Sector 62",
-        "addressLine2": "Hanuman mandir",
-        "state": "UP",
-        "postalCode": "804403",
-        "city": "Noida",
-        "panNumber": "ABCDE1234F",
-        "aadhaarNumber": "123456789012",
-        "gstNumber": "22ABCDE1234F1Z5",
-        "drivingLicenceNumber": "2341234",
-        "ifscCode": "sbin0008559",
-        "bankName": "SBi",
-        "accountNumber": "234234234234234",
-        "branchAddress": "234234234234234",
+        "ownerName": ownerName,
+        "email": email,
+        "companyName": companyName,
+        "contactPersonName": contactPersonName,
+        "contactPersonEmail": contactPersonEmail,
+        "contactPersonPhone": contactPersonPhone,
+        "whatsappNumber": whatsappNumber,
+        "address": address,
+        "addressLine2": addressLine2,
+        "state": state,
+        "postalCode": postalCode,
+        "city": city,
+        "panNumber": panNumber,
+        "aadhaarNumber": aadhaarNumber,
+        "gstNumber": gstNumber,
+        "drivingLicenceNumber": drivingLicenceNumber,
+        "ifscCode": ifscCode,
+        "bankName": bankName,
+        "accountNumber": accountNumber,
+        "branchAddress": branchAddress,
 
         /// ✅ Only include if not empty
         if (aadhaarUpload.isNotEmpty) "aadhaarUpload": aadhaarUpload,

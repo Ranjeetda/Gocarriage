@@ -23,11 +23,11 @@ class _OperatorBottomNavigationbar extends State<OperatorBottomNavigationbar> {
   String? fromLatitude;
   String? fromLongitude;
 
+  /// 🔹 Removed MenuScreen from here
   final List<Widget> _screens = [
     OperatorHomeScreen(),
     OperatorBooingScreen(),
     VehiclesChangesScreen(),
-    MenuScreen(),
   ];
 
   @override
@@ -63,7 +63,7 @@ class _OperatorBottomNavigationbar extends State<OperatorBottomNavigationbar> {
         ],
       ),
 
-      /// 🔹 NORMAL BOTTOM NAVIGATION (LIKE SCREENSHOT)
+      /// 🔹 BOTTOM NAVIGATION
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
@@ -71,9 +71,17 @@ class _OperatorBottomNavigationbar extends State<OperatorBottomNavigationbar> {
         selectedItemColor: AppColors.primaryColor,
         unselectedItemColor: Colors.grey,
         onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
+          if (index == 3) {
+            /// 👉 Open MenuScreen instead of replacing body
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => MenuScreen()),
+            );
+          } else {
+            setState(() {
+              _selectedIndex = index;
+            });
+          }
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
@@ -97,24 +105,32 @@ class _OperatorBottomNavigationbar extends State<OperatorBottomNavigationbar> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Welcome!', style: TextStyle(fontSize: 14,color: Colors.white)),
+              const Text(
+                'Welcome!',
+                style: TextStyle(fontSize: 14, color: Colors.white),
+              ),
               Text(
                 PrefUtils.getName(),
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white
+                  color: Colors.white,
                 ),
               ),
             ],
           ),
           const Spacer(),
-          const Icon(Icons.notifications_none_outlined, size: 28,color: Colors.white,),
+          const Icon(
+            Icons.notifications_none_outlined,
+            size: 28,
+            color: Colors.white,
+          ),
         ],
       ),
     );
   }
 
+  /// 🔹 LOCATION FUNCTION
   Future<void> _setCurrentLocation() async {
     setState(() {
       isGettingLocation = true;
@@ -144,5 +160,4 @@ class _OperatorBottomNavigationbar extends State<OperatorBottomNavigationbar> {
 
     setState(() => isGettingLocation = false);
   }
-
 }

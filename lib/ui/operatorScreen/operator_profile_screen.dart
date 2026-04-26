@@ -9,7 +9,6 @@ import 'package:provider/provider.dart';
 import '../../../provider_service/email_verify_otp_provider.dart';
 import '../../../provider_service/fetch_image_url_provider.dart';
 import '../../../provider_service/file_upload_provider.dart';
-import '../../../provider_service/owner_profile_update_provider.dart';
 import '../../../provider_service/profile_provider.dart';
 import '../../../provider_service/send_otp_email_provider.dart';
 import '../../../resource/Utils.dart';
@@ -64,7 +63,7 @@ class _OperatorProfileScreen extends State<OperatorProfileScreen> {
   // 6-digit OTP controllers
   final List<TextEditingController> emailOtpControllers = List.generate(
     6,
-    (_) => TextEditingController(),
+        (_) => TextEditingController(),
   );
 
   // ---------------------- SECURE FIELD STATE ------------------------
@@ -135,7 +134,7 @@ class _OperatorProfileScreen extends State<OperatorProfileScreen> {
   }
 
   // ================= STEP VALID =================
-  bool isStepValid() {
+  bool isStepValidSilent() {
     switch (_currentStep) {
       case 0:
         return _nameController.text.isNotEmpty &&
@@ -145,14 +144,18 @@ class _OperatorProfileScreen extends State<OperatorProfileScreen> {
             _cityController.text.isNotEmpty &&
             _stateController.text.isNotEmpty;
 
+      case 1:
+        return isValidPAN(panNumberController.text) &&
+            isValidAadhaar(aadhaarNumberController.text.replaceAll(" ", ""));
+
       case 2:
         return bankNameController.text.isNotEmpty &&
-            bankAccountController.text.isNotEmpty &&
-            confirmAccountController.text.isNotEmpty &&
+            isValidAccountNumber(bankAccountController.text) &&
             bankAccountController.text == confirmAccountController.text &&
-            ifscController.text.isNotEmpty;
+            isValidIFSC(ifscController.text);
+
       default:
-        return false;
+        return true;
     }
   }
 
@@ -166,16 +169,14 @@ class _OperatorProfileScreen extends State<OperatorProfileScreen> {
     }
   }
 
-  Widget buildUploadBox(
-    String label,
-    File? localFile,
-    String? url,
-    Function(File) callback,
-    bool isLoading,
-    Function(bool) setLoading,
-  ) {
+  Widget buildUploadBox(String label,
+      File? localFile,
+      String? url,
+      Function(File) callback,
+      bool isLoading,
+      Function(bool) setLoading,) {
     final safeUrl =
-        (url != null && url.isNotEmpty) ? Uri.encodeFull(url) : null;
+    (url != null && url.isNotEmpty) ? Uri.encodeFull(url) : null;
 
     return GestureDetector(
       onTap: () => pickImage(callback, label),
@@ -205,14 +206,16 @@ class _OperatorProfileScreen extends State<OperatorProfileScreen> {
                       fit: BoxFit.cover,
                     ),
                   )
-                else if (safeUrl != null)
-                  const Icon(Icons.check_circle, size: 50, color: Colors.green)
                 else
-                  const Icon(
-                    Icons.cloud_upload_outlined,
-                    size: 48,
-                    color: Colors.grey,
-                  ),
+                  if (safeUrl != null)
+                    const Icon(
+                        Icons.check_circle, size: 50, color: Colors.green)
+                  else
+                    const Icon(
+                      Icons.cloud_upload_outlined,
+                      size: 48,
+                      color: Colors.grey,
+                    ),
                 const SizedBox(height: 8),
                 Text(
                   label,
@@ -237,20 +240,20 @@ class _OperatorProfileScreen extends State<OperatorProfileScreen> {
                     radius: 18,
                     backgroundColor: AppColors.primaryColor,
                     child:
-                        isLoading
-                            ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                            : const Icon(
-                              Icons.remove_red_eye,
-                              color: Colors.white,
-                              size: 18,
-                            ),
+                    isLoading
+                        ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                        : const Icon(
+                      Icons.remove_red_eye,
+                      color: Colors.white,
+                      size: 18,
+                    ),
                   ),
                 ),
               ),
@@ -261,11 +264,9 @@ class _OperatorProfileScreen extends State<OperatorProfileScreen> {
   }
 
   // ================== FILE UPLOAD & PREVIEW (unchanged) ==================
-  Future<void> _fileUpload(
-    String folderName,
-    File? fileName,
-    String mType,
-  ) async {
+  Future<void> _fileUpload(String folderName,
+      File? fileName,
+      String mType,) async {
     if (fileName == null) return;
     showUploadingDialog(context);
 
@@ -337,29 +338,33 @@ class _OperatorProfileScreen extends State<OperatorProfileScreen> {
       context: context,
       barrierDismissible: false,
       builder:
-          (ctx) => const Dialog(
-            child: Padding(
-              padding: EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  LinearProgressIndicator(minHeight: 8),
-                  SizedBox(height: 16),
-                  Text("Uploading your document..."),
-                ],
-              ),
-            ),
+          (ctx) =>
+      const Dialog(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              LinearProgressIndicator(minHeight: 8),
+              SizedBox(height: 16),
+              Text("Uploading your document..."),
+            ],
           ),
+        ),
+      ),
     );
   }
 
   void showImagePreview(BuildContext context, String imageUrl) {
-    final size = MediaQuery.of(context).size;
+    final size = MediaQuery
+        .of(context)
+        .size;
     showDialog(
       context: context,
       barrierColor: Colors.black.withOpacity(0.9),
       builder:
-          (context) => Dialog(
+          (context) =>
+          Dialog(
             backgroundColor: Colors.transparent,
             insetPadding: EdgeInsets.symmetric(
               horizontal: size.width * 0.05,
@@ -557,7 +562,7 @@ class _OperatorProfileScreen extends State<OperatorProfileScreen> {
         contactPersonPhone: _contactPersonPhoneController.text.trim(),
         whatsappNumber: _whatsappController.text.trim(),
         address: _addressController.text.trim(),
-        addressLine2: _addressLine2Controller.toString().trim(),
+        addressLine2: _addressLine2Controller.text.trim(),
         state: _stateController.text.trim(),
         postalCode: _postalCodeController.text.trim(),
         city: _cityController.text.trim(),
@@ -572,9 +577,9 @@ class _OperatorProfileScreen extends State<OperatorProfileScreen> {
         panUpload: panDocumentFile != null ? (panDocumentUrl ?? '') : '',
         aadhaarUpload: aadhaarFrontFile != null ? (aadhaarFrontUrl ?? '') : '',
         gstCertificateUpload:
-            gstDocumentFile != null ? (gstCertificateUrl ?? '') : '',
+        gstDocumentFile != null ? (gstCertificateUrl ?? '') : '',
         drivingLicenceUpload:
-            licenseFrontFile != null ? (licenseFrontUrl ?? '') : '',
+        licenseFrontFile != null ? (licenseFrontUrl ?? '') : '',
       );
 
       setState(() => isLoading = false);
@@ -612,9 +617,38 @@ class _OperatorProfileScreen extends State<OperatorProfileScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final provider = Provider.of<ProfileProvider>(context, listen: false);
-      await provider.fetchProfile('owner', "owner", PrefUtils.getUserId());
+      await provider.fetchProfile('operator', "operator", PrefUtils.getUserId());
       if (provider.profileData.isNotEmpty) setProfileData(provider.profileData);
     });
+
+    void listener() => setState(() {});
+
+    _nameController.addListener(listener);
+    _emailController.addListener(listener);
+    _phoneController.addListener(listener);
+    _companyNameController.addListener(listener);
+    _contactPersonNameController.addListener(listener);
+    _contactPersonEmailController.addListener(listener);
+    _contactPersonPhoneController.addListener(listener);
+
+    _whatsappController.addListener(listener);
+    _addressController.addListener(listener);
+    _addressLine2Controller.addListener(listener);
+    _cityController.addListener(listener);
+    _stateController.addListener(listener);
+    _postalCodeController.addListener(listener);
+
+    aadhaarNumberController.addListener(listener);
+    panNumberController.addListener(listener);
+    drivingLicenseController.addListener(listener);
+    gstNumberController.addListener(listener);
+
+    // Bank Controllers
+    bankNameController.addListener(listener);
+    bankAccountController.addListener(listener);
+    confirmAccountController.addListener(listener);
+    ifscController.addListener(listener);
+    branchAddressController.addListener(listener);
   }
 
   @override
@@ -658,27 +692,39 @@ class _OperatorProfileScreen extends State<OperatorProfileScreen> {
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        elevation: (!isStepValid() || isLoading) ? 0 : 4,
-                        backgroundColor:
-                            (!isStepValid() || isLoading)
-                                ? Colors.grey.shade300
-                                : AppColors.primaryColor,
+                        elevation: (!isStepValidSilent() || isLoading) ? 0 : 4,
+                        backgroundColor: (!isStepValidSilent() || isLoading)
+                            ? Colors.grey.shade300
+                            : AppColors.primaryColor,
                       ),
-                      onPressed:
-                          (!isStepValid() || isLoading)
-                              ? null
-                              : () {
-                                if (_formKey.currentState!.validate()) {
-                                  if (_currentStep == 2) {
-                                    _updateProfile();
-                                  } else {
-                                    setState(() => _currentStep += 1);
-                                  }
-                                }
-                              },
+
+                      // ✅ KEEP THIS CLEAN
+                      onPressed: (!isStepValidSilent() || isLoading)
+                          ? null
+                          : () {
+                        print("CURRENT STEP: $_currentStep");
+                        print("STEP VALID: ${isStepValidSilent()}");
+
+                        final isFormValid = _formKey.currentState?.validate() ??
+                            false;
+                        print("FORM VALID: $isFormValid");
+
+                        if (isStepValidSilent()) {
+                          if (_currentStep == 2) {
+                            print("CALLING UPDATE PROFILE");
+                            _updateProfile();
+                          } else {
+                            print("GOING TO NEXT STEP");
+                            setState(() => _currentStep += 1);
+                          }
+                        } else {
+                          print("FORM VALIDATION FAILED");
+                        }
+                      },
+
                       child: Text(
                         _currentStep == 2 ? "Update" : "Next",
-                        style: TextStyle(color: Colors.white),
+                        style: const TextStyle(color: Colors.white),
                       ),
                     ),
                   ),
@@ -923,44 +969,36 @@ class _OperatorProfileScreen extends State<OperatorProfileScreen> {
                       padding: const EdgeInsets.all(8),
                       children: [
                         buildUploadBox(
-                          "Profile Photo",
-                          profilePhotoFile,
-                          profilePhotoUrl,
-                          (f) => setState(() => profilePhotoFile = f),
-                          isProfileLoading,
-                          (l) => setState(() => isProfileLoading = l),
-                        ),
-                        buildUploadBox(
                           "Aadhaar Card*",
                           aadhaarFrontFile,
                           aadhaarFrontUrl,
-                          (f) => setState(() => aadhaarFrontFile = f),
+                              (f) => setState(() => aadhaarFrontFile = f),
                           isAadhaarLoading,
-                          (l) => setState(() => isAadhaarLoading = l),
+                              (l) => setState(() => isAadhaarLoading = l),
                         ),
                         buildUploadBox(
                           "Driver License",
                           licenseFrontFile,
                           licenseFrontUrl,
-                          (f) => setState(() => licenseFrontFile = f),
+                              (f) => setState(() => licenseFrontFile = f),
                           isLicenseLoading,
-                          (l) => setState(() => isLicenseLoading = l),
+                              (l) => setState(() => isLicenseLoading = l),
                         ),
                         buildUploadBox(
                           "PAN Card*",
                           panDocumentFile,
                           panDocumentUrl,
-                          (f) => setState(() => panDocumentFile = f),
+                              (f) => setState(() => panDocumentFile = f),
                           isPanLoading,
-                          (l) => setState(() => isPanLoading = l),
+                              (l) => setState(() => isPanLoading = l),
                         ),
                         buildUploadBox(
                           "GST Certificate",
                           gstDocumentFile,
                           gstCertificateUrl,
-                          (f) => setState(() => gstDocumentFile = f),
+                              (f) => setState(() => gstDocumentFile = f),
                           isGstLoading,
-                          (l) => setState(() => isGstLoading = l),
+                              (l) => setState(() => isGstLoading = l),
                         ),
                       ],
                     ),
@@ -999,7 +1037,7 @@ class _OperatorProfileScreen extends State<OperatorProfileScreen> {
                       bankAccountController,
                       Icons.account_balance,
                       _obscureAccountNumber,
-                      (val) {
+                          (val) {
                         setState(() => _obscureAccountNumber = val);
                       },
                       validator: (value) {
@@ -1019,7 +1057,7 @@ class _OperatorProfileScreen extends State<OperatorProfileScreen> {
                       confirmAccountController,
                       Icons.account_balance,
                       _obscureConfirmAccountNumber,
-                      (val) {
+                          (val) {
                         setState(() => _obscureConfirmAccountNumber = val);
                       },
                       validator: (value) {
@@ -1073,14 +1111,13 @@ class _OperatorProfileScreen extends State<OperatorProfileScreen> {
   }
 
   // ================== SECURE TEXT FIELD (New) ==================
-  Widget _secureTextField(
-    String hint,
-    TextEditingController controller,
-    IconData icon,
-    bool obscure,
-    Function(bool) onToggle, {
-    String? Function(String?)? validator,
-  }) {
+  Widget _secureTextField(String hint,
+      TextEditingController controller,
+      IconData icon,
+      bool obscure,
+      Function(bool) onToggle, {
+        String? Function(String?)? validator,
+      }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextFormField(
@@ -1129,15 +1166,14 @@ class _OperatorProfileScreen extends State<OperatorProfileScreen> {
     );
   }
 
-  Widget textField(
-    String hint,
-    TextEditingController controller,
-    IconData icon, {
-    TextInputType keyboard = TextInputType.text,
-    List<TextInputFormatter>? formatters,
-    bool enabled = true,
-    String? Function(String?)? validator,
-  }) {
+  Widget textField(String hint,
+      TextEditingController controller,
+      IconData icon, {
+        TextInputType keyboard = TextInputType.text,
+        List<TextInputFormatter>? formatters,
+        bool enabled = true,
+        String? Function(String?)? validator,
+      }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextFormField(
@@ -1167,79 +1203,81 @@ class _OperatorProfileScreen extends State<OperatorProfileScreen> {
   InputDecoration _dec(String h) =>
       InputDecoration(hintText: h, border: OutlineInputBorder());
 
-  Widget _emailSection() => Column(
-    children: [
-      TextFormField(
-        controller: _emailController,
-        enabled: !isEmailVerified,
-        decoration: _dec("Enter email").copyWith(
-          suffixIcon:
+  Widget _emailSection() =>
+      Column(
+        children: [
+          TextFormField(
+            controller: _emailController,
+            enabled: !isEmailVerified,
+            decoration: _dec("Enter email").copyWith(
+              suffixIcon:
               (!isEmailVerified && _isValidEmail(_emailController.text))
                   ? TextButton(
-                    onPressed:
-                        isLoadingEmail ||
-                                (isEmailOtpSent && _secondsRemaining > 0)
-                            ? null
-                            : () {
-                              sendOtpOnEmail();
-                              _startCountdown();
-                            },
-                    child:
-                        isLoadingEmail
-                            ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                            : Text(
-                              isEmailOtpSent
-                                  ? (_secondsRemaining > 0
-                                      ? "Resend ($_secondsRemaining)"
-                                      : "Resend")
-                                  : "Send OTP",
-                            ),
-                  )
+                onPressed:
+                isLoadingEmail ||
+                    (isEmailOtpSent && _secondsRemaining > 0)
+                    ? null
+                    : () {
+                  sendOtpOnEmail();
+                  _startCountdown();
+                },
+                child:
+                isLoadingEmail
+                    ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+                    : Text(
+                  isEmailOtpSent
+                      ? (_secondsRemaining > 0
+                      ? "Resend ($_secondsRemaining)"
+                      : "Resend")
+                      : "Send OTP",
+                ),
+              )
                   : null,
-        ),
-        onChanged: (_) => setState(() {}),
-        validator: (v) => _isValidEmail(v!) ? null : "Invalid email",
-      ),
-      if (isEmailOtpSent && !isEmailVerified) ...[
-        const SizedBox(height: 10),
-        _otpBoxes(emailOtpControllers),
-        const SizedBox(height: 10),
-        SizedBox(
-          width: double.infinity,
-          height: 55,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.secondarycolor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
             ),
-            onPressed: () {
-              _verifyEmailOtp();
-            },
-            child:
+            onChanged: (_) => setState(() {}),
+            validator: (v) => _isValidEmail(v!) ? null : "Invalid email",
+          ),
+          if (isEmailOtpSent && !isEmailVerified) ...[
+            const SizedBox(height: 10),
+            _otpBoxes(emailOtpControllers),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.secondarycolor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  _verifyEmailOtp();
+                },
+                child:
                 isLoadingEmailOtp
                     ? const CircularProgressIndicator(color: Colors.white)
                     : Text(
-                      "Confirm Email OTP",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-          ),
-        ),
-      ],
-      if (isEmailVerified)
-        const Text("✔ Email Verified", style: TextStyle(color: Colors.green)),
-    ],
-  );
+                  "Confirm Email OTP",
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white,
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
+          if (isEmailVerified)
+            const Text(
+                "✔ Email Verified", style: TextStyle(color: Colors.green)),
+        ],
+      );
 
   void _startCountdown() {
     _secondsRemaining = 60;
