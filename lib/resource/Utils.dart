@@ -296,6 +296,12 @@ class Utils {
     return "${diff.inDays} days ago";
   }
 
+  static String daysAgo(String dateString) {
+    final date = DateTime.parse(dateString);
+    final difference = DateTime.now().difference(date);
+    return '${difference.inDays} d ago';
+  }
+
   static double applyProgress(String createdAt) {
     final created = DateTime.parse(createdAt).toLocal();
     final now = DateTime.now();
@@ -548,4 +554,117 @@ class Utils {
       ));
     }
   }
+
+  static String formatDate(String date) {
+    DateTime parsedDate = DateTime.parse(date);
+    return "${parsedDate.year}-${parsedDate.month.toString().padLeft(2, '0')}-${parsedDate.day.toString().padLeft(2, '0')}";
+  }
+
+  static List<String> getPermitStates(dynamic data) {
+    if (data == null) return [];
+
+    // ✅ If already a List
+    if (data is List) {
+      return data
+          .where((e) => e != null)
+          .map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+
+    // ✅ If it's a String like "[A, B, C]"
+    if (data is String) {
+      return data
+          .replaceAll('[', '')
+          .replaceAll(']', '')
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+
+    return [];
+  }
+
+  static List<String> indiaStates = [
+    "Andaman and Nicobar Islands",
+    "Andhra Pradesh",
+    "Arunachal Pradesh",
+    "Assam",
+    "Bihar",
+    "Chandigarh",
+    "Chhattisgarh",
+    "Dadra and Nagar Haveli",
+    "Delhi",
+    "Goa",
+    "Gujarat",
+    "Haryana",
+    "Himachal Pradesh",
+    "Jammu and Kashmir",
+    "Jharkhand",
+    "Karnataka",
+    "Kerala",
+    "Ladakh",
+    "Lakshadweep",
+    "Madhya Pradesh",
+    "Maharashtra",
+    "Manipur",
+    "Meghalaya",
+    "Mizoram",
+    "Nagaland",
+    "Odisha",
+    "Puducherry",
+    "Punjab",
+    "Rajasthan",
+    "Sikkim",
+    "Tamil Nadu",
+    "Telangana",
+    "Tripura",
+    "Uttar Pradesh",
+    "Uttarakhand",
+    "West Bengal",
+  ];
+
+  static List<Map<String, dynamic>> documents = [
+    {
+      "id": 63,
+      "document_type": "rc_document",
+      "file_path": null,
+      "valid_from": null,
+      "valid_to": null,
+      "status": null,
+    },
+    {
+      "id": 64,
+      "document_type": "fitness_certificate",
+      "file_path": null,
+      "valid_from": null,
+      "valid_to": null,
+      "status": null,
+    },
+    {
+      "id": 65,
+      "document_type": "permit_document",
+      "file_path": null,
+      "valid_from": null,
+      "valid_to": null,
+      "status": null,
+    },
+    {
+      "id": 66,
+      "document_type": "insurance",
+      "file_path": null,
+      "valid_from": null,
+      "valid_to": null,
+      "status": null,
+    },
+    {
+      "id": 71,
+      "document_type": "pollution_certificate",
+      "file_path": null,
+      "valid_from": null,
+      "valid_to": null,
+      "status": null,
+    },
+  ];
 }

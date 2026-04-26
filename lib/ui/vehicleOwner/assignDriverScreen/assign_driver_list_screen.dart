@@ -10,6 +10,8 @@ import '../../../resource/image_paths.dart';
 import '../../dialogBox/assign_driver_dialoge.dart';
 import 'package:http/http.dart' as http;
 
+import '../../dialogBox/assignment_details_dialog.dart';
+
 class AssignDriverListScreen extends StatefulWidget {
   @override
   _AssignDriverListScreen createState() => _AssignDriverListScreen();
@@ -83,9 +85,18 @@ class _AssignDriverListScreen extends State<AssignDriverListScreen> {
     );
   }
 
+
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          openAssignDriverDialog(context);
+        },
+        backgroundColor: const Color(0xFF0F8A7B),
+        child: const Icon(Icons.person_add, color: Colors.white),
+      ),
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
         backgroundColor: AppColors.primaryColor,
@@ -99,19 +110,6 @@ class _AssignDriverListScreen extends State<AssignDriverListScreen> {
           'Assign Driver List',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => openAssignDriverDialog(context),
-            child: const Text(
-              'Assign Driver',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
       ),
 
       body: Padding(
@@ -255,6 +253,13 @@ class _AssignDriverListScreen extends State<AssignDriverListScreen> {
                               itemBuilder:
                                   (context) => const [
                                     PopupMenuItem(
+                                      value: 'View Details',
+                                      child: Text(
+                                        'View Details',
+                                        style: TextStyle(color: Colors.red),
+                                      ),
+                                    ),
+                                    PopupMenuItem(
                                       value: 'Unassign',
                                       child: Text(
                                         'Unassign',
@@ -265,6 +270,11 @@ class _AssignDriverListScreen extends State<AssignDriverListScreen> {
                               onSelected: (value) {
                                 if (value == 'Unassign') {
                                   showDeleteDriverDialog(context,data);
+                                }else if (value == 'View Details') {
+                                  showDialog(
+                                    context: context,
+                                    builder: (_) => AssignmentDetailsDialog(data),
+                                  );
                                 }
                               },
                             ),

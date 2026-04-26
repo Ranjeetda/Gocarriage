@@ -837,7 +837,7 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
                 ),
                 const SizedBox(height: 10),
                 sectionTitle("Vehicle Type Preference*"),
-                Consumer<VehicleTypeProvider>(
+                /*Consumer<VehicleTypeProvider>(
                   builder: (context, provider, _) {
                     if (provider.isLoading) {
                       return const Padding(
@@ -899,7 +899,7 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
                       ),
                     );
                   },
-                ),
+                ),*/
                 const SizedBox(height: 10),
 
                 // Document Uploads

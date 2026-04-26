@@ -1,18 +1,26 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../../provider_service/delete_vehicle_provider.dart';
+import '../../../provider_service/fetch_image_url_provider.dart';
+import '../../../provider_service/profile_provider.dart';
 import '../../../provider_service/vechile_owner_fleets_list.dart';
 import '../../../resource/Utils.dart';
 import '../../../resource/app_colors.dart';
 import '../../../resource/image_paths.dart';
 import '../../../resource/pref_utils.dart';
+
 import '../../commanScreen/menu_screen.dart';
 import '../assignDriverScreen/assign_driver_list_screen.dart';
 import '../bookingRequestScreen/booking_request_screen.dart';
 import '../driver_list_screen/driver_list_screen.dart';
+import '../profile_screen/owner_profile_screen.dart';
 import '../quotationScreen/price_quotations_screen.dart';
 import '../subscriptionsScreen/subscriptions_screen.dart';
 import '../vehicleListScreen/add_vehicle_screen.dart';
+import '../vehicleListScreen/select_driver_dialog.dart';
 import '../vehicleListScreen/vehicle_details_screen.dart';
 import '../vehicleListScreen/vehicle_list_screen.dart';
 import '../vehicleRequestScreen/vehicle_request_screen.dart';
@@ -22,80 +30,68 @@ class DashboardVehicleOwnerScreen extends StatefulWidget {
   _DashboardVehicleOwnerScreen createState() => _DashboardVehicleOwnerScreen();
 }
 
-class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen> {
+class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen>
+    with SingleTickerProviderStateMixin {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  List<dynamic> filteredList = [];
-
-  TextEditingController searchController = TextEditingController();
+  late TabController _tabController;
+  bool isProfileUpdated = true;
+  String profileImage = '';
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final provider = Provider.of<VechileOwnerFleetsList>(
-        context,
-        listen: false,
-      );
-
-      await provider.fetchList("in_city");
-
-      setState(() {
-        filteredList = provider.listData;
-      });
+      final provider = Provider.of<ProfileProvider>(context, listen: false);
+      await provider.fetchProfile('owner', "owner", PrefUtils.getUserId());
+      if (provider.profileData.isNotEmpty) {
+        setState(() {
+          isProfileUpdated = provider.profileData['isProfileUpdated'];
+          _showImage(provider.profileData['profile_pic']);
+        });
+      }
     });
   }
 
-  /// SEARCH FUNCTION
-  void filterVehicles(String query) {
-    final provider = Provider.of<VechileOwnerFleetsList>(
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _showImage(String fileName) async {
+    final response = await Provider.of<FetchImageUrlProvider>(
       context,
       listen: false,
-    );
-
-    if (query.isEmpty) {
+    ).fetchImagePath(fileName);
+    var responseData = json.decode(response.body);
+    if (responseData['success'] == true &&
+        responseData['data']?['url'] != null) {
       setState(() {
-        filteredList = provider.listData;
+        profileImage = responseData['data']['url'];
       });
     } else {
-      setState(() {
-        filteredList =
-            provider.listData.where((vehicle) {
-              final vehicleNo = vehicle['vehicle_number']?.toLowerCase() ?? '';
-
-              final type = vehicle['VehicleType']?['name']?.toLowerCase() ?? '';
-
-              final fuel = vehicle['fuel_type']?.toLowerCase() ?? '';
-
-              return vehicleNo.contains(query.toLowerCase()) ||
-                  type.contains(query.toLowerCase()) ||
-                  fuel.contains(query.toLowerCase());
-            }).toList();
-      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(responseData?['message'] ?? 'Failed to load image'),
+        ),
+      );
     }
   }
 
+  /// ADD VEHICLE
   Future<void> nextScreen(BuildContext context) async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => AddVehicleScreen(null)),
+      MaterialPageRoute(builder: (_) => AddVehicleScreen(null)),
     );
 
-    if (result == true) {
-      final provider = Provider.of<VechileOwnerFleetsList>(
-        context,
-        listen: false,
-      );
-
-      await provider.fetchList("in_city");
-
-      setState(() {
-        filteredList.clear();
-        filteredList = provider.listData ?? [];
-      });
-    }
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -103,57 +99,59 @@ class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen> {
       key: _scaffoldKey,
       backgroundColor: const Color(0xFFF7F9FC),
 
-      /// DRAWER MENU
+      /// DRAWER
       drawer: Drawer(
         child: ListView(
-          padding: EdgeInsets.zero,
           children: [
             InkWell(
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => MenuScreen()),
+                  MaterialPageRoute(builder: (_) => MenuScreen()),
                 );
               },
               child: UserAccountsDrawerHeader(
-                accountName: Text(
-                  PrefUtils.getName(),
-                  style: const TextStyle(color: Colors.white),
-                ),
-                accountEmail: const Text(
-                  "Vehicle Owner",
-                  style: TextStyle(color: Colors.white70),
-                ),
-                currentAccountPicture: const CircleAvatar(
+                accountName: Text(PrefUtils.getName()),
+                accountEmail: Text("Vehicle Owner"),
+                currentAccountPicture: CircleAvatar(
                   backgroundColor: Colors.white,
-                  child: Icon(Icons.person, color: Colors.black),
+                  backgroundImage:
+                      (profileImage.isNotEmpty)
+                          ? NetworkImage(profileImage)
+                          : null,
+                  child:
+                      (profileImage.isEmpty)
+                          ? const Icon(Icons.person, color: Colors.black)
+                          : null,
                 ),
-
-                /// BACKGROUND COLOR
-                decoration: BoxDecoration(
-                  color: AppColors.primaryColor, // your custom color
-                ),
+                decoration: BoxDecoration(color: AppColors.primaryColor),
               ),
             ),
             menuItem(Icons.directions_car, "Vehicles"),
+            menuItem(Icons.people, "Driver"),
+            menuItem(Icons.assignment_ind, "Assign Driver"),
             menuItem(Icons.request_page, "Vehicle Request"),
             menuItem(Icons.price_check, "Price Quotations"),
             menuItem(Icons.book_online, "Booking Requests"),
-            menuItem(Icons.people, "Driver"),
-            menuItem(Icons.assignment_ind, "Assign Driver"),
-            menuItem(Icons.calculate, "Freight Calculator"),
             menuItem(Icons.account_balance_wallet, "Subscriptions"),
           ],
         ),
       ),
 
-      /// ADD VEHICLE BUTTON
+      /// FAB
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.primaryColor,
-        child: const Icon(Icons.add, color: Colors.white),
+        child: Icon(Icons.add, color: Colors.white),
         onPressed: () {
-          nextScreen(context);
+          if (_tabController.index == 0) {
+            nextScreen(context);
+          } else {
+            showDialog(
+              context: context,
+              builder: (_) => const SelectDriverDialog(),
+            );
+          }
         },
       ),
 
@@ -161,197 +159,145 @@ class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen> {
         children: [
           /// HEADER
           Container(
-            color: AppColors.primaryColor, // Safe background for status bar
+            color: AppColors.primaryColor,
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
+                padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
-                    /// BURGER ICON
                     IconButton(
-                      icon: const Icon(Icons.menu, color: Colors.white),
+                      icon: Icon(Icons.menu, color: Colors.white),
                       onPressed: () {
                         _scaffoldKey.currentState!.openDrawer();
                       },
                     ),
-
-                    Image.asset(ImagePaths.appLogoVertical, height: 40, width: 40),
-
-                    const SizedBox(width: 10),
-
+                    Image.asset(ImagePaths.appLogoVertical, height: 40),
+                    SizedBox(width: 10),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          "Welcome!",
-                          style: TextStyle(fontSize: 14, color: Colors.white),
-                        ),
-
+                        Text("Welcome!", style: TextStyle(color: Colors.white)),
                         Text(
                           PrefUtils.getName(),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                          style: TextStyle(
                             color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ],
                     ),
-
-                    const Spacer(),
-
-                    const Icon(
-                      Icons.notifications_none_outlined,
-                      color: Colors.white,
-                    ),
+                    Spacer(),
+                    Icon(Icons.notifications, color: Colors.white),
                   ],
                 ),
               ),
             ),
           ),
+          isProfileUpdated
+              ? SizedBox()
+              : profileStatusStrip(isComplete: isProfileUpdated),
 
-          /// SEARCH BAR
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade300),
+          /// TAB BAR
+          Container(
+            margin: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              indicator: BoxDecoration(
+                color: AppColors.primaryColor,
+                borderRadius: BorderRadius.circular(30),
               ),
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.black87,
+              indicatorSize: TabBarIndicatorSize.tab,
+              dividerColor: Colors.transparent,
 
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-
-              child: TextField(
-                controller: searchController,
-                onChanged: filterVehicles,
-                decoration: const InputDecoration(
-                  hintText: "Search vehicle...",
-                  border: InputBorder.none,
-                  icon: Icon(Icons.search),
+              tabs: [
+                Tab(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(Icons.directions_car, size: 18),
+                      SizedBox(width: 6),
+                      Text("Vehicles"),
+                    ],
+                  ),
                 ),
-              ),
+                Tab(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(Icons.person, size: 18),
+                      SizedBox(width: 6),
+                      Text("Drivers"),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
 
-          /// VEHICLE LIST
-          Consumer<VechileOwnerFleetsList>(
-            builder: (context, provider, _) {
-              if (provider.isLoading) {
-                return const Expanded(
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
+          /// TAB VIEW
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                /// VEHICLES TAB
+                VehicleListScreen(false),
 
-              if (filteredList.isEmpty) {
-                return const Expanded(
-                  child: Center(child: Text("No vehicle list available")),
-                );
-              }
-
-              return Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.only(top: 10, bottom: 10),
-                  // 👈 control top space
-                  itemCount: filteredList.length,
-                  itemBuilder: (context, index) {
-                    final vehicle = filteredList[index];
-
-                    return InkWell(onTap: (){
-                      if(vehicle['status']=='draft') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) =>
-                              AddVehicleScreen(vehicle['id'].toString())),
-                        );
-                      }else {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) =>
-                              VehicleDetailsScreen(vehicle['id'].toString())),
-                        );
-                      }
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-
-                      child: _vehicleCard(
-                        vehicleId: vehicle['id'].toString() ?? "--",
-                        vehicleNo: vehicle['vehicle_number'] ?? "--",
-                        status: vehicle['status'] ?? "--",
-                        type: vehicle['VehicleType']?['name'] ?? "--",
-                        fuel: vehicle['fuel_type'] ?? "--",
-                        insurance:
-                        vehicle['insurance_upto'] != null
-                            ? Utils.formatToDDMMYYYY(
-                          vehicle['insurance_upto'],
-                        )
-                            : "--",
-                      ),
-                    ),
-                    );
-                  },
-                ),
-              );
-            },
+                /// DRIVERS TAB
+                DriverListScreen(false),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  /// MENU ITEM
+  /// MENU
   Widget menuItem(IconData icon, String title) {
     return ListTile(
       leading: Icon(icon),
       title: Text(title),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
       onTap: () {
+        Navigator.pop(context);
+
         if (title == 'Vehicles') {
-          Navigator.pop(context);
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => VehicleListScreen()),
+            MaterialPageRoute(builder: (_) => VehicleListScreen(true)),
+          );
+        } else if (title == 'Driver') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => DriverListScreen(true)),
+          );
+        } else if (title == 'Assign Driver') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => AssignDriverListScreen()),
           );
         } else if (title == 'Vehicle Request') {
-          Navigator.pop(context);
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => VehicleRequestScreen()),
           );
         } else if (title == 'Price Quotations') {
-
-          Navigator.pop(context);
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => PriceQuotationsScreen()),
           );
         } else if (title == 'Booking Requests') {
-          Navigator.pop(context);
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => BookingRequestScreen()),
           );
-        } else if (title == 'Booking Requests') {
-        } else if (title == 'Driver') {
-          Navigator.pop(context);
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => DriverListScreen()),
-          );
-        } else if (title == 'Assign Driver') {
-          Navigator.pop(context);
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => AssignDriverListScreen()),
-          );
-        } else if (title == 'Freight Calculator') {
-
-        }else if (title == 'Subscriptions') {
-          Navigator.pop(context);
+        } else if (title == 'Subscriptions') {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => SubscriptionsScreen()),
@@ -361,139 +307,48 @@ class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen> {
     );
   }
 
-  /// VEHICLE CARD
-  Widget _vehicleCard({
-    required String vehicleId,
-    required String status,
-    required String vehicleNo,
-    required String type,
-    required String fuel,
-    required String insurance,
-  }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      color: Colors.white,
-      child: ListTile(
-        leading: const Icon(
-          Icons.local_shipping,
-          size: 40,
-          color: Colors.green,
-        ),
+  Widget profileStatusStrip({required bool isComplete}) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isComplete ? Colors.green.shade50 : Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isComplete ? Colors.green : Colors.orange),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isComplete ? Icons.verified : Icons.warning_amber_rounded,
+            color: isComplete ? Colors.green : Colors.orange,
+          ),
+          const SizedBox(width: 10),
 
-        title: Row(
-          children: [
-            Text(
-              vehicleNo,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            Spacer(),
-            Text(
-              Utils.capitalizeFirst(status),
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(type),
-            Text("Fuel: $fuel"),
-            Text("Insurance: $insurance"),
-          ],
-        ),
-
-        // 👇 ADD THIS
-        trailing: PopupMenuButton<String>(
-          onSelected: (value) {
-            if (value == 'delete') {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: Text("Confirm Delete"),
-                  content: Text("Are you sure you want to delete this vehicle?"),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text("Cancel"),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        deleteVehicle(vehicleId); // your function
-                      },
-                      child: Text(
-                        "Delete",
-                        style: TextStyle(color: Colors.red),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-          },
-          itemBuilder: (context) => [
-            PopupMenuItem(
-              value: 'delete',
-              child: Row(
-                children: const [
-                  Icon(Icons.delete, color: Colors.red),
-                  SizedBox(width: 8),
-                  Text('Delete'),
-                ],
+          Expanded(
+            child: Text(
+              isComplete
+                  ? "Your profile is complete"
+                  : "Your profile is incomplete. Complete it now.",
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: isComplete ? Colors.green : Colors.orange,
               ),
             ),
-          ],
-          icon: const Icon(Icons.more_vert),
-        ),
-      ),
-    );
-  }
+          ),
 
-  void deleteVehicle(String id) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text("Confirm Delete"),
-        content: Text("Are you sure you want to delete this vehicle?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () {
-              validateDeleteVehicle(id);
-              Navigator.pop(context);
-              print("Deleted vehicle: $id");
-            },
-            child: Text("Delete", style: TextStyle(color: Colors.red)),
-          ),
+          if (!isComplete)
+            TextButton(
+              onPressed: () {
+                // 👉 Navigate to profile / edit screen
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => OwnerProfileScreen()),
+                );
+              },
+              child: const Text("Complete"),
+            ),
         ],
       ),
     );
   }
-
-  Future<void> validateDeleteVehicle(String vehicleId) async {
-    final provider = Provider.of<DeleteVehicleProvider>(context, listen: false);
-    await provider.deleteVehicle(vehicleId);
-    final data = provider.vehicleDelete;
-
-    setState(() {
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        final provider = Provider.of<VechileOwnerFleetsList>(
-          context,
-          listen: false,
-        );
-        await provider.fetchList("in_city");
-        setState(() {
-          filteredList = provider.listData;
-        });
-      });
-      Utils.showCustomToast(context, data['message']);
-    });
-
-    print("Vehicle Number: ${data['vehicle_number']}");
-  }
-
 }

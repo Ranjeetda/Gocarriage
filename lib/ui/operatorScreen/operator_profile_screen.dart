@@ -19,14 +19,16 @@ import '../../../resource/pref_utils.dart';
 import '../../../resource/upper_case_text_formatter.dart';
 import 'package:http/http.dart' as http;
 
-class OwnerProfileScreen extends StatefulWidget {
-  const OwnerProfileScreen({super.key});
+import '../../provider_service/operator_profile_update_provider.dart';
+
+class OperatorProfileScreen extends StatefulWidget {
+  const OperatorProfileScreen({super.key});
 
   @override
-  State<OwnerProfileScreen> createState() => _OwnerProfileScreenState();
+  State<OperatorProfileScreen> createState() => _OperatorProfileScreen();
 }
 
-class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
+class _OperatorProfileScreen extends State<OperatorProfileScreen> {
   int _currentStep = 0;
   final _formKey = GlobalKey<FormState>();
   final picker = ImagePicker();
@@ -35,6 +37,11 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _companyNameController = TextEditingController();
+  final _contactPersonNameController = TextEditingController();
+  final _contactPersonEmailController = TextEditingController();
+  final _contactPersonPhoneController = TextEditingController();
+
   final _whatsappController = TextEditingController();
   final _addressController = TextEditingController();
   final _addressLine2Controller = TextEditingController();
@@ -57,7 +64,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
   // 6-digit OTP controllers
   final List<TextEditingController> emailOtpControllers = List.generate(
     6,
-        (_) => TextEditingController(),
+    (_) => TextEditingController(),
   );
 
   // ---------------------- SECURE FIELD STATE ------------------------
@@ -88,7 +95,6 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
   bool isCancelChequeLoading = false;
   bool isLoadingEmailOtp = false;
   bool isLoadingEmail = false;
-
 
   bool isSameNumber = false;
   bool isEmailOtpSent = false;
@@ -133,14 +139,12 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
     switch (_currentStep) {
       case 0:
         return _nameController.text.isNotEmpty &&
-            _emailController.text.isNotEmpty &&
+            _companyNameController.text.isNotEmpty &&
             _addressController.text.isNotEmpty &&
             _postalCodeController.text.isNotEmpty &&
             _cityController.text.isNotEmpty &&
             _stateController.text.isNotEmpty;
-      case 1:
-        return isValidPAN(panNumberController.text) &&
-            isValidAadhaar(aadhaarNumberController.text.replaceAll(" ", ""));
+
       case 2:
         return bankNameController.text.isNotEmpty &&
             bankAccountController.text.isNotEmpty &&
@@ -158,7 +162,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
     if (pickedFile != null) {
       final file = File(pickedFile.path);
       onPicked(file);
-      _fileUpload('owners', file, fileType);
+      _fileUpload('operators', file, fileType);
     }
   }
 
@@ -426,15 +430,19 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
   void setProfileData(Map data) {
     _nameController.text = data["fullName"] ?? data["ownerName"] ?? "";
     _emailController.text = data["email"] ?? "";
-    _phoneController.text = data["mobileNo"] ?? data['user']?["phone"] ?? "";
+    _phoneController.text = data["mobileNo"] ?? data['User']?["phone"] ?? "";
     _addressController.text = data["address"] ?? "";
-    _addressLine2Controller.text = data["address1"] ?? "";
+    _addressLine2Controller.text = data["addressLine2"] ?? "";
     _cityController.text = data["city"] ?? "";
     _stateController.text = data["state"] ?? "";
     _postalCodeController.text = data["pinCode"] ?? data["postalCode"] ?? "";
-    _whatsappController.text = data["wa_number"] ?? "";
+    _whatsappController.text = data["whatsappNumber"] ?? "";
+    _contactPersonNameController.text = data["contactPersonName"] ?? "";
+    _contactPersonEmailController.text = data["contactPersonEmail"] ?? "";
+    _contactPersonPhoneController.text = data["contactPersonPhone"] ?? "";
+    _companyNameController.text = data["companyName"] ?? "";
 
-    isSameNumber = (data['wa_number'] == data['user']?["phone"]);
+    isSameNumber = (data['whatsappNumber'] == data['contactPersonPhone']);
 
     aadhaarNumberController.text = data["aadhaarNumber"] ?? "";
     panNumberController.text = data["panNumber"] ?? "";
@@ -498,7 +506,6 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
 
   Future<void> sendOtpOnEmail() async {
     if (_formKey.currentState!.validate()) {
-
       if (_emailController.text.isEmpty) {
         Utils.showErrorMessage(context, 'Please enter your  email');
         return;
@@ -534,42 +541,40 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
     }
   }
 
-
   Future<void> _updateProfile() async {
     setState(() => isLoading = true);
 
     try {
-      final response = await Provider.of<OwnerProfileUpdateProvider>(
+      final response = await Provider.of<OperatorProfileUpdateProvider>(
         context,
         listen: false,
       ).updateProfile(
-        ownerName: _nameController.text,
-        email: _emailController.text,
-        phone: _phoneController.text,
-        address: _addressController.text,
-        addressLine2: _addressLine2Controller.text,
-        city: _cityController.text,
-        state: _stateController.text,
-        pinCode: _postalCodeController.text,
-        wa_number: _whatsappController.text,
-        panNumber: panNumberController.text,
-        aadhaarNumber: aadhaarNumberController.text,
-        gstNumber: gstNumberController.text,
-        drivingLicenceNumber: drivingLicenseController.text,
-        bankName: bankNameController.text,
-        accountNumber: bankAccountController.text,
-        ifscCode: ifscController.text,
-        branchAddress: branchAddressController.text,
-
+        ownerName: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        companyName: _companyNameController.text.trim(),
+        contactPersonName: _contactPersonNameController.text.trim(),
+        contactPersonEmail: _contactPersonEmailController.text.trim(),
+        contactPersonPhone: _contactPersonPhoneController.text.trim(),
+        whatsappNumber: _whatsappController.text.trim(),
+        address: _addressController.text.trim(),
+        addressLine2: _addressLine2Controller.toString().trim(),
+        state: _stateController.text.trim(),
+        postalCode: _postalCodeController.text.trim(),
+        city: _cityController.text.trim(),
+        panNumber: panNumberController.text.trim(),
+        aadhaarNumber: aadhaarNumberController.text.trim(),
+        gstNumber: gstNumberController.text.trim(),
+        drivingLicenceNumber: drivingLicenseController.text.trim(),
+        ifscCode: ifscController.text.trim(),
+        bankName: bankNameController.text.trim(),
+        accountNumber: bankAccountController.text.trim(),
+        branchAddress: branchAddressController.text.trim(),
         panUpload: panDocumentFile != null ? (panDocumentUrl ?? '') : '',
         aadhaarUpload: aadhaarFrontFile != null ? (aadhaarFrontUrl ?? '') : '',
         gstCertificateUpload:
             gstDocumentFile != null ? (gstCertificateUrl ?? '') : '',
         drivingLicenceUpload:
             licenseFrontFile != null ? (licenseFrontUrl ?? '') : '',
-        profilePhotoUpload:
-            profilePhotoFile != null ? (profilePhotoUrl ?? '') : '',
-        cancelCheque: cancelChequeFile != null ? (cancelChequeUrl ?? '') : '',
       );
 
       setState(() => isLoading = false);
@@ -654,9 +659,10 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         elevation: (!isStepValid() || isLoading) ? 0 : 4,
-                        backgroundColor: (!isStepValid() || isLoading)
-                            ? Colors.grey.shade300
-                            : AppColors.primaryColor,
+                        backgroundColor:
+                            (!isStepValid() || isLoading)
+                                ? Colors.grey.shade300
+                                : AppColors.primaryColor,
                       ),
                       onPressed:
                           (!isStepValid() || isLoading)
@@ -708,13 +714,59 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                       Icons.phone,
                       enabled: false,
                     ),
+                    sectionTitle('Company Name', isRequired: true),
+                    textField(
+                      "Company Name",
+                      _companyNameController,
+                      Icons.holiday_village,
+                      enabled: true,
+                    ),
+                    sectionTitle('Email Address', isRequired: false),
+                    _emailSection(),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Contact Person',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    sectionTitle('Contact person name', isRequired: true),
+                    textField(
+                      "Contact person name",
+                      _contactPersonNameController,
+                      Icons.man,
+                      enabled: true,
+                    ),
+                    const SizedBox(height: 10),
+                    sectionTitle('Contact person phone', isRequired: true),
+                    textField(
+                      "Contact person phone",
+                      _contactPersonPhoneController,
+                      Icons.phone,
+                      enabled: true,
+                    ),
+                    const SizedBox(height: 10),
+                    sectionTitle('Contact person email', isRequired: false),
+                    textField(
+                      "Contact person email",
+                      _contactPersonEmailController,
+                      Icons.email,
+                      enabled: true,
+                    ),
+                    const SizedBox(height: 10),
                     Row(
                       children: [
                         Checkbox(
                           value: isSameNumber,
                           onChanged: toggleCheckbox,
                         ),
-                        const Text("WhatsApp number same as phone number",style: TextStyle(fontSize: 12),),
+                        const Text(
+                          "WhatsApp number same as phone number *",
+                          style: TextStyle(fontSize: 12),
+                        ),
                       ],
                     ),
                     if (!isSameNumber) ...[
@@ -725,8 +777,6 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                         FontAwesomeIcons.whatsapp,
                       ),
                     ],
-                    sectionTitle('Email Address', isRequired: true),
-                    _emailSection(),
                     const SizedBox(height: 10),
                     const Text(
                       'Address',
@@ -1012,26 +1062,6 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                       Icons.location_on,
                     ),
 
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Cancelled Cheque',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: buildUploadBox(
-                        "Upload Cancelled Cheque",
-                        cancelChequeFile,
-                        cancelChequeUrl,
-                        (f) => setState(() => cancelChequeFile = f),
-                        isCancelChequeLoading,
-                        (l) => setState(() => isCancelChequeLoading = l),
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -1100,14 +1130,14 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
   }
 
   Widget textField(
-      String hint,
-      TextEditingController controller,
-      IconData icon, {
-        TextInputType keyboard = TextInputType.text,
-        List<TextInputFormatter>? formatters,
-        bool enabled = true,
-        String? Function(String?)? validator,
-      }) {
+    String hint,
+    TextEditingController controller,
+    IconData icon, {
+    TextInputType keyboard = TextInputType.text,
+    List<TextInputFormatter>? formatters,
+    bool enabled = true,
+    String? Function(String?)? validator,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextFormField(
@@ -1124,18 +1154,18 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
         decoration: InputDecoration(
           prefixIcon: Icon(icon, color: AppColors.primaryColor),
           hintText: hint,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );
   }
+
   bool _isValidEmail(String email) {
     return RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email);
   }
 
-  InputDecoration _dec(String h) => InputDecoration(hintText: h, border: OutlineInputBorder());
+  InputDecoration _dec(String h) =>
+      InputDecoration(hintText: h, border: OutlineInputBorder());
 
   Widget _emailSection() => Column(
     children: [
@@ -1143,35 +1173,36 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
         controller: _emailController,
         enabled: !isEmailVerified,
         decoration: _dec("Enter email").copyWith(
-          suffixIcon: (!isEmailVerified &&
-              _isValidEmail(_emailController.text))
-              ? TextButton(
-            onPressed: isLoadingEmail ||
-                (isEmailOtpSent && _secondsRemaining > 0)
-                ? null
-                : () {
-              sendOtpOnEmail();
-              _startCountdown();
-            },
-            child: isLoadingEmail
-                ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-                : Text(
-              isEmailOtpSent
-                  ? (_secondsRemaining > 0
-                  ? "Resend ($_secondsRemaining)"
-                  : "Resend")
-                  : "Send OTP",
-            ),
-          )
-              : null,
+          suffixIcon:
+              (!isEmailVerified && _isValidEmail(_emailController.text))
+                  ? TextButton(
+                    onPressed:
+                        isLoadingEmail ||
+                                (isEmailOtpSent && _secondsRemaining > 0)
+                            ? null
+                            : () {
+                              sendOtpOnEmail();
+                              _startCountdown();
+                            },
+                    child:
+                        isLoadingEmail
+                            ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : Text(
+                              isEmailOtpSent
+                                  ? (_secondsRemaining > 0
+                                      ? "Resend ($_secondsRemaining)"
+                                      : "Resend")
+                                  : "Send OTP",
+                            ),
+                  )
+                  : null,
         ),
         onChanged: (_) => setState(() {}),
-        validator: (v) =>
-        _isValidEmail(v!) ? null : "Invalid email",
+        validator: (v) => _isValidEmail(v!) ? null : "Invalid email",
       ),
       if (isEmailOtpSent && !isEmailVerified) ...[
         const SizedBox(height: 10),
@@ -1191,16 +1222,17 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
               _verifyEmailOtp();
             },
             child:
-            isLoadingEmailOtp
-                ? const CircularProgressIndicator(color: Colors.white)
-                :  Text("Confirm Email OTP",
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.white,
-                fontFamily: 'Poppins',
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+                isLoadingEmailOtp
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : Text(
+                      "Confirm Email OTP",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
           ),
         ),
       ],
@@ -1224,6 +1256,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
 
     setState(() {});
   }
+
   Widget _otpBoxes(List<TextEditingController> controllers) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1252,6 +1285,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
       }),
     );
   }
+
   @override
   void dispose() {
     _timer?.cancel();

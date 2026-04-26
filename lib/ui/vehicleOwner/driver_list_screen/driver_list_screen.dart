@@ -12,6 +12,10 @@ import '../vehicleListScreen/select_driver_dialog.dart';
 import 'package:http/http.dart' as http;
 
 class DriverListScreen extends StatefulWidget {
+  bool isHeader;
+
+  DriverListScreen(this.isHeader);
+
   @override
   _DriverListScreen createState() => _DriverListScreen();
 }
@@ -85,37 +89,43 @@ class _DriverListScreen extends State<DriverListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.white,
-      appBar: AppBar(
-        backgroundColor: AppColors.primaryColor,
-        elevation: 2,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Driver List',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (_) => const SelectDriverDialog(),
-              );
-            },
-            child: const Text(
-              'Add Driver',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
+      appBar:
+          widget.isHeader
+              ? AppBar(
+                backgroundColor: AppColors.primaryColor,
+                elevation: 2,
+                centerTitle: true,
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                title: const Text(
+                  'Driver List',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (_) => const SelectDriverDialog(),
+                      );
+                    },
+                    child: const Text(
+                      'Add Driver',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              )
+              : null,
 
       body: Padding(
         padding: const EdgeInsets.all(12),
@@ -171,10 +181,15 @@ class _DriverListScreen extends State<DriverListScreen> {
 
                       return InkWell(
                         onTap: () {
-
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => DriverProfile('ownerDriverList',driver['id'].toString())),
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => DriverProfile(
+                                    'ownerDriverList',
+                                    driver['id'].toString(),
+                                  ),
+                            ),
                           );
                         },
                         child: Container(

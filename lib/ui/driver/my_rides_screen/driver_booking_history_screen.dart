@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../provider_service/driver_booking_history_full_provider.dart';
 import '../../../provider_service/driver_booking_history_provider.dart';
 import '../../../resource/Utils.dart';
 import '../../../resource/ClickableDiagonalPill.dart';
@@ -24,6 +25,11 @@ class _DriverBookingHistoryScreenState
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await Provider.of<DriverBookingHistoryProvider>(context, listen: false)
+          .fetchBooking();
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await Provider.of<DriverBookingHistoryFullProvider>(context, listen: false)
           .fetchBooking();
     });
   }
@@ -114,7 +120,6 @@ class _DriverBookingHistoryScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             /// TOP
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

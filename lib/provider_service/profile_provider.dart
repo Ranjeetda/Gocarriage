@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:gocarriage_universal/resource/Utils.dart';
 import 'package:http/http.dart' as http;
 
 import '../resource/pref_utils.dart';
@@ -18,12 +19,14 @@ class ProfileProvider with ChangeNotifier {
     notifyListeners();
     print("Ranjeet Driver profile =========>${role+"    "+userId + "     "+PrefUtils.getRole()}");
 
-    if(PrefUtils.getRole()==role){
+    if(PrefUtils.getRole()=='customer'){
       mainUrl=URLS.fetchProfileCustomer+userId;
-    }else if(PrefUtils.getRole()== role){
+    }else if(PrefUtils.getRole()== 'driver'){
       mainUrl=URLS.fetchProfileDriver+userId;
-    }else if(PrefUtils.getRole()== role){
+    }else if(PrefUtils.getRole()== 'owner'){
       mainUrl=URLS.profileOwners+userId;
+    }else if(PrefUtils.getRole()== 'operator'){
+      mainUrl="${URLS.registerOperator}/$userId";
     }else if(comeFrome== 'ownerDriverList'){
       mainUrl=URLS.fetchProfileDriver+userId;
     }
@@ -41,9 +44,10 @@ class ProfileProvider with ChangeNotifier {
 
       final response = await http.get(url, headers: headers);
 
-      print('Profile Response : ===============: ${response.body}');
 
       final responseData = json.decode(response.body);
+
+      Utils.printFullText('Profile Response : ===============: ${response.body}');
 
       if (response.statusCode == 200 && responseData['success'] == true) {
         _profileData = responseData['data']; // ✅ Contains all profile key-values

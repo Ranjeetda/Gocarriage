@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -55,6 +56,8 @@ class _SignUpScreen extends State<SignUpScreen> {
   bool isEmailVerified = false;
   bool isMobileOtpSent = false;
   bool isMobileVerified = false;
+  int _secondsRemaining = 0;
+  Timer? _timer;
 
   // 6-digit OTP controllers
   final List<TextEditingController> emailOtpControllers = List.generate(
@@ -208,8 +211,9 @@ class _SignUpScreen extends State<SignUpScreen> {
             errorMessage = "Verification failed: ${e.message}";
           }
 
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(errorMessage)));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(errorMessage)));
 
           setState(() => isLoadingMobile = false);
         },
@@ -226,8 +230,9 @@ class _SignUpScreen extends State<SignUpScreen> {
             isMobileOtpSent = true;
           });
 
-          ScaffoldMessenger.of(context)
-              .showSnackBar(const SnackBar(content: Text("OTP sent")));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text("OTP sent")));
         },
 
         codeAutoRetrievalTimeout: (String verificationId) {
@@ -245,8 +250,9 @@ class _SignUpScreen extends State<SignUpScreen> {
 
       setState(() => isLoadingMobile = false);
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Something went wrong: $e")));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Something went wrong: $e")));
     }
   }
 
@@ -272,8 +278,7 @@ class _SignUpScreen extends State<SignUpScreen> {
       print("🔐 Creating credential with:");
       print("Verification ID: $_verificationId");
 
-      final userCredential =
-      await _auth.signInWithCredential(credential);
+      final userCredential = await _auth.signInWithCredential(credential);
 
       print("✅ OTP Verified Successfully");
       print("User: ${userCredential.user}");
@@ -283,36 +288,39 @@ class _SignUpScreen extends State<SignUpScreen> {
         isMobileVerified = true;
         isMobileOtpSent = false;
       });
-
     } catch (e) {
       print("❌ OTP Verification Failed: $e");
 
       setState(() => isLoadingMobileOtp = false);
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Failed to verify OTP: $e")));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Failed to verify OTP: $e")));
     }
   }
 
   // ---------------- REGISTER ----------------
 
   Future<void> _registerUser() async {
-    if ( PrefUtils.getRole()=="Vehicle Owner"&&widget.mMode=="Company"&&_companyNameController.text.isEmpty) {
+    if (PrefUtils.getRole() == "Vehicle Owner" &&
+        widget.mMode == "Company" &&
+        _companyNameController.text.isEmpty) {
       Utils.showErrorMessage(context, 'Please enter your  company name');
       return;
-    }else if (_nameController.text.isEmpty) {
+    } else if (_nameController.text.isEmpty) {
       Utils.showErrorMessage(context, 'Please enter your  first name');
       return;
-    }if (!isEmailVerified || !isMobileVerified) {
+    }
+    if (!isEmailVerified || !isMobileVerified) {
       Utils.showErrorMessage(context, "Please verify Email and Mobile number");
       return;
-    }else if (_passwordController.text.isEmpty) {
+    } else if (_passwordController.text.isEmpty) {
       Utils.showErrorMessage(context, 'Please enter your  password');
       return;
-    }else if (_confirmPasswordController.text.isEmpty) {
+    } else if (_confirmPasswordController.text.isEmpty) {
       Utils.showErrorMessage(context, 'Please enter Re-password');
       return;
-    }else if (_passwordController.text!=_confirmPasswordController.text) {
+    } else if (_passwordController.text != _confirmPasswordController.text) {
       Utils.showErrorMessage(context, 'Password does not match');
       return;
     }
@@ -335,11 +343,15 @@ class _SignUpScreen extends State<SignUpScreen> {
         PrefUtils.getRole() == "driver" ? "" : city ?? "",
         PrefUtils.getRole() == "driver" ? "" : state ?? "",
         PrefUtils.getRole() == "driver" ? "" : _pinCodeController.text.trim(),
-        PrefUtils.getRole() == "owner" ? widget.mMode! : "",
+        PrefUtils.getRole() == "owner" || PrefUtils.getRole() == "operator"
+            ? widget.mMode!
+            : "",
         PrefUtils.getRole() == "owner" ? _bankNameController.text.trim() : "",
         PrefUtils.getRole() == "owner" ? _accountNoController.text.trim() : "",
         PrefUtils.getRole() == "owner" ? _ifcCodeController.text.trim() : "",
-        PrefUtils.getRole() == "owner" ? _companyNameController.text.trim() : "",
+        PrefUtils.getRole() == "owner"
+            ? _companyNameController.text.trim()
+            : "",
       );
 
       final data = json.decode(response.body);
@@ -361,7 +373,6 @@ class _SignUpScreen extends State<SignUpScreen> {
 
   Future<void> sendOtpOnEmail() async {
     if (_formKey.currentState!.validate()) {
-
       if (_emailController.text.isEmpty) {
         Utils.showErrorMessage(context, 'Please enter your  email');
         return;
@@ -413,8 +424,16 @@ class _SignUpScreen extends State<SignUpScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              PrefUtils.getRole()=="owner" &&  widget.mMode=="Company"? _label("Company Name *"):SizedBox(),
-              PrefUtils.getRole()=="owner" &&  widget.mMode=="Company"?  _textField(_companyNameController, "Enter company name") :SizedBox(),
+              PrefUtils.getRole() == "owner" ||
+                      PrefUtils.getRole() == "operator" &&
+                          widget.mMode == "Company"
+                  ? _label("Company Name *")
+                  : SizedBox(),
+              PrefUtils.getRole() == "owner" ||
+                      PrefUtils.getRole() == "operator" &&
+                          widget.mMode == "Company"
+                  ? _textField(_companyNameController, "Enter company name")
+                  : SizedBox(),
               _label("Full Name *"),
               _textField(_nameController, "Enter full name"),
 
@@ -430,7 +449,9 @@ class _SignUpScreen extends State<SignUpScreen> {
               _label("Confirm Password *"),
               _confirmPasswordField(),
 
-              if (PrefUtils.getRole() != "driver" &&  PrefUtils.getRole() != "owner") ...[
+              if (PrefUtils.getRole() != "driver" &&
+                  PrefUtils.getRole() != "owner" &&
+                  PrefUtils.getRole() != "operator") ...[
                 _label("Address *"),
                 _addressField(),
                 _label("Pin Code *"),
@@ -482,7 +503,8 @@ class _SignUpScreen extends State<SignUpScreen> {
     child: Text(t),
   );
 
-  InputDecoration _dec(String h) => InputDecoration(hintText: h, border: OutlineInputBorder());
+  InputDecoration _dec(String h) =>
+      InputDecoration(hintText: h, border: OutlineInputBorder());
 
   Widget _textField(TextEditingController c, String h) => TextFormField(
     controller: c,
@@ -496,7 +518,7 @@ class _SignUpScreen extends State<SignUpScreen> {
     decoration: _dec("Password"),
   );
 
-  Widget _confirmPasswordField()=> TextFormField(
+  Widget _confirmPasswordField() => TextFormField(
     controller: _confirmPasswordController,
     obscureText: true,
     decoration: _dec("Confirm Password"),
@@ -558,13 +580,28 @@ class _SignUpScreen extends State<SignUpScreen> {
           suffixIcon:
               (!isEmailVerified && _isValidEmail(_emailController.text))
                   ? TextButton(
-                    onPressed: isEmailOtpSent ? null : sendOtpOnEmail,
+                    onPressed:
+                        isLoadingEmail ||
+                                (isEmailOtpSent && _secondsRemaining > 0)
+                            ? null
+                            : () {
+                              sendOtpOnEmail();
+                              _startCountdown();
+                            },
                     child:
                         isLoadingEmail
-                            ? CircularProgressIndicator(
-                              color: AppColors.primaryColor,
+                            ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                            : Text(isEmailOtpSent ? "SENT" : "Send OTP"),
+                            : Text(
+                              isEmailOtpSent
+                                  ? (_secondsRemaining > 0
+                                      ? "Resend ($_secondsRemaining)"
+                                      : "Resend")
+                                  : "Send OTP",
+                            ),
                   )
                   : null,
         ),
@@ -624,7 +661,13 @@ class _SignUpScreen extends State<SignUpScreen> {
                             ? CircularProgressIndicator(
                               color: AppColors.primaryColor,
                             )
-                            : Text(isMobileOtpSent ? "SENT" : "Send OTP"),
+                            : Text(
+                              isMobileOtpSent
+                                  ? (_secondsRemaining > 0
+                                      ? "Resend ($_secondsRemaining)"
+                                      : "Resend")
+                                  : "Send OTP",
+                            ),
                   )
                   : null,
         ),
@@ -666,4 +709,26 @@ class _SignUpScreen extends State<SignUpScreen> {
         const Text("✔ Mobile Verified", style: TextStyle(color: Colors.green)),
     ],
   );
+
+  void _startCountdown() {
+    _secondsRemaining = 60;
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_secondsRemaining == 0) {
+        timer.cancel();
+      } else {
+        setState(() {
+          _secondsRemaining--;
+        });
+      }
+    });
+
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 }

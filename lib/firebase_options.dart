@@ -58,7 +58,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyCegewzfDwUhL32ektlfGrby8J2qVv6kho',
-    appId: '1:1029345451232:android:0cfdc80c31c2b66d438485', // ✅ FIXED
+    appId: '1:1029345451232:android:bbfdb52fae0cbc92438485', // ✅ MATCHED
     messagingSenderId: '1029345451232',
     projectId: 'gocarriage-b5173',
     storageBucket: 'gocarriage-b5173.firebasestorage.app',

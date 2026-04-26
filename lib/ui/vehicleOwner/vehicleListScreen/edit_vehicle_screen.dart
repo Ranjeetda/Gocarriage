@@ -16,22 +16,21 @@ import '../../../provider_service/vehicle_type_provider.dart';
 import '../../../resource/app_colors.dart';
 import '../../../resource/pref_utils.dart';
 
-class AddVehicleScreen extends StatefulWidget {
+class EditVehicleScreen extends StatefulWidget {
   String? mVehicleId;
 
-  AddVehicleScreen(this.mVehicleId);
+  EditVehicleScreen(this.mVehicleId);
 
   @override
-  State<AddVehicleScreen> createState() => _AddVehicleScreenState();
+  State<EditVehicleScreen> createState() => _EditVehicleScreenState();
 }
 
-class _AddVehicleScreenState extends State<AddVehicleScreen> {
+class _EditVehicleScreenState extends State<EditVehicleScreen> {
   int step = 0;
 
   /// CONTROLLERS
   final regNo = TextEditingController();
   final regDate = TextEditingController();
-  final vehicleTypeControler = TextEditingController();
   final city = TextEditingController();
   final payload = TextEditingController();
   final chassis = TextEditingController();
@@ -50,7 +49,6 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       fuel,
       permit,
       status,
-      mStatus,
       service,
       roadTax,
       isNegotiable,
@@ -60,8 +58,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       lastPaidDate,
       fleetId;
   List<String> selectedPermitStates = [];
-  String? selectedVehicleId;
-
+  bool _isFetched = false;
   /// FILES
   File? rc, fitness, permitDoc, insurance;
   String? rcUrl, fitnessUrl, permitDocUrl, insuranceUrl;
@@ -99,11 +96,14 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   }
 
   Future<void> fetchData() async {
+    if (_isFetched) return;
+    _isFetched = true;
+
     final provider = Provider.of<DraftVehicleProvider>(context, listen: false);
     await provider.fetchDraftVehicle(widget.mVehicleId!);
     final data = provider.vehicleQutation;
-
-    print("RanjeetTest =========>${data.toString()}");
+    final providerVehicleType = Provider.of<VehicleTypeProvider>(context, listen: false);
+    final providerVehicleBrand = Provider.of<VehicleCategoryBy>(context, listen: false);
 
     setState(() {
 
@@ -121,11 +121,65 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       city.text = data['rto'] ?? "";
       insuranceCompany.text = data['insurance_company'] ?? "";
       policyNo.text = data['insurance_policy_number'] ?? "";
-      brand = data['VehicleType']?['brand']?.toString();
-      vehicleTypeControler.text = data['VehicleType']['model'].toString();
-      model = data['VehicleType']['model'].toString();
-      selectedVehicleId = data['VehicleType']?['id']?.toString();
-      widget.mVehicleId = data['vehicle_type_id']?.toString() ?? '';
+      selectedColorName = data['color'] ?? "";
+      providerVehicleType.setSelectedGroup(data['VehicleType']?['v_cat']);
+      providerVehicleType.setSelectedVehicle(data['VehicleType']?['id']);
+      brand=providerVehicleBrand.selectedBrand;
+      final docs = data['documents'];
+
+      if (docs != null && docs is List && docs.isNotEmpty) {
+        for (var item in docs) {
+          if(item['document_type']=='rc_document'){
+             rcFrom=item['valid_from']??'';
+             rcTo=item['valid_to']??'';
+             rcUrl=item['file_path']??'';
+          }else if(item['document_type']=='fitness_certificate'){
+             fitFrom=item['valid_from']??'';
+             fitTo=item['valid_to']??'';
+             fitnessUrl=item['file_path']??'';
+          }else if(item['document_type']=='permit_document'){
+             permitFrom=item['valid_from']??'';
+             permitTo=item['valid_to']??'';
+             permitDocUrl=item['file_path']??'';
+          }else if(item['document_type']=='insurance'){
+             insFrom=item['valid_from']??'';
+             insTo=item['valid_to']??'';
+             insuranceUrl=item['file_path']??'';
+          }
+        }
+      }
+
+      final pollution = data['pollutionCertificates'];
+
+      if (pollution is List && pollution.isNotEmpty) {
+        pollutionList.clear(); // optional safety
+
+        for (int i = 0; i < pollution.length; i++) {
+          final e = pollution[i];
+
+          final model = PollutionCertificateModel(
+            state: e['state'],
+            fileUrl: e['file_upload'],
+            validFrom: e['valid_from'] != null
+                ? DateTime.tryParse(e['valid_from'])
+                : null,
+            validTo: e['valid_to'] != null
+                ? DateTime.tryParse(e['valid_to'])
+                : null,
+          );
+
+          pollutionList.add(model);
+
+          // 🔍 Debug (optional)
+          print("Index: $i → validTo: ${model.validTo}");
+        }
+      } else {
+        pollutionList.clear();
+        pollutionList.add(PollutionCertificateModel());
+      }
+
+
+
       fuel = data['fuel_type'];
       if (data['permit_type'] != null &&
           data['permit_type'] == 'State Permit') {
@@ -134,23 +188,28 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
           data['permit_type'] == 'No Permit') {
         permit = 'No permit';
       }
-      if (data['permit_states'] != null) {
-        String raw = data['permit_states'] ?? '';
 
-        selectedPermitStates =
-            raw
-                .replaceAll('[', '')
-                .replaceAll(']', '')
-                .split(',')
-                .map((e) => e.trim())
-                .where((e) => e.isNotEmpty)
-                .toList();
+      if (data['permit_states'] != null) {
+        var permitStates = data['permit_states'];
+
+        if (permitStates is String) {
+          selectedPermitStates = permitStates
+              .replaceAll('[', '')
+              .replaceAll(']', '')
+              .split(',')
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty)
+              .toList();
+        } else if (permitStates is List) {
+          selectedPermitStates =
+              permitStates.map((e) => e.toString()).toList();
+        }
       }
 
       selectedTaxPeriod =
-          data['road_tax_paid_period'] == null
-              ? null
-              : Utils.capitalize(data['road_tax_paid_period']);
+      data['road_tax_paid_period'] == null
+          ? null
+          : Utils.capitalize(data['road_tax_paid_period']);
       if (selectedTaxPeriod != null) {
         selected = true;
       }
@@ -228,12 +287,12 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                     value: item.state,
                     hint: const Text("Select State"),
                     items:
-                        Utils.indiaStates.map((e) {
-                          return DropdownMenuItem<String>(
-                            value: e,
-                            child: Text(e),
-                          );
-                        }).toList(),
+                    Utils.indiaStates.map((e) {
+                      return DropdownMenuItem<String>(
+                        value: e,
+                        child: Text(e),
+                      );
+                    }).toList(),
                     onChanged: (v) {
                       setState(() {
                         item.state = v;
@@ -289,11 +348,11 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                           key: ValueKey(item.validFrom),
                           // ✅ IMPORTANT
                           initialValue:
-                              item.validFrom == null
-                                  ? ""
-                                  : DateFormat(
-                                    'dd/MM/yyyy',
-                                  ).format(item.validFrom!),
+                          item.validFrom == null
+                              ? ""
+                              : DateFormat(
+                            'dd/MM/yyyy',
+                          ).format(item.validFrom!),
                           onTap: () async {
                             var d = await pickDate();
                             if (d != null) {
@@ -315,11 +374,11 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                           key: ValueKey(item.validTo),
                           // ✅ IMPORTANT
                           initialValue:
-                              item.validTo == null
-                                  ? ""
-                                  : DateFormat(
-                                    'dd/MM/yyyy',
-                                  ).format(item.validTo!),
+                          item.validTo == null
+                              ? ""
+                              : DateFormat(
+                            'dd/MM/yyyy',
+                          ).format(item.validTo!),
                           onTap: () async {
                             var d = await pickDate();
                             if (d != null) {
@@ -367,8 +426,8 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       child: GestureDetector(
         onTap:
             () => setState(() {
-              //step = index;
-            }),
+          //step = index;
+        }),
         // onTap: () => setState(() => step = index),
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -458,12 +517,12 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                           ),
                           isExpanded: true,
                           items:
-                              provider.vehicleTypes.map((group) {
-                                return DropdownMenuItem<String>(
-                                  value: group.group,
-                                  child: Text(group.group),
-                                );
-                              }).toList(),
+                          provider.vehicleTypes.map((group) {
+                            return DropdownMenuItem<String>(
+                              value: group.group,
+                              child: Text(group.group),
+                            );
+                          }).toList(),
                           onChanged: (value) {
                             if (value != null) {
                               provider.setSelectedGroup(value);
@@ -481,23 +540,22 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                             border: OutlineInputBorder(),
                           ),
                           hint: Text("Select Name"),
-
                           isExpanded: true,
                           items:
-                              provider.selectedVehicleGroup?.options.map((
-                                item,
+                          provider.selectedVehicleGroup?.options.map((
+                              item,
                               ) {
-                                return DropdownMenuItem<int>(
-                                  value: item.id,
-                                  child: Text(item.name),
-                                );
-                              }).toList(),
+                            return DropdownMenuItem<int>(
+                              value: item.id,
+                              child: Text(item.name),
+                            );
+                          }).toList(),
                           onChanged: (value) async {
                             provider.setSelectedVehicle(value);
+                            print("RanjeetTest =========>${value}");
 
                             if (value != null) {
-                              final selectedItem = provider.selectedVehicleGroup?.options
-                                  .firstWhere((e) => e.id == value);
+                              final selectedItem = provider.selectedVehicleGroup?.options.firstWhere((e) => e.id == value);
 
                               payload.text = selectedItem?.name ?? "";
                               widget.mVehicleId=selectedItem?.id.toString();
@@ -594,11 +652,10 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                 text("Status"),
                 dropdown(
                   "Status",
-                  ["Active", "Under Maintenance"],
+                  ["Active", "Inactive","Under Maintenance"],
                   status,
-                  (v) => setState(() {
+                      (v) => setState(() {
                     status = v;
-                    mStatus = v;
                   }),
                 ),
                 gap(),
@@ -606,7 +663,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                   "Service Type *",
                   ["Within City", "Outside City"],
                   service,
-                  (v) => setState(() => service = v),
+                      (v) => setState(() => service = v),
                 ),
               ],
             ),
@@ -734,7 +791,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                   "Permit Type *",
                   ["National permit", "State permit", "No permit"],
                   permit,
-                  (v) {
+                      (v) {
                     setState(() {
                       permit = v;
                       if (v != "State permit") {
@@ -771,9 +828,9 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                                   : selectedPermitStates.join(", "),
                               style: TextStyle(
                                 color:
-                                    selectedPermitStates.isEmpty
-                                        ? Colors.grey
-                                        : Colors.black,
+                                selectedPermitStates.isEmpty
+                                    ? Colors.grey
+                                    : Colors.black,
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -790,7 +847,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                   "Fuel Type *",
                   ["Diesel", "Petrol", "CNG", "Electric"],
                   fuel,
-                  (v) => setState(() => fuel = v),
+                      (v) => setState(() => fuel = v),
                 ),
                 gap(),
                 text("Payload (kg) *"),
@@ -809,7 +866,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                   "Is Price Negotiable?",
                   ["Yes", "No"],
                   isNegotiable,
-                  (v) => setState(() {
+                      (v) => setState(() {
                     isNegotiable = v;
                   }),
                 ),
@@ -819,7 +876,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                   "Road Tax Paid?",
                   ["Yes", "No"],
                   roadTax,
-                  (v) => setState(() {
+                      (v) => setState(() {
                     roadTax = v;
                     // selectedTaxPeriod = null;
                   }),
@@ -840,43 +897,43 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
                   Row(
                     children:
-                        ["Monthly", "Half-Yearly", "Yearly", "Custom"].map((e) {
-                          selected = selectedTaxPeriod == e;
+                    ["Monthly", "Half-Yearly", "Yearly", "Custom"].map((e) {
+                      selected = selectedTaxPeriod == e;
 
-                          return Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  selectedTaxPeriod = e;
-                                });
-                              },
-                              child: Container(
-                                margin: const EdgeInsets.fromLTRB(4, 0, 0, 0),
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color:
-                                      selected!
-                                          ? Colors.teal.shade100
-                                          : Colors.white,
-                                  border: Border.all(
-                                    color:
-                                        selected! ? Colors.teal : Colors.grey,
-                                  ),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    e,
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                      return Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              selectedTaxPeriod = e;
+                            });
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.fromLTRB(4, 0, 0, 0),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color:
+                              selected!
+                                  ? Colors.teal.shade100
+                                  : Colors.white,
+                              border: Border.all(
+                                color:
+                                selected! ? Colors.teal : Colors.grey,
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Center(
+                              child: Text(
+                                e,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
-                          );
-                        }).toList(),
+                          ),
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ],
 
@@ -915,27 +972,27 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
         children: [
           doc(
             "RC Document",
-            (f) => rc = f,
+                (f) => rc = f,
             rcFrom,
             rcTo,
-            (v) => rcFrom = v,
-            (v) => rcTo = v,
+                (v) => rcFrom = v,
+                (v) => rcTo = v,
           ),
           doc(
             "Fitness Certificate",
-            (f) => fitness = f,
+                (f) => fitness = f,
             fitFrom,
             fitTo,
-            (v) => fitFrom = v,
-            (v) => fitTo = v,
+                (v) => fitFrom = v,
+                (v) => fitTo = v,
           ),
           doc(
             "Permit Document",
-            (f) => permitDoc = f,
+                (f) => permitDoc = f,
             permitFrom,
             permitTo,
-            (v) => permitFrom = v,
-            (v) => permitTo = v,
+                (v) => permitFrom = v,
+                (v) => permitTo = v,
           ),
           card(
             child: Column(
@@ -949,6 +1006,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                 upload(
                   fileType: 'Insurance',
                   file: insurance,
+                  fileUrl: insuranceUrl,
                   onPick: (f) => setState(() => insurance = f),
                 ),
                 gap(),
@@ -1023,59 +1081,59 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   }
 
   Widget dropdown(
-    String label,
-    List<String> items,
-    String? value,
-    Function(String) onChange,
-  ) {
+      String label,
+      List<String> items,
+      String? value,
+      Function(String) onChange,
+      ) {
     return DropdownButtonFormField(
       value: value,
       hint: Text(label),
       items:
-          items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+      items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
       onChanged: (v) => onChange(v as String),
       decoration: InputDecoration(border: OutlineInputBorder()),
     );
   }
 
   Widget radioRow(
-    String label,
-    List<String> options,
-    String? group,
-    Function(String) onTap,
-  ) {
+      String label,
+      List<String> options,
+      String? group,
+      Function(String) onTap,
+      ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         text(label),
         Row(
           children:
-              options.map((e) {
-                return Expanded(
-                  child: GestureDetector(
-                    onTap: () => onTap(e),
-                    child: Container(
-                      margin: EdgeInsets.all(4),
-                      padding: EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            group == e
-                                ? Icons.check_circle
-                                : Icons.circle_outlined,
-                          ),
-                          SizedBox(width: 6),
-                          Text(e, style: TextStyle(fontSize: 12)),
-                        ],
-                      ),
-                    ),
+          options.map((e) {
+            return Expanded(
+              child: GestureDetector(
+                onTap: () => onTap(e),
+                child: Container(
+                  margin: EdgeInsets.all(4),
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                );
-              }).toList(),
+                  child: Row(
+                    children: [
+                      Icon(
+                        group == e
+                            ? Icons.check_circle
+                            : Icons.circle_outlined,
+                      ),
+                      SizedBox(width: 6),
+                      Text(e, style: TextStyle(fontSize: 12)),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
         ),
       ],
     );
@@ -1084,6 +1142,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   Widget upload({
     required String fileType,
     required File? file,
+    required String? fileUrl, // ✅ NEW
     required Function(File) onPick,
   }) {
     return GestureDetector(
@@ -1091,9 +1150,12 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
         FilePickerResult? r = await FilePicker.platform.pickFiles();
         if (r != null && r.files.single.path != null) {
           File pickedFile = File(r.files.single.path!);
-          onPick(pickedFile); // ✅ update UI
+
+          onPick(pickedFile); // update UI
+
           _fileUpload('vehicle-documents', pickedFile, fileType, 0);
-          print("RanjeetTest============> IFFFFFFFFFF Undar ${fileType}");
+
+          print("Picked File => $fileType");
         }
       },
       child: Container(
@@ -1107,22 +1169,30 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
             Expanded(
               child: Text(
                 file != null
-                    ? file.path
-                        .split('/')
-                        .last // ✅ show file name
-                    : "Upload File",
+                    ? file.path.split('/').last
+                    : (fileUrl != null && fileUrl.isNotEmpty
+                    ? fileUrl.split('/').last
+                    : "Upload File"),
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: file != null ? Colors.black : Colors.grey,
+                  color: (file != null || (fileUrl != null && fileUrl.isNotEmpty))
+                      ? Colors.black
+                      : Colors.grey,
                 ),
               ),
             ),
 
-            /// 👁️ Eye Icon (only if file exists)
-            if (file != null)
+            /// 👁️ Eye Icon
+            if (file != null || (fileUrl != null && fileUrl.isNotEmpty))
               GestureDetector(
-                onTap: () {
-                  // openFile(file);
+                onTap: () async {
+                  if (file != null) {
+                    // ✅ open local file
+                    //openFile(file);
+                  } else if (fileUrl != null) {
+                    // ✅ open URL
+
+                  }
                 },
                 child: const Icon(Icons.remove_red_eye, color: Colors.teal),
               ),
@@ -1135,11 +1205,11 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   /////////////////// Upload image /////////////////////////////////
 
   Future<void> _fileUpload(
-    String folderName,
-    File? fileName,
-    String mType,
-    int position,
-  ) async {
+      String folderName,
+      File? fileName,
+      String mType,
+      int position,
+      ) async {
     if (fileName == null) return;
     print("RanjeetTest============> callll uper _fileUpload ${"_fileUpload"}");
 
@@ -1189,18 +1259,18 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       barrierDismissible: false,
       builder:
           (ctx) => Dialog(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  LinearProgressIndicator(minHeight: 8),
-                  SizedBox(height: 16),
-                  Text("Wait we are uploading your documents"),
-                ],
-              ),
-            ),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              LinearProgressIndicator(minHeight: 8),
+              SizedBox(height: 16),
+              Text("Wait we are uploading your documents"),
+            ],
           ),
+        ),
+      ),
     );
   }
 
@@ -1280,13 +1350,13 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   }
 
   Widget doc(
-    String title,
-    Function(File) onPick,
-    String? from,
-    String? to,
-    Function(String) setFrom,
-    Function(String) setTo,
-  ) {
+      String title,
+      Function(File) onPick,
+      String? from,
+      String? to,
+      Function(String) setFrom,
+      Function(String) setTo,
+      ) {
     return card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1296,18 +1366,21 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
             upload(
               fileType: 'RC Document',
               file: rc,
+              fileUrl: rcUrl,
               onPick: (f) => setState(() => rc = f),
             ),
           if (title == 'Fitness Certificate')
             upload(
               fileType: 'Fitness Certificate',
               file: fitness,
+              fileUrl: fitnessUrl,
               onPick: (f) => setState(() => fitness = f),
             ),
           if (title == 'Permit Document')
             upload(
               fileType: 'Permit Document',
               file: permitDoc,
+              fileUrl: permitDocUrl,
               onPick: (f) => setState(() => permitDoc = f),
             ),
           gap(),
@@ -1362,46 +1435,46 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children:
-                  colorList.map((item) {
-                    bool isSelected = selectedColorName == item.name;
+              colorList.map((item) {
+                bool isSelected = selectedColorName == item.name;
 
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          selectedColorName = item.name;
-                          selectedColor = item.color;
-                        });
-                      },
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 12),
-                        child: Column(
-                          children: [
-                            CircleAvatar(
-                              radius: 22,
-                              backgroundColor: item.color,
-                              child:
-                                  isSelected
-                                      ? const Icon(
-                                        Icons.check,
-                                        color: Colors.white,
-                                        size: 18,
-                                      )
-                                      : null,
-                              foregroundColor:
-                                  item.color == Colors.white
-                                      ? Colors.black
-                                      : Colors.white,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              item.name,
-                              style: const TextStyle(fontSize: 10),
-                            ),
-                          ],
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      selectedColorName = item.name;
+                      selectedColor = item.color;
+                    });
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 12),
+                    child: Column(
+                      children: [
+                        CircleAvatar(
+                          radius: 22,
+                          backgroundColor: item.color,
+                          child:
+                          isSelected
+                              ? const Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 18,
+                          )
+                              : null,
+                          foregroundColor:
+                          item.color == Colors.white
+                              ? Colors.black
+                              : Colors.white,
                         ),
-                      ),
-                    );
-                  }).toList(),
+                        const SizedBox(height: 4),
+                        Text(
+                          item.name,
+                          style: const TextStyle(fontSize: 10),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
             ),
           ),
         ),
@@ -1478,20 +1551,19 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
               return;
             }
             if (step < 2) {
-              submit();
-              //setState(() => step++);
+              setState(() => step++);
             } else {
-              status = mStatus;
               submit();
-              showUploadingDialog(context);
             }
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primaryColor,
           ),
-          child: Text(
-            step == 2 ? "Add Vehicle" : "Next",
-            style: TextStyle(color: Colors.white),
+          child: (step == 2 && isLoading)
+              ? const CircularProgressIndicator(color: Colors.white)
+              : Text(
+            step == 2 ? "Update Vehicle" : "Next",
+            style: const TextStyle(color: Colors.white),
           ),
         ),
       ],
@@ -1538,29 +1610,29 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
         permit_from_date: permitFrom,
         permit_to_date: permitTo,
         pollution_validity_date:
-            pollutionList.isEmpty
-                ? ""
-                : pollutionList[0].validTo != null
-                ? DateFormat('yyyy-MM-dd').format(pollutionList[0].validTo!)
-                : null,
+        pollutionList.isEmpty
+            ? ""
+            : pollutionList[0].validTo != null
+            ? DateFormat('yyyy-MM-dd').format(pollutionList[0].validTo!)
+            : null,
         brand: brand,
         model: model,
         pollution_certificates: jsonEncode(
           pollutionList
               .map(
                 (p) => {
-                  "state": p.state,
-                  "file_upload": p.fileUrl,
-                  "valid_from":
-                      p.validFrom != null
-                          ? DateFormat('yyyy-MM-dd').format(p.validFrom!)
-                          : null,
-                  "valid_to":
-                      p.validTo != null
-                          ? DateFormat('yyyy-MM-dd').format(p.validTo!)
-                          : null,
-                },
-              )
+              "state": p.state,
+              "file_upload": p.fileUrl,
+              "valid_from":
+              p.validFrom != null
+                  ? DateFormat('yyyy-MM-dd').format(p.validFrom!)
+                  : null,
+              "valid_to":
+              p.validTo != null
+                  ? DateFormat('yyyy-MM-dd').format(p.validTo!)
+                  : null,
+            },
+          )
               .toList(),
         ),
         rcDocument: rcUrl,
@@ -1597,14 +1669,10 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
       /// ✅ FLOW CONTROL
       if (success) {
-        if (step < 2) {
-          setState(() => step++);
+        if (fleetId != null) {
+          _documentUpload(response!['data']['id'].toString());
         } else {
-          if (widget.mVehicleId != null) {
-            _documentUpload(response!['data']['id'].toString());
-          } else {
-            debugPrint("❌ Vehicle ID missing in response");
-          }
+          debugPrint("❌ Vehicle ID missing in response");
         }
       }
     } catch (e) {
@@ -1620,16 +1688,8 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
   Future<void> _documentUpload(String vehicleId) async {
     List<Map<String, dynamic>> documents = [];
-    setState(() {
-      isLoading = true;
-    });
-    final provider = Provider.of<VehicleDocumentsBulkProvider>(
-      context,
-      listen: false,
-    );
-
     /// 🔹 Build documents list FIRST
-    if (rcUrl != null && rcUrl!.isNotEmpty) {
+    if (rc != null && rcUrl!.isNotEmpty) {
       documents.add({
         "document_type": "rc_document",
         "file_path": rcUrl,
@@ -1640,7 +1700,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       });
     }
 
-    if (fitnessUrl != null && fitnessUrl!.isNotEmpty) {
+    if (fitness != null && fitnessUrl!.isNotEmpty) {
       documents.add({
         "document_type": "fitness_certificate",
         "file_path": fitnessUrl,
@@ -1651,7 +1711,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       });
     }
 
-    if (permitDocUrl != null && permitDocUrl!.isNotEmpty) {
+    if (permitDoc != null && permitDocUrl!.isNotEmpty) {
       documents.add({
         "document_type": "permit_document",
         "file_path": permitDocUrl,
@@ -1662,7 +1722,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       });
     }
 
-    if (insuranceUrl != null && insuranceUrl!.isNotEmpty) {
+    if (insurance != null && insuranceUrl!.isNotEmpty) {
       documents.add({
         "document_type": "insurance",
         "file_path": insuranceUrl,
@@ -1678,8 +1738,18 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     /// 🚨 Safety check
     if (documents.isEmpty) {
       print("⚠️ No documents to upload");
+      Navigator.pop(context);
       return;
     }
+
+    setState(() {
+      isLoading = true;
+    });
+    final provider = Provider.of<VehicleDocumentsBulkProvider>(
+      context,
+      listen: false,
+    );
+
 
     try {
       final response = await provider.validateVehicleBuckDocumentUpload(
@@ -1693,7 +1763,6 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
       if (response != null && response['success'] == true) {
         print("🎉 Success: ${response['message']}");
-        Navigator.pop(context);
         Navigator.pop(context);
       } else {
         print("⚠️ Failed: ${response?['message']}");
@@ -1715,7 +1784,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          "Add Vehicle",
+          "Edit Vehicle",
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -1747,6 +1816,14 @@ class PollutionCertificateModel {
   String? fileUrl;
   DateTime? validFrom;
   DateTime? validTo;
+
+  PollutionCertificateModel({
+    this.state,
+    this.file,
+    this.fileUrl,
+    this.validFrom,
+    this.validTo,
+  });
 }
 
 class VehicleColor {

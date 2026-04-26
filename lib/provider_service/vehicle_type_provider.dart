@@ -6,49 +6,63 @@ import '../ui/model/VehicleType.dart';
 import 'URLS.dart';
 
 class VehicleTypeProvider with ChangeNotifier {
-  List<VehicleType> _vehicleTypes=[];
+  List<VehicleType> _vehicleTypes = [];
   bool _isLoading = false;
 
-  List<dynamic> get vehicleTypes => _vehicleTypes;
+  String? _selectedGroup;
+  int? _selectedVehicleId;
+
+  List<VehicleType> get vehicleTypes => _vehicleTypes;
   bool get isLoading => _isLoading;
+
+  String? get selectedGroup => _selectedGroup;
+  int? get selectedVehicleId => _selectedVehicleId;
+
+  void setSelectedGroup(String group) {
+    _selectedGroup = group;
+    _selectedVehicleId = null; // reset vehicle
+    notifyListeners();
+  }
+
+  void setSelectedVehicle(int? id) {
+    _selectedVehicleId = id;
+    notifyListeners();
+  }
+
+  VehicleType? get selectedVehicleGroup {
+    if (_selectedGroup == null) return null;
+
+    try {
+      return _vehicleTypes.firstWhere(
+            (e) => e.group == _selectedGroup,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
 
   Future<void> fetchVehicleType() async {
     _isLoading = true;
     notifyListeners();
 
-    final url = Uri.parse(URLS.vehicleTypes);
-
     try {
-      print("========== REQUEST ==========");
-      print("URL: $url");
-      print("Method: GET");
-      print("=============================");
+      final response = await http.get(Uri.parse(URLS.vehicleTypes));
+      final data = json.decode(response.body);
 
-      final response = await http.get(url);
+      if (response.statusCode == 200 && data['success'] == true) {
+        final List list = data['data'] ?? [];
 
-      print("========== RESPONSE ==========");
-      print("Status Code: ${response.statusCode}");
-      print("Headers: ${response.headers}");
-      print("Body: ${response.body}");
-      print("==============================");
+        _vehicleTypes =
+            list.map((e) => VehicleType.fromJson(e)).toList();
 
-      final responseData = json.decode(response.body);
+        // ✅ Auto-select default group
+        _selectedGroup ??= "Small Commercial Vehicles";
 
-      if (response.statusCode == 200 &&
-          responseData['success'] == true) {
-        _vehicleTypes = responseData['data'] .map<VehicleType>((e) => VehicleType.fromJson(e))
-            .toList();
-        notifyListeners();
       } else {
-        throw Exception(
-          responseData['message'] ?? 'Failed to load vehicle types.',
-        );
+        throw Exception(data['message']);
       }
     } catch (e) {
-      print("========== ERROR ==========");
-      print("Error fetching vehicle types: $e");
-      print("===========================");
-      rethrow;
+      debugPrint("Error: $e");
     } finally {
       _isLoading = false;
       notifyListeners();

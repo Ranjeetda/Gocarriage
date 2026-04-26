@@ -1,16 +1,20 @@
+import 'package:gocarriage_universal/ui/model/vehicle_option.dart';
+
 class VehicleType {
-  final int id;
-  final String name;
+  final String group;
+  final List<VehicleOption> options;
 
   VehicleType({
-    required this.id,
-    required this.name,
+    required this.group,
+    required this.options,
   });
 
   factory VehicleType.fromJson(Map<String, dynamic> json) {
     return VehicleType(
-      id: json['id'],
-      name: json['name'],
+      group: json['group'],
+      options: (json['options'] as List)
+          .map((e) => VehicleOption.fromJson(e))
+          .toList(),
     );
   }
 }

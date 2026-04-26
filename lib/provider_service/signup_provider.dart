@@ -6,30 +6,32 @@ import 'URLS.dart';
 
 class SignupProvider with ChangeNotifier {
   Future<http.Response> signup(
-      String type,
-      String name,
-      String email,
-      String phone,
-      String password,
-      String address,
-      String city,
-      String state,
-      String pincode,
-      String mode,
-      String bankName,
-      String accountNumber,
-      String ifscCode,
-      String companyName,
-      ) async {
-
+    String type,
+    String name,
+    String email,
+    String phone,
+    String password,
+    String address,
+    String city,
+    String state,
+    String pincode,
+    String mode,
+    String bankName,
+    String accountNumber,
+    String ifscCode,
+    String companyName,
+  ) async {
     /// ---------------- URL ----------------
     final Uri url = Uri.parse(
       type == "driver"
           ? URLS.registerDriver
           : type == "customer"
           ? URLS.registerCustomer
+          : type == 'operator'
+          ? URLS.registerOperator
           : URLS.registerOwners,
     );
+    print("Ranjeet Test ========${type}");
 
     /// ---------------- HEADERS ----------------
     final headers = {
@@ -67,6 +69,16 @@ class SignupProvider with ChangeNotifier {
         "state": state,
         "postalCode": pincode,
       };
+    } else if (type == "operator") {
+      bodyMap = {
+        "name": name,
+        "email": email,
+        "phone": phone,
+        "password": password,
+        "type": mode,
+        "companyName": companyName,
+        "ownerName": name
+      };
     } else {
       throw Exception("Invalid signup type: $type");
     }
@@ -77,11 +89,7 @@ class SignupProvider with ChangeNotifier {
     debugPrint("Signup Body: $body");
 
     try {
-      final response = await http.post(
-        url,
-        headers: headers,
-        body: body,
-      );
+      final response = await http.post(url, headers: headers, body: body);
 
       debugPrint("Signup Status: ${response.statusCode}");
       debugPrint("Signup Response: ${response.body}");

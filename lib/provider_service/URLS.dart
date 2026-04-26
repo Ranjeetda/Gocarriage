@@ -41,7 +41,12 @@ class URLS {
   static const String unAssignVehicle = '$baseUrl/owners/unassign-driver-vehicle';
   static const String unAssignDriver = '$baseUrl/owners/unassign-driver-owner';
   static const String addVehicle = '$baseUrl/fleets';
+  static const String vehicleDocumentsBulk = '$baseUrl/vehicle-documents/bulk';
   static const String vehicleTypes = '$baseUrl/vehicle-types';
+  static const String vehicleCategoryBy = '$baseUrl/vehicle-models/by-category/';
+  static const String subscriptions = '$baseUrl/fleet-subscriptions/fleet/';
+  static const String uploadVehicleDocumentsBulk = '$baseUrl/vehicle-documents/bulk/';
+  static const String transactionHistory = '$baseUrl/credit-wallets/fleet/';
   static const String vehicleModel = '$baseUrl/vehicle-types/brand?brand=';
   static const String searchDriverByPhone = '$baseUrl/drivers/by-phone';
   static const String requestOwner = '$baseUrl/owners/get-request-owner';
@@ -64,7 +69,7 @@ class URLS {
   static const String completeTrip = '$baseUrl/driver/trip/complete';
   static const String driverArrived = '$baseUrl/driver/trip/arrived';
   static const String driverBookingHistory = '$bookingBaseUrl/driver/booking/upcoming';
-  //static const String driverBookingHistory = '$bookingBaseUrl/driver/booking/history';
+  static const String driverBookingHistoryFull = '$bookingBaseUrl/driver/booking/history';
   static const String driverOngoingHistory = '$bookingBaseUrl/driver/booking/accepted';
   static const String driverOtpVerify = '$bookingBaseUrl/driver/booking/validate-otp';
   static const String driverEmailOtp = '$baseUrl/email/send-email-otp';
@@ -73,6 +78,7 @@ class URLS {
 
 
   ////////////////////////////Operator////////////////////////////////////
+  static const String registerOperator ='$baseUrl/operator';
   static const String operatorVehicleRequestList ='$baseUrl/operator/get-vehicle-requests';
   static const String operatorBookingList ='$baseUrl/bookings?';
   static const String searchRegistrationNumber ='$baseUrl/fleets/search?registration_number=';

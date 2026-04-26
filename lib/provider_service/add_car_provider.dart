@@ -32,10 +32,12 @@ class AddCarProvider with ChangeNotifier {
 
   String get message => _message;
 
-  Future<void> validateAddNewCar({
+  Future<Map<String, dynamic>?> validateAddNewCar({
+    required bool isUpdate,
     required String? vehicle_number,
     required String? vehicle_type_id,
     required String? owner_id,
+    required String? fleetId,
     required String? current_city,
     required String? service_type,
     required String? status,
@@ -69,9 +71,7 @@ class AddCarProvider with ChangeNotifier {
     required String? fitnessCertificate,
     required String? permitDocument,
     required String? insurance,
-    required String? mVehicleId,
   }) async {
-    final Uri url = Uri.parse(URLS.addVehicle);
 
     final Map<String, String> headers = {
       "Content-Type": "application/json",
@@ -80,7 +80,6 @@ class AddCarProvider with ChangeNotifier {
 
     /// 🔹 PRINT REQUEST
     debugPrint("🔵 Area IN REQUEST");
-    debugPrint("URL: $url");
     debugPrint("Headers: $headers");
 
     try {
@@ -130,11 +129,15 @@ class AddCarProvider with ChangeNotifier {
       http.Response response;
 
       /// ✅ FIX: declare response OUTSIDE
-      if (mVehicleId == null) {
+      if (isUpdate != true) {
+        final Uri url = Uri.parse(URLS.addVehicle);
+        debugPrint("URL: $url");
+
         response = await http.post(url, body: body, headers: headers);
       } else {
+        print("URL: ${"${URLS.addVehicle}/$fleetId"}");
         response = await http.put(
-          Uri.parse("${URLS.addVehicle}/$mVehicleId"),
+          Uri.parse("${URLS.addVehicle}/$fleetId"),
           body: body,
           headers: headers,
         );
@@ -152,6 +155,7 @@ class AddCarProvider with ChangeNotifier {
       } else {
         _message = responseData['message'] ?? 'Failed to Add New Vehicle';
       }
+      return responseData;
     } catch (error) {
       debugPrint("🔴 Add New Vehicle In ERROR: $error");
       throw Exception('Failed to Add New Vehicle in: $error');

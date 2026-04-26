@@ -11,11 +11,14 @@ import 'package:gocarriage_universal/provider_service/assign_vehicle_driver_prov
 import 'package:gocarriage_universal/provider_service/audio_provider.dart';
 import 'package:gocarriage_universal/provider_service/delete_vehicle_provider.dart';
 import 'package:gocarriage_universal/provider_service/draft_vehicle_provider.dart';
+import 'package:gocarriage_universal/provider_service/driver_booking_history_full_provider.dart';
 import 'package:gocarriage_universal/provider_service/fetch_image_url_provider.dart';
 import 'package:gocarriage_universal/provider_service/file_upload_provider.dart';
+import 'package:gocarriage_universal/provider_service/fleet_subscriptions_provider.dart';
 import 'package:gocarriage_universal/provider_service/forgot_password_provider.dart';
 import 'package:gocarriage_universal/provider_service/forgot_verify_otp_provider.dart';
 import 'package:gocarriage_universal/provider_service/operator_permission_list_provider.dart';
+import 'package:gocarriage_universal/provider_service/operator_profile_update_provider.dart';
 import 'package:gocarriage_universal/provider_service/operator_vechile_booking.dart';
 import 'package:gocarriage_universal/provider_service/operator_vechile_request.dart';
 import 'package:gocarriage_universal/provider_service/operator_vehicle_post_request_provider.dart';
@@ -29,7 +32,11 @@ import 'package:gocarriage_universal/provider_service/owner_unassign_driver_vehi
 import 'package:gocarriage_universal/provider_service/search_driver_provider.dart';
 import 'package:gocarriage_universal/provider_service/state_provider.dart';
 import 'package:gocarriage_universal/provider_service/subscriptions_owner_list_provider.dart';
+import 'package:gocarriage_universal/provider_service/transactions_history_provider.dart';
+import 'package:gocarriage_universal/provider_service/upload_vehicle_documents_bulk_provider.dart';
+import 'package:gocarriage_universal/provider_service/vehicle_category_by.dart';
 import 'package:gocarriage_universal/provider_service/vehicle_details_provider.dart';
+import 'package:gocarriage_universal/provider_service/vehicle_documents_bulk_provider.dart';
 import 'package:gocarriage_universal/provider_service/vehicle_model_provider.dart';
 import 'package:gocarriage_universal/provider_service/vehicle_type_provider.dart';
 import 'package:provider/provider.dart';
@@ -117,10 +124,17 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => AddCarProvider()),
         ChangeNotifierProvider(create: (_) => VehicleDetailsProvider()),
         ChangeNotifierProvider(create: (_) => VehicleTypeProvider()),
+        ChangeNotifierProvider(create: (_) => VehicleCategoryBy()),
+        ChangeNotifierProvider(create: (_) => FleetSubscriptionsProvider()),
+        ChangeNotifierProvider(create: (_) => UploadVehicleDocumentsBulkProvider()),
+        ChangeNotifierProvider(create: (_) => TransactionsHistoryProvider()),
         ChangeNotifierProvider(create: (_) => OwnerPriceQuotationsProvider()),
         ChangeNotifierProvider(create: (_) => AcceptRejectPriceProvider()),
         ChangeNotifierProvider(create: (_) => DraftVehicleProvider()),
         ChangeNotifierProvider(create: (_) => DeleteVehicleProvider()),
+        ChangeNotifierProvider(create: (_) => VehicleDocumentsBulkProvider()),
+        ChangeNotifierProvider(create: (_) => DriverBookingHistoryFullProvider()),
+        ChangeNotifierProvider(create: (_) => OperatorProfileUpdateProvider()),
         ChangeNotifierProvider(
           create: (_) => OwnerBookingRequestListProvider(),
         ),

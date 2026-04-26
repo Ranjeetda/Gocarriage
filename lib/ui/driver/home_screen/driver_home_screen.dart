@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
@@ -10,7 +11,6 @@ import 'package:provider/provider.dart';
 
 import '../../../SocketService/driver_know_book_socket_service.dart';
 import '../../../provider_service/accept_reject_trip_provider.dart';
-import '../../../provider_service/audio_provider.dart';
 import '../../../provider_service/booking_provider.dart';
 import '../../../provider_service/driver_booing_request_provider.dart';
 import '../../../provider_service/driver_booking_ongoing_provider.dart';
@@ -28,34 +28,30 @@ class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
 
   @override
-  State<DriverHomeScreen> createState() => _DriverHomeScreenState();
+  State<DriverHomeScreen> createState() => _DriverHomeScreen();
 }
 
-class _DriverHomeScreenState extends State<DriverHomeScreen> {
+class _DriverHomeScreen extends State<DriverHomeScreen> {
   GoogleMapController? _mapController;
   LatLng? _currentLocation;
 
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
+  var mBookingId;
 
   BitmapDescriptor? _truckIcon;
   BitmapDescriptor? _pickupIcon;
   BitmapDescriptor? _dropIcon;
 
   bool isLoading = false;
+  bool isValidateLoading = false;
   String buttonName = "ARRIVED";
-  var mBookingId;
-  bool _isDrawingRoute = false;
-
-  // Default fallback location (Patna)
-  final LatLng _defaultLocation = const LatLng(25.5941, 85.1376);
 
   @override
   void initState() {
     super.initState();
-    _loadIcons(); // Load icons first
+    _loadIcons();
     _initLocation();
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
@@ -63,6 +59,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         context,
         listen: false,
       );
+
       DriverKnowBookSocketService()
         ..attachProvider(bookingProvider)
         ..connectDriverSocket(int.parse(PrefUtils.getUserId()));
@@ -71,195 +68,175 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     });
   }
 
-  // ================= ICONS =================
+  /// ================= ICONS =================
   Future<void> _loadIcons() async {
-    try {
-      _truckIcon = await BitmapDescriptor.fromAssetImage(
-        const ImageConfiguration(size: Size(60, 60)),
-        ImagePaths.truck,
-      );
-
-      _pickupIcon = await BitmapDescriptor.fromAssetImage(
-        const ImageConfiguration(size: Size(40, 40)),
-        ImagePaths.flag,
-      );
-
-      _dropIcon = await BitmapDescriptor.fromAssetImage(
-        const ImageConfiguration(size: Size(40, 40)),
-        ImagePaths.house,
-      );
-
-      if (mounted) {
-        setState(() {});
-        _showOnlyDriver(); // Refresh marker with custom icon
-      }
-    } catch (e) {
-      debugPrint("Icon loading error: $e");
+    _truckIcon = await BitmapDescriptor.fromAssetImage(
+      const ImageConfiguration(),
+      ImagePaths.truck,
+    );
+    _pickupIcon = await BitmapDescriptor.fromAssetImage(
+      const ImageConfiguration(),
+      ImagePaths.flag,
+    );
+    _dropIcon = await BitmapDescriptor.fromAssetImage(
+      const ImageConfiguration(),
+      ImagePaths.house,
+    );
+    if (mounted) {
+      setState(() {});
     }
   }
 
-  // ================= LOCATION =================
+  /// ================= LOCATION =================
   Future<void> _initLocation() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      return;
+    }
+
     try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
+      // 🔥 STEP 1: Get last known position (FAST)
+      Position? lastPosition = await Geolocator.getLastKnownPosition();
+
+      if (lastPosition != null) {
+        _currentLocation =
+            LatLng(lastPosition.latitude, lastPosition.longitude);
+        _showOnlyDriver();
       }
 
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        Utils.showErrorMessage(context, "Location permission is required");
-        _setDefaultLocation();
-        return;
-      }
-
-      Position position = await Geolocator.getCurrentPosition(
+      // 🔥 STEP 2: Get accurate position (SLOW but precise)
+      final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.best,
-        timeLimit: const Duration(seconds: 10),
-      ).timeout(const Duration(seconds: 12));
+        timeLimit: const Duration(seconds: 8), // avoid freeze
+      );
 
       _currentLocation = LatLng(position.latitude, position.longitude);
+      _showOnlyDriver();
+
+      // Move camera smoothly
+      if (_mapController != null) {
+        _mapController!.animateCamera(
+          CameraUpdate.newLatLngZoom(_currentLocation!, 15),
+        );
+      }
+
     } catch (e) {
       debugPrint("Location error: $e");
-      _setDefaultLocation();
-    }
-
-    if (mounted) {
-      _showOnlyDriver();
-      _mapController?.animateCamera(
-        CameraUpdate.newLatLngZoom(_currentLocation!, 15),
-      );
     }
   }
 
-  void _setDefaultLocation() {
-    _currentLocation = _defaultLocation;
-    if (mounted) _showOnlyDriver();
-  }
-
-  void _showOnlyDriver() {
+  /// ================= ROUTE =================
+  Future<void> drawRoute(LatLng pickup, LatLng drop) async {
     if (_currentLocation == null) return;
 
     _markers.clear();
     _polylines.clear();
 
-    _markers.add(
+    _markers.addAll([
       Marker(
         markerId: const MarkerId("driver"),
         position: _currentLocation!,
         icon: _truckIcon ?? BitmapDescriptor.defaultMarker,
-        anchor: const Offset(0.5, 0.5),
+      ),
+      Marker(
+        markerId: const MarkerId("pickup"),
+        position: pickup,
+        icon: _pickupIcon ?? BitmapDescriptor.defaultMarker,
+      ),
+      Marker(
+        markerId: const MarkerId("drop"),
+        position: drop,
+        icon: _dropIcon ?? BitmapDescriptor.defaultMarker,
+      ),
+    ]);
+
+    final points = await _fetchRoute(_currentLocation!, drop);
+
+    // ✅ CRITICAL FIX
+    if (points.isEmpty) {
+      debugPrint("Route points empty — skipping bounds");
+      setState(() {});
+      return;
+    }
+
+    _polylines.add(
+      Polyline(
+        polylineId: const PolylineId("route"),
+        points: points,
+        width: 5,
+        color: Colors.blue,
       ),
     );
 
-    if (mounted) setState(() {});
-  }
+    if (!mounted) return;
+    setState(() {});
 
-  // ================= OLA/UBER STYLE ROUTE =================
-  Future<void> drawRoute(LatLng pickup, LatLng drop) async {
-    if (_currentLocation == null || _isDrawingRoute) return;
-    _isDrawingRoute = true;
+    await Future.delayed(const Duration(milliseconds: 300));
 
-    try {
-      _markers.clear();
-      _polylines.clear();
-
-      _markers.addAll([
-        Marker(
-          markerId: const MarkerId("driver"),
-          position: _currentLocation!,
-          icon: _truckIcon ?? BitmapDescriptor.defaultMarker,
-          anchor: const Offset(0.5, 0.5),
-        ),
-        Marker(
-          markerId: const MarkerId("pickup"),
-          position: pickup,
-          icon: _pickupIcon ?? BitmapDescriptor.defaultMarker,
-        ),
-        Marker(
-          markerId: const MarkerId("drop"),
-          position: drop,
-          icon: _dropIcon ?? BitmapDescriptor.defaultMarker,
-        ),
-      ]);
-
-      List<LatLng> routeToPickup = await _fetchRoute(_currentLocation!, pickup);
-      if (routeToPickup.isNotEmpty) {
-        _polylines.add(
-          Polyline(
-            polylineId: const PolylineId("to_pickup"),
-            points: routeToPickup,
-            color: Colors.blue,
-            width: 7,
-            geodesic: true,
-          ),
-        );
-      }
-
-      List<LatLng> routeToDrop = await _fetchRoute(pickup, drop);
-      if (routeToDrop.isNotEmpty) {
-        _polylines.add(
-          Polyline(
-            polylineId: const PolylineId("to_drop"),
-            points: routeToDrop,
-            color: Colors.green,
-            width: 7,
-            geodesic: true,
-          ),
-        );
-      }
-
-      if (mounted) setState(() {});
-
-      if (_mapController != null &&
-          (routeToPickup.isNotEmpty || routeToDrop.isNotEmpty)) {
-        await Future.delayed(const Duration(milliseconds: 400));
-        _mapController!.animateCamera(
-          CameraUpdate.newLatLngBounds(
-            _getBounds([...routeToPickup, ...routeToDrop]),
-            90,
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint("Route drawing error: $e");
-    } finally {
-      _isDrawingRoute = false;
+    if (_mapController != null) {
+      _mapController!.animateCamera(
+        CameraUpdate.newLatLngBounds(_bounds(points), 80),
+      );
     }
   }
 
+  /// ================= DIRECTIONS =================
   Future<List<LatLng>> _fetchRoute(LatLng start, LatLng end) async {
     final url =
-        "https://maps.googleapis.com/maps/api/directions/json?"
-        "origin=${start.latitude},${start.longitude}&"
-        "destination=${end.latitude},${end.longitude}&"
-        "mode=driving&key=$GOOGLE_API_KEY";
+        "https://maps.googleapis.com/maps/api/directions/json"
+        "?origin=${start.latitude},${start.longitude}"
+        "&destination=${end.latitude},${end.longitude}"
+        "&mode=driving"
+        "&alternatives=false"
+        "&key=$GOOGLE_API_KEY";
 
     try {
       final response = await http
           .get(Uri.parse(url))
-          .timeout(const Duration(seconds: 12));
-      if (response.statusCode != 200) return [];
+          .timeout(const Duration(seconds: 15));
+
+      if (response.statusCode != 200) {
+        debugPrint("Directions API HTTP error: ${response.statusCode}");
+        return [];
+      }
 
       final data = json.decode(response.body);
-      if (data['status'] != 'OK' || data['routes'].isEmpty) return [];
 
-      final points = data['routes'][0]['overview_polyline']['points'];
-      return _decodePolyline(points);
-    } catch (e) {
-      debugPrint("Directions API error: $e");
+      // Google API–level errors (VERY important)
+      if (data['status'] != 'OK') {
+        debugPrint(
+          "Directions API error: ${data['status']} | ${data['error_message']}",
+        );
+        return [];
+      }
+
+      if (data['routes'] == null || data['routes'].isEmpty) {
+        debugPrint("No routes returned");
+        return [];
+      }
+
+      final polyline = data['routes'][0]['overview_polyline']['points'];
+      return _decodePolyline(polyline);
+    } on TimeoutException {
+      debugPrint("Directions request timed out");
       return [];
     }
   }
 
-  List<LatLng> _decodePolyline(String encoded) {
-    List<LatLng> points = [];
-    int index = 0, len = encoded.length, lat = 0, lng = 0;
+  List<LatLng> _decodePolyline(String poly) {
+    List<LatLng> list = [];
+    int index = 0, lat = 0, lng = 0;
 
-    while (index < len) {
-      int shift = 0, result = 0, b;
+    while (index < poly.length) {
+      int b, shift = 0, result = 0;
       do {
-        b = encoded.codeUnitAt(index++) - 63;
+        b = poly.codeUnitAt(index++) - 63;
         result |= (b & 0x1f) << shift;
         shift += 5;
       } while (b >= 0x20);
@@ -268,97 +245,43 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       shift = 0;
       result = 0;
       do {
-        b = encoded.codeUnitAt(index++) - 63;
+        b = poly.codeUnitAt(index++) - 63;
         result |= (b & 0x1f) << shift;
         shift += 5;
       } while (b >= 0x20);
       lng += (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
 
-      points.add(LatLng(lat / 1E5, lng / 1E5));
+      list.add(LatLng(lat / 1E5, lng / 1E5));
     }
-    return points;
+    return list;
   }
 
-  LatLngBounds _getBounds(List<LatLng> points) {
-    if (points.isEmpty && _currentLocation != null) {
+  LatLngBounds _bounds(List<LatLng> list) {
+    if (list.isEmpty) {
       return LatLngBounds(
-        southwest: _currentLocation!,
-        northeast: _currentLocation!,
+        southwest: LatLng(20.5937, 78.9629),
+        northeast: LatLng(20.5937, 78.9629),
       );
     }
-    double minLat = points.first.latitude, maxLat = points.first.latitude;
-    double minLng = points.first.longitude, maxLng = points.first.longitude;
 
-    for (var p in points) {
-      if (p.latitude < minLat) minLat = p.latitude;
-      if (p.latitude > maxLat) maxLat = p.latitude;
-      if (p.longitude < minLng) minLng = p.longitude;
-      if (p.longitude > maxLng) maxLng = p.longitude;
+    double x0 = list.first.latitude,
+        x1 = list.first.latitude,
+        y0 = list.first.longitude,
+        y1 = list.first.longitude;
+
+    for (LatLng p in list) {
+      if (p.latitude > x1) x1 = p.latitude;
+      if (p.latitude < x0) x0 = p.latitude;
+      if (p.longitude > y1) y1 = p.longitude;
+      if (p.longitude < y0) y0 = p.longitude;
     }
-    return LatLngBounds(
-      southwest: LatLng(minLat, minLng),
-      northeast: LatLng(maxLat, maxLng),
-    );
+
+    return LatLngBounds(southwest: LatLng(x0, y0), northeast: LatLng(x1, y1));
   }
 
-  // ================= YOUR EXISTING METHODS (UNTOUCHED) =================
-  Future<void> _acceptRejectRide(String type, String bookingId) async {
-    setState(() => isLoading = true);
-    Provider.of<AudioProvider>(context, listen: false).stop();
-    try {
-      http.Response response = await Provider.of<AcceptRejectTripProvider>(
-        context,
-        listen: false,
-      ).acceptRejectTrip(type, bookingId);
-
-      final data = json.decode(response.body);
-      if (data['success'] == true) {
-        context.read<BookingProvider>().clearRide();
-        context.read<DriverBookingOngoingProvider>().fetchBooking();
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(data['message'])));
-      } else {
-        Utils.showErrorMessage(context, data['message']);
-      }
-    } finally {
-      if (mounted) setState(() => isLoading = false);
-    }
-  }
-
-  Future<void> _driverRide() async {
-    setState(() => isLoading = true);
-    try {
-      http.Response response =
-          await Provider.of<StartTripeProvider>(
-            context,
-            listen: false,
-          ).startTrip();
-      final data = json.decode(response.body);
-
-      if (data['success'] == true) {
-        if (data['data']?['nextStatus'] != null) {
-          setState(() => buttonName = data['data']['nextStatus']);
-          if (buttonName == 'LOADING') {
-            _showOtpDialog(context);
-          }
-        }
-      } else {
-        Utils.showErrorMessage(context, data['message']);
-      }
-    } finally {
-      if (mounted) setState(() => isLoading = false);
-    }
-  }
-
-  Future<void> _handleTripCompletedOnlyDriver() async {
-    if (_mapController == null) return;
-
-    final position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
-
-    _currentLocation = LatLng(position.latitude, position.longitude);
+  /// ================= DRIVER ONLY =================
+  void _showOnlyDriver() {
+    if (_currentLocation == null) return;
 
     _markers.clear();
     _polylines.clear();
@@ -372,7 +295,101 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     );
 
     setState(() {});
+  }
 
+  /// ================= ACCEPT / REJECT =================
+  Future<void> _acceptRejectRide(String type, String bookingId) async {
+    setState(() => isLoading = true);
+
+    http.Response response = await Provider.of<AcceptRejectTripProvider>(
+      context,
+      listen: false,
+    ).acceptRejectTrip(type, bookingId);
+
+    setState(() => isLoading = false);
+
+    final data = json.decode(response.body);
+
+    if (data['success'] == true) {
+      context.read<BookingProvider>().clearRide();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Provider.of<DriverBookingOngoingProvider>(
+          context,
+          listen: false,
+        ).fetchBooking();
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(data['message'])));
+    } else {
+      Utils.showErrorMessage(context, data['message']);
+    }
+  }
+
+  Future<void> _driverRide() async {
+    setState(() => isLoading = true);
+
+    http.Response response =
+    await Provider.of<StartTripeProvider>(
+      context,
+      listen: false,
+    ).startTrip();
+
+    setState(() => isLoading = false);
+
+    final data = json.decode(response.body);
+
+    if (data['success'] == true) {
+      if (data.containsKey('data') &&
+          data['data'] != null &&
+          data['data'].containsKey('nextStatus') &&
+          data['data']['nextStatus'] != null) {
+        setState(() {
+          buttonName = data['data']['nextStatus'];
+        });
+
+        print("Next Status: $buttonName");
+        if (buttonName == 'LOADING') {
+          _showOtpDialog(context);
+        }
+      } else {
+        setState(() {
+          buttonName = "ARRIVED";
+          print("nextStatus not found in response");
+        });
+      }
+    } else {
+      Utils.showErrorMessage(context, data['message']);
+    }
+  }
+
+  /// ================= HANDLE TRIP COMPLETED =================
+  Future<void> _handleTripCompletedOnlyDriver() async {
+    if (_mapController == null) return;
+
+    // Get latest location
+    final position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+
+    _currentLocation = LatLng(position.latitude, position.longitude);
+
+    // Clear old markers and polylines
+    _markers.clear();
+    _polylines.clear();
+
+    // Add only truck marker
+    _markers.add(
+      Marker(
+        markerId: const MarkerId("driver"),
+        position: _currentLocation!,
+        icon: _truckIcon ?? BitmapDescriptor.defaultMarker,
+      ),
+    );
+
+    setState(() {});
+
+    // Move camera to driver location
     _mapController!.animateCamera(
       CameraUpdate.newLatLngZoom(_currentLocation!, 15),
     );
@@ -389,7 +406,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
       if (response.statusCode == 200 && data['success'] == true) {
         print("VERIFY OTP ${data['message']}");
-        return true;
+        return true; // ✅ success
       } else {
         Utils.showCustomToast(context, data['message'] ?? "Invalid OTP");
         return false;
@@ -422,8 +439,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    /// 🔷 LOGO
                     Image.asset(ImagePaths.appLogo, height: 80),
+
                     const SizedBox(height: 12),
+
                     const Text(
                       "Verify OTP",
                       style: TextStyle(
@@ -432,8 +452,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                         color: Colors.black,
                       ),
                     ),
+
                     const SizedBox(height: 20),
 
+                    /// 🔢 OTP FIELD (Responsive)
                     LayoutBuilder(
                       builder: (context, constraints) {
                         double availableWidth = constraints.maxWidth;
@@ -465,13 +487,20 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                             activeColor: AppColors.secondarycolor,
                           ),
                           onChanged: (value) {},
+
+                          /// 🔥 AUTO SUBMIT
                           onCompleted: (value) async {
                             if (value.length == 6 && !isLoading) {
                               setDialogState(() => isLoading = true);
+
                               bool isSuccess = await _verifyOtp(value);
+
                               setDialogState(() => isLoading = false);
+
                               if (isSuccess) {
-                                Navigator.of(dialogContext).pop();
+                                Navigator.of(
+                                  dialogContext,
+                                ).pop(); // ✅ close dialog
                               }
                             }
                           },
@@ -480,6 +509,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                     ),
 
                     const SizedBox(height: 24),
+
+                    /// 🔘 SUBMIT BUTTON
                     SizedBox(
                       width: double.infinity,
                       height: 48,
@@ -491,44 +522,50 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                           ),
                         ),
                         onPressed:
-                            isLoading
-                                ? null
-                                : () async {
-                                  if (otpController.text.trim().length != 6) {
-                                    Utils.showCustomToast(
-                                      context,
-                                      "Please enter valid 6 digit OTP",
-                                    );
-                                    return;
-                                  }
-                                  setDialogState(() => isLoading = true);
-                                  bool isSuccess = await _verifyOtp(
-                                    otpController.text.trim(),
-                                  );
-                                  setDialogState(() => isLoading = false);
-                                  if (isSuccess) {
-                                    Navigator.of(dialogContext).pop();
-                                  }
-                                },
+                        isLoading
+                            ? null
+                            : () async {
+                          if (otpController.text.trim().length != 6) {
+                            Utils.showCustomToast(
+                              context,
+                              "Please enter valid 6 digit OTP",
+                            );
+                            return;
+                          }
+                          print("OTP ===========>${otpController.text.trim()}");
+                          setDialogState(() => isLoading = true);
+
+                          bool isSuccess = await _verifyOtp(
+                            otpController.text.trim(),
+                          );
+
+                          setDialogState(() => isLoading = false);
+
+                          if (isSuccess) {
+                            Navigator.of(
+                              dialogContext,
+                            ).pop(); // ✅ close dialog
+                          }
+                        },
                         child:
-                            isLoading
-                                ? const SizedBox(
-                                  height: 22,
-                                  width: 22,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                                : const Text(
-                                  "Submit",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.white,
-                                    fontFamily: 'Poppins',
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
+                        isLoading
+                            ? const SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                            : const Text(
+                          "Submit",
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.white,
+                            fontFamily: 'Poppins',
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -541,9 +578,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     );
   }
 
-  // ================= UI =================
+  /// ================= UI =================
   @override
   Widget build(BuildContext context) {
+    context.read<DriverBooingRequestProvider>();
+
     return Scaffold(
       body: Stack(
         children: [
@@ -563,32 +602,29 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   }
 
   Widget _buildMap() {
-    final initialPosition = _currentLocation ?? _defaultLocation;
-
+    if (_currentLocation == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return GoogleMap(
-      initialCameraPosition: CameraPosition(target: initialPosition, zoom: 15),
+      initialCameraPosition: CameraPosition(
+        target: _currentLocation ?? const LatLng(20.5937, 78.9629),
+        zoom: 12,
+      ),
       myLocationEnabled: true,
-      myLocationButtonEnabled: true,
       zoomControlsEnabled: false,
       markers: _markers,
       polylines: _polylines,
-      onMapCreated: (controller) {
-        _mapController = controller;
-        if (_currentLocation != null) {
-          _mapController?.animateCamera(
-            CameraUpdate.newLatLngZoom(_currentLocation!, 15),
-          );
-        }
-      },
+      onMapCreated: (c) => _mapController = c,
     );
   }
 
-  // ================= UPCOMING CARD (YOUR ORIGINAL UI - UNCHANGED) =================
+  /// ================= UPCOMING =================
   Widget _upcomingCard() {
     return Consumer<BookingProvider>(
       builder: (context, provider, _) {
         final ride = provider.upcomingRide;
-        if (ride == null) return const SizedBox.shrink();
+
+        if (ride == null) return const SizedBox();
 
         final pickup = LatLng(
           ride['fromLocation']['lat'],
@@ -598,9 +634,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           ride['toLocation']['lat'],
           ride['toLocation']['lng'],
         );
+
         mBookingId = ride['bookingId'];
+
         WidgetsBinding.instance.addPostFrameCallback(
-          (_) => drawRoute(pickup, drop),
+              (_) => drawRoute(pickup, drop),
         );
 
         return Container(
@@ -628,6 +666,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 ),
               ),
               const SizedBox(height: 12),
+
               Text(
                 Utils.formatIsoDate(ride["createdAt"]),
                 style: const TextStyle(
@@ -635,10 +674,12 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   fontSize: 14,
                 ),
               ),
+
               const SizedBox(height: 12),
               Text("📍 ${ride['fromLocation']['address']}"),
               const SizedBox(height: 8),
               Text("🏁 ${ride['toLocation']['address']}"),
+
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -653,12 +694,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   ),
                 ],
               ),
+
               const SizedBox(height: 20),
               RideActionButtons(
                 isAccepted: true,
                 ride: ride,
-                onAction:
-                    (status, bookingId) => _acceptRejectRide(status, bookingId),
+                onAction: (status, bookingId) async {
+                  await _acceptRejectRide(status, bookingId);
+                },
               ),
             ],
           ),
@@ -667,13 +710,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     );
   }
 
-  // ================= ONGOING CARD (YOUR ORIGINAL UI - UNCHANGED) =================
+  /// ================= ONGOING =================
+
   Widget _ongoingCard() {
     return Consumer<DriverBookingOngoingProvider>(
       builder: (context, provider, _) {
         final ride = provider.bookingData;
-        if (ride == null) return const SizedBox.shrink();
-
+        if (ride == null) return const SizedBox();
         final pickup = LatLng(
           ride['fromLocation']['lat'],
           ride['fromLocation']['lng'],
@@ -684,7 +727,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         );
 
         WidgetsBinding.instance.addPostFrameCallback(
-          (_) => drawRoute(pickup, drop),
+              (_) => drawRoute(pickup, drop),
         );
 
         return Container(
@@ -712,6 +755,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 ),
               ),
               const SizedBox(height: 12),
+
               Text(
                 Utils.formatIsoDate(ride["createdAt"]),
                 style: const TextStyle(
@@ -719,10 +763,24 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   fontSize: 14,
                 ),
               ),
+
               const SizedBox(height: 12),
               Text("📍 ${ride['fromLocation']['address']}"),
               const SizedBox(height: 8),
               Text("🏁 ${ride['toLocation']['address']}"),
+              const SizedBox(height: 10),
+
+              /* Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Name : ${ride['customer']['name']??"--"}"),
+                  Text(
+                    "Phone: ${ride['customer']['phone']??"--"}",
+                    style: const TextStyle(
+                        fontSize: 16),
+                  ),
+                ],
+              ),*/
               const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -737,6 +795,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   ),
                 ],
               ),
+
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
@@ -756,16 +815,17 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                     }
                   },
                   child:
-                      isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : Text(
-                            buttonName,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
+                  isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Text(
+                    buttonName,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.white,
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ),
             ],

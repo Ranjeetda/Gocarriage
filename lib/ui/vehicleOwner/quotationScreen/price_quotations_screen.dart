@@ -48,6 +48,7 @@ class _PriceQuotationsScreen extends State<PriceQuotationsScreen> {
 
     List list = provider.listData ?? [];
 
+
     /// FILTER BY TAB
     if (selectedTab != "all") {
       list =
@@ -91,6 +92,8 @@ class _PriceQuotationsScreen extends State<PriceQuotationsScreen> {
 
     setState(() {
       selectedTab = status;
+      print("RanjeetTest ===========>${selectedTab}");
+      print("RanjeetTest ===========>${provider.listData.length}");
 
       if (status == "all") {
         filteredList = provider.listData ?? [];
@@ -226,7 +229,7 @@ class _PriceQuotationsScreen extends State<PriceQuotationsScreen> {
             const SizedBox(height: 12),
 
             /// TABS
-            Row(
+           /* Row(
               children: [
                 buildTab("All", "all"),
                 const SizedBox(width: 8),
@@ -239,7 +242,7 @@ class _PriceQuotationsScreen extends State<PriceQuotationsScreen> {
             ),
 
             const SizedBox(height: 12),
-
+*/
             /// LIST
             Consumer<VechileOwnerFleetsList>(
               builder: (context, provider, _) {

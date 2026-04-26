@@ -10,6 +10,7 @@ import '../../provider_service/delete_profile_provider.dart';
 import '../../resource/Utils.dart';
 import '../../resource/pref_utils.dart';
 import '../dashboardScreen/customer_bottom_navigation_bar.dart';
+import '../operatorScreen/operator_profile_screen.dart';
 import '../vehicleOwner/profile_screen/owner_profile_screen.dart';
 import 'basic_details_form.dart';
 import 'common_screen.dart';
@@ -28,27 +29,25 @@ class _MenuScreen extends State<MenuScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar:
-          PrefUtils.getRole().toLowerCase() == 'owner'
-              ? AppBar(
-                leading: IconButton(
-                  icon: Icon(Icons.arrow_back, color: Colors.white),
-                  // Back arrow icon
-                  onPressed: () {
-                    Navigator.pop(context); // Go back to the previous screen
-                  },
-                ),
-                title: Text(
-                  "Menu",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                backgroundColor: AppColors.primaryColor,
-              )
-              : null,
+      appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.white),
+          // Back arrow icon
+          onPressed: () {
+            Navigator.pop(context); // Go back to the previous screen
+          },
+        ),
+        title: Text(
+          "Menu",
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: AppColors.primaryColor,
+      ),
+
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -58,11 +57,14 @@ class _MenuScreen extends State<MenuScreen> {
               icon: Icons.person_outline,
               text: 'Edit Profile',
               onTap:
-                  () => _navigateTo(
+                  () =>
+                  _navigateTo(
                     PrefUtils.getRole() == "owner"
                         ? OwnerProfileScreen()
+                        : PrefUtils.getRole() == "operator"
+                        ? OperatorProfileScreen()
                         : PrefUtils.getRole() == "driver"
-                        ? DriverProfile('Menu',PrefUtils.getUserId())
+                        ? DriverProfile('Menu', PrefUtils.getUserId())
                         : BasicDetailsForm(),
                   ),
             ),
@@ -70,7 +72,8 @@ class _MenuScreen extends State<MenuScreen> {
               icon: Icons.support_agent,
               text: 'Refound Policy',
               onTap:
-                  () => _navigateTo(
+                  () =>
+                  _navigateTo(
                     CommonScreen(
                       'https://gocarriage.com/refund-policy',
                       'Refound Policy',
@@ -81,7 +84,8 @@ class _MenuScreen extends State<MenuScreen> {
               icon: Icons.privacy_tip_outlined,
               text: 'Privacy Policy',
               onTap:
-                  () => _navigateTo(
+                  () =>
+                  _navigateTo(
                     CommonScreen(
                       'https://gocarriage.com/privacy-policy',
                       'Privacy Policy',
@@ -92,7 +96,8 @@ class _MenuScreen extends State<MenuScreen> {
               icon: Icons.article_outlined,
               text: 'Terms & Conditions',
               onTap:
-                  () => _navigateTo(
+                  () =>
+                  _navigateTo(
                     CommonScreen(
                       'https://gocarriage.com/terms-condition',
                       'Terms & Conditions',
@@ -101,28 +106,28 @@ class _MenuScreen extends State<MenuScreen> {
             ),
             isLoading
                 ? const Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: CircularProgressIndicator(),
-                )
+              padding: EdgeInsets.all(16.0),
+              child: CircularProgressIndicator(),
+            )
                 : _buildMenuItem(
-                  icon: Icons.delete_forever_outlined,
-                  text: 'Delete Profile',
-                  onTap: () async {
-                    bool? confirmed = await _showConfirmationDialog(
-                      "Delete Profile",
-                      "Are you sure you want to delete your profile?",
-                    );
-                    if (confirmed == true) {
-                      _navigateTo(
-                        CommonScreen(
-                          'https://gocarriage.com/delete-account',
-                          'Delete Profile',
-                        ),
-                      );
-                      // _deleteProfile();
-                    }
-                  },
-                ),
+              icon: Icons.delete_forever_outlined,
+              text: 'Delete Profile',
+              onTap: () async {
+                bool? confirmed = await _showConfirmationDialog(
+                  "Delete Profile",
+                  "Are you sure you want to delete your profile?",
+                );
+                if (confirmed == true) {
+                  _navigateTo(
+                    CommonScreen(
+                      'https://gocarriage.com/delete-account',
+                      'Delete Profile',
+                    ),
+                  );
+                  // _deleteProfile();
+                }
+              },
+            ),
             _buildMenuItem(
               icon: Icons.logout_rounded,
               text: PrefUtils.isLoggedIn() ? 'Logout' : "Login",
@@ -138,7 +143,7 @@ class _MenuScreen extends State<MenuScreen> {
                       duration: const Duration(milliseconds: 900),
                       reverseDuration: const Duration(milliseconds: 900),
                     ),
-                    (Route<dynamic> route) => false,
+                        (Route<dynamic> route) => false,
                   );
                 } else {
                   bool? confirmed = await _showConfirmationDialog(
@@ -155,7 +160,7 @@ class _MenuScreen extends State<MenuScreen> {
                         duration: const Duration(milliseconds: 900),
                         reverseDuration: const Duration(milliseconds: 900),
                       ),
-                      (Route<dynamic> route) => false,
+                          (Route<dynamic> route) => false,
                     );
                   }
                 }
@@ -171,7 +176,8 @@ class _MenuScreen extends State<MenuScreen> {
     return showDialog<bool>(
       context: context,
       builder:
-          (context) => AlertDialog(
+          (context) =>
+          AlertDialog(
             title: Text(title),
             content: Text(message),
             actions: [

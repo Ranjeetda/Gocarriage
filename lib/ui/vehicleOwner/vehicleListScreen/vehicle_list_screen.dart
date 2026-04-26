@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:gocarriage_universal/resource/app_colors.dart';
 import 'package:provider/provider.dart';
+import '../../../provider_service/delete_vehicle_provider.dart';
 import '../../../provider_service/vechile_owner_fleets_list.dart';
+import '../../../resource/Utils.dart';
 import '../../../resource/image_paths.dart';
+import '../../dialogBox/wallet_dialog.dart';
 import 'add_vehicle_screen.dart';
+import 'edit_vehicle_screen.dart';
 import 'vehicle_details_screen.dart';
 
 class VehicleListScreen extends StatefulWidget {
+  bool isHeader;
+
+  VehicleListScreen(this.isHeader);
+
   @override
   _VehicleListScreen createState() => _VehicleListScreen();
 }
@@ -133,88 +141,49 @@ class _VehicleListScreen extends State<VehicleListScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
 
-      appBar: AppBar(
-        backgroundColor: AppColors.primaryColor,
-        elevation: 2,
-        centerTitle: true,
-
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-
-        title: const Text(
-          'My Vehicle List',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
-
-        actions: [
-          TextButton(
-            onPressed: () {
-              nextScreen(context);
-            },
-            child: const Text(
-              'Add',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
+      appBar:
+          widget.isHeader
+              ? AppBar( backgroundColor: AppColors.primaryColor, elevation: 2, centerTitle: true, leading: IconButton( icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context), ), title: const Text( 'My Vehicle List', style: TextStyle( color: Colors.white, fontWeight: FontWeight.w600, ), ), actions: [ TextButton( onPressed: () { nextScreen(context); }, child: const Text( 'Add', style: TextStyle( color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500, ), ), ), ], )
+              : null,
 
       body: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12), // FIXED
 
         child: Column(
           children: [
-            /// SEARCH BAR
+            /// SEARCH
             Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.grey.shade300),
               ),
-
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: searchController,
-                      onChanged: filterVehicles,
-                      decoration: const InputDecoration(
-                        hintText: 'Search by vehicle number, type, service...',
-                        border: InputBorder.none,
-                      ),
-                    ),
-                  ),
-
-                  const Icon(Icons.search, color: Colors.grey),
-                ],
+              child: TextField(
+                controller: searchController,
+                onChanged: filterVehicles,
+                decoration: const InputDecoration(
+                  hintText: 'Search vehicle...',
+                  border: InputBorder.none,
+                ),
               ),
             ),
 
-            const SizedBox(height: 12),
-
+            const SizedBox(height: 6), // reduced space
             /// TABS
-            Row(
-              children: [
-                buildTab("All", "all"),
-                const SizedBox(width: 8),
+            widget.isHeader
+                ? Row(
+                  children: [
+                    buildTab("All", "all"),
+                    const SizedBox(width: 8),
+                    buildTab("Active", "active"),
+                    const SizedBox(width: 8),
+                    buildTab("Inactive", "inactive"),
+                  ],
+                )
+                : const SizedBox.shrink(),
 
-                buildTab("Active", "active"),
-                const SizedBox(width: 8),
-
-                buildTab("Inactive", "inactive"),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
+            const SizedBox(height: 6), // reduced space
             /// LIST
             Consumer<VechileOwnerFleetsList>(
               builder: (context, provider, _) {
@@ -232,6 +201,7 @@ class _VehicleListScreen extends State<VehicleListScreen> {
 
                 return Expanded(
                   child: ListView.builder(
+                    padding: EdgeInsets.zero, // FIXED TOP GAP ISSUE
                     itemCount: filteredList.length,
                     itemBuilder: (context, index) {
                       final vehicle = filteredList[index];
@@ -316,25 +286,48 @@ class _VehicleListScreen extends State<VehicleListScreen> {
                                         ? Colors.green
                                         : Colors.red,
                                   ),
-                                  PopupMenuButton(
+                                  PopupMenuButton<String>(
+                                    onSelected: (value) {
+                                      if (value == "edit") {
+                                        nextScreenEdit(context, vehicle);
+                                        print("Edit clicked");
+                                      } else if (value == "Plan & Wallet") {
+                                        showDialog(
+                                          context: context,
+                                          builder: (_) =>  WalletDialog(vehicle['id'].toString(),vehicle['vehicle_number']),
+                                        );
+                                      }else if (value == "delete") {
+                                        deleteVehicle(vehicle['id'].toString());
+                                        print("Delete clicked");
+                                      }
+                                    },
                                     itemBuilder:
                                         (context) => const [
-                                          PopupMenuItem(child: Text("Edit")),
-                                          PopupMenuItem(child: Text("Delete")),
+                                          PopupMenuItem(
+                                            value: "edit",
+                                            child: Text("Edit"),
+                                          ),PopupMenuItem(
+                                            value: "Plan & Wallet",
+                                            child: Text("Plan & Wallet"),
+                                          ),
+                                          PopupMenuItem(
+                                            value: "delete",
+                                            child: Text("Delete"),
+                                          ),
                                         ],
                                   ),
                                 ],
                               ),
                               Row(
                                 children: [
-                                  Text('Service Type : '),
+                                  Text('Service : '),
                                   chip(vehicle['service_type'], Colors.blue),
 
                                   Spacer(),
 
                                   Row(
                                     children: [
-                                      Text('Payload Type : '),
+                                      Text('Payload : '),
                                       Text(vehicle['payload'] ?? '--'),
                                     ],
                                   ),
@@ -361,6 +354,7 @@ class _VehicleListScreen extends State<VehicleListScreen> {
                                 ],
                               ),
 
+
                               /// DOCUMENT BOX
                               Container(
                                 width: double.infinity,
@@ -370,23 +364,23 @@ class _VehicleListScreen extends State<VehicleListScreen> {
                                   borderRadius: BorderRadius.circular(10),
                                 ),
 
-                                child: const Column(
+                                child:  Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      "RC - Not set",
+                                      "RC - ${vehicle['rc_validity_date']!=null?Utils.daysAgo(vehicle['rc_validity_date']):''}",
                                       style: TextStyle(fontSize: 12),
                                     ),
                                     Text(
-                                      "Fitness - Not set",
+                                      "Fitness -  ${vehicle['fitness_validity_date']!=null?Utils.daysAgo(vehicle['fitness_validity_date']):''}",
                                       style: TextStyle(fontSize: 12),
                                     ),
                                     Text(
-                                      "Insurance - Not set",
+                                      "Insurance -  ${vehicle['insurance_upto']!=null?Utils.daysAgo(vehicle['insurance_upto']):''}",
                                       style: TextStyle(fontSize: 12),
                                     ),
                                     Text(
-                                      "Pollution - Not set",
+                                      "Pollution -  ${vehicle['pollution_validity_date']!=null?Utils.daysAgo(vehicle['pollution_validity_date']):''}",
                                       style: TextStyle(fontSize: 12),
                                     ),
                                   ],
@@ -448,5 +442,69 @@ class _VehicleListScreen extends State<VehicleListScreen> {
         });
       });
     }
+  }
+
+  Future<void> nextScreenEdit(BuildContext context, final vehicle) async {
+    final result =
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditVehicleScreen(vehicle['id'].toString()),
+      ),
+    );
+
+    if (result == true) refreshVehicles();
+  }
+
+  /// REFRESH
+  Future<void> refreshVehicles() async {
+    final provider = Provider.of<VechileOwnerFleetsList>(
+      context,
+      listen: false,
+    );
+
+    await provider.fetchList("in_city");
+
+    setState(() {
+      filteredList = provider.listData ?? [];
+    });
+  }
+
+  /// DELETE
+  void deleteVehicle(String id) {
+    showDialog(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: Text("Confirm Delete"),
+            content: Text("Are you sure you want to delete this vehicle?"),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text("Cancel"),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+
+                  final provider = Provider.of<DeleteVehicleProvider>(
+                    context,
+                    listen: false,
+                  );
+
+                  await provider.deleteVehicle(id);
+
+                  Utils.showCustomToast(
+                    context,
+                    provider.vehicleDelete['message'],
+                  );
+
+                  refreshVehicles();
+                },
+                child: Text("Delete", style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          ),
+    );
   }
 }

@@ -34,7 +34,6 @@ class _CustomerBottomNavigationBar extends State<CustomerBottomNavigationBar> {
   final List<Widget> _screens = [
     CustomerHomeScreen(),
     HistoryScreen(),
-    MenuScreen(),
   ];
 
   @override
@@ -91,6 +90,11 @@ class _CustomerBottomNavigationBar extends State<CustomerBottomNavigationBar> {
         selectedItemColor: AppColors.primaryColor,
         unselectedItemColor: Colors.grey,
         onTap: (index) {
+          if (index == 2) {
+            _navigateTo(MenuScreen());
+            return; // 🚀 IMPORTANT: stop index update
+          }
+
           setState(() {
             _selectedIndex = index;
           });
@@ -104,7 +108,9 @@ class _CustomerBottomNavigationBar extends State<CustomerBottomNavigationBar> {
     );
   }
 
-
+  void _navigateTo(Widget screen) {
+    Navigator.push(context, MaterialPageRoute(builder: (context) => screen));
+  }
   /// 🔹 HEADER UI
   Widget _buildHeader() {
     return Padding(

@@ -64,6 +64,16 @@ class PrefUtils {
     return value ?? '';
   }
 
+  static String? setProfileImage(String profileImage) {
+    Prefs.prefs!.setString("profileImage", profileImage);
+    return null;
+  }
+
+  static String getProfileImage() {
+    final String? value = Prefs.prefs!.getString("profileImage");
+    return value ?? '';
+  }
+
   static String? setUserId(String userId) {
     Prefs.prefs!.setString("id", userId);
     return null;
