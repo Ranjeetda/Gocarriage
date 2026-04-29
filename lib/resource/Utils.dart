@@ -296,10 +296,38 @@ class Utils {
     return "${diff.inDays} days ago";
   }
 
-  static String daysAgo(String dateString) {
-    final date = DateTime.parse(dateString);
-    final difference = DateTime.now().difference(date);
-    return '${difference.inDays} d ago';
+
+  static String getValidity(String? dateString) {
+    if (dateString == null || dateString.isEmpty) return "--";
+
+    DateTime expiryDate = DateTime.parse(dateString);
+    DateTime now = DateTime.now();
+
+    int diff = expiryDate.difference(now).inDays;
+
+    if (diff > 0) {
+      if (diff > 365) {
+        int years = diff ~/ 365;
+        return "$years yr left";
+      } else if (diff > 30) {
+        int months = diff ~/ 30;
+        return "$months mo left";
+      } else {
+        return "$diff days left";
+      }
+    } else {
+      int daysAgo = diff.abs();
+
+      if (daysAgo == 0) {
+        return "today";
+      } else if (daysAgo < 30) {
+        return "$daysAgo days left";
+      } else if (daysAgo < 365) {
+        return "${daysAgo ~/ 30} mo left";
+      } else {
+        return "${daysAgo ~/ 365} yr left";
+      }
+    }
   }
 
   static double applyProgress(String createdAt) {
@@ -552,6 +580,44 @@ class Utils {
         i,
         i + chunkSize > text.length ? text.length : i + chunkSize,
       ));
+    }
+  }
+
+  static DateTime safeParseDate(dynamic value) {
+    if (value == null) return DateTime(1900);
+
+    try {
+      return DateTime.parse(value.toString());
+    } catch (e) {
+      return DateTime(1900); // fallback for invalid format
+    }
+  }
+
+  static String getVehicleAge(String dateString) {
+    DateTime vehicleDate = DateTime.parse(dateString);
+    DateTime now = DateTime.now();
+
+    if (vehicleDate.isAfter(now)) {
+      return "New";
+    }
+
+    int years = now.year - vehicleDate.year;
+    int months = now.month - vehicleDate.month;
+
+    if (months < 0) {
+      years--;
+      months += 12;
+    }
+
+    /// ✅ Clean formatting
+    if (years == 0 && months == 0) {
+      return "New"; // 👈 best UX
+    } else if (years == 0) {
+      return "$months month${months > 1 ? 's' : ''}";
+    } else if (months == 0) {
+      return "$years year${years > 1 ? 's' : ''}";
+    } else {
+      return "$years yr $months mo";
     }
   }
 

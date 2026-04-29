@@ -65,12 +65,7 @@ class _AssignDriverDialogeState extends State<AssignDriverDialoge> {
     });
 
     if (responseData['success'] == true) {
-      Navigator.pop(context, {
-        "service_type": selectedServiceType,
-        "vehicle_id": selectedVehicleId,
-        "driver": selectedDriver,
-        "shift": selectedShift,
-      });
+      Navigator.pop(context);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(responseData['message'])));
@@ -84,7 +79,7 @@ class _AssignDriverDialogeState extends State<AssignDriverDialoge> {
     }
   }
 
-
+// 74368764416
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -149,16 +144,7 @@ class _AssignDriverDialogeState extends State<AssignDriverDialoge> {
                     items: provider.listData.map<DropdownMenuItem<int>>((v) {
                       return DropdownMenuItem<int>(
                         value: v['id'], // ✅ VEHICLE ID
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(v['vehicle_number']),
-                            Text(
-                              v['VehicleType']?['name'] ?? 'N/A',
-                              style: TextStyle(fontSize: 12, color: Colors.grey),
-                            ),
-                          ],
-                        ),
+                        child: Text(v['vehicle_number']),
                       );
                     }).toList(),
                     onChanged: selectedServiceType == null
@@ -192,7 +178,7 @@ class _AssignDriverDialogeState extends State<AssignDriverDialoge> {
                     hint: const Text('-- Select Driver --'),
                     items: provider.listData.map<DropdownMenuItem<int>>((v) {
                       return DropdownMenuItem<int>(
-                        value: v['id'],
+                        value: v['driver_id'],
                         child: Text(
                           "${v['Driver']['fullName']}",
                         ),
@@ -204,6 +190,7 @@ class _AssignDriverDialogeState extends State<AssignDriverDialoge> {
                       setState(() {
                         selectedDriver = value;
                         print('RanjeetTest ===========>${value}');
+                        print('RanjeetTest ===========>${selectedDriver}');
                         selectedDriverId = value;
                       });
                     },

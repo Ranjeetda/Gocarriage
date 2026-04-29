@@ -54,6 +54,7 @@ dependencies:
   auto_size_text: ^3.0.0
   file_picker: ^10.3.10
   audioplayers: ^5.2.1
+  shimmer: ^3.0.0
 
 
 

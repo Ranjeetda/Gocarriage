@@ -143,8 +143,6 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                             const SizedBox(height: 16),
                             _buildRoadTax(provider.vehicleDetailsData),
                             const SizedBox(height: 16),
-                            _buildRoadTax(provider.vehicleDetailsData),
-                            const SizedBox(height: 16),
                             _ownerDetails(provider.vehicleDetailsData),
                             const SizedBox(height: 16),
                             _locationTrip(provider.vehicleDetailsData),
@@ -462,6 +460,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                                 .toString()
                                 .toUpperCase(),
                             style: const TextStyle(
+                              fontSize: 12,
                               color: Colors.black87,
                               fontWeight: FontWeight.bold,
                             ),
@@ -487,7 +486,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
             children: [
               _infoChip(
                 "Vehicle Age",
-                "<1 mo",
+                Utils.getVehicleAge(data['registered_date']),
                 "Since ${_formatDate(data['registered_date'])}",
               ),
               _infoChip("Payload", "${data['payload'] ?? '0'} kg", "Capacity"),
@@ -659,7 +658,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              "Rod Tax Status",
+              "Road Tax",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
@@ -673,7 +672,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
               data['road_tax_paid_period'] ?? '',
               Colors.orange,
             ),
-            _complianceItem("Permit Type", data['permit_type'], Colors.orange),
+            _complianceItem("Permit Type", data['permit_type']??'', Colors.orange),
             _complianceItem(
               "Permit From",
               data['permit_from_date'] ?? '',
@@ -789,7 +788,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
             ),
             _complianceItem(
               "Weight Category",
-              data['SubscriptionPlan']['weight_category'],
+              data['SubscriptionPlan']['weight_category']??"",
               Colors.orange,
             ),
             _complianceItem("Duration", data['duration_type'], Colors.orange),
@@ -836,11 +835,11 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            _complianceItem(
+            data['SubscriptionPlan']==null?_complianceItem(
               "Plan",
-              data['SubscriptionPlan']['name'],
+              data['SubscriptionPlan']['name']??'',
               Colors.orange,
-            ),
+            ):SizedBox(),
             _complianceItem("Duration", data['duration_type'], Colors.orange),
             _complianceItem("Start Date", data['start_date'], Colors.orange),
             _complianceItem("End Date", data['end_date'], Colors.orange),
@@ -891,27 +890,45 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
     }
   }
 
-  Map<String, dynamic> getLatestDocuments(List docs) {
-    Map<String, List> grouped = {};
+  Map<String, dynamic> getLatestDocuments(List? docs) {
+    /// 🔹 Handle null or empty input
+    if (docs == null || docs.isEmpty) {
+      return {};
+    }
 
-    /// Group by document_type
+    Map<String, List<Map<String, dynamic>>> grouped = {};
+
+    /// 🔹 Group by document_type
     for (var doc in docs) {
-      String type = doc['document_type'];
-      grouped.putIfAbsent(type, () => []).add(doc);
+      if (doc == null || doc is! Map<String, dynamic>) continue;
+
+      final type = doc['document_type'];
+
+      if (type == null || type.toString().isEmpty) continue;
+
+      grouped.putIfAbsent(type.toString(), () => []).add(doc);
     }
 
     Map<String, dynamic> result = {};
 
     grouped.forEach((type, list) {
-      /// Prefer ACTIVE, else latest by date
-      list.sort(
-        (a, b) => DateTime.parse(
-          b['valid_to'],
-        ).compareTo(DateTime.parse(a['valid_to'])),
-      );
+      if (list.isEmpty) return;
 
-      var activeDoc = list.firstWhere(
-        (d) => d['status'] == 'active',
+      /// 🔹 Sort safely by valid_to (latest first)
+      list.sort((a, b) {
+        final dateA = Utils.safeParseDate(a['valid_from']);
+        final dateB = Utils.safeParseDate(b['valid_to']);
+        return dateB.compareTo(dateA);
+      });
+
+      /// 🔹 Prefer ACTIVE document
+      final activeDoc = list.firstWhere(
+            (d) =>
+        (d['status'] ?? '')
+            .toString()
+            .toLowerCase()
+            .trim() ==
+            'active',
         orElse: () => list.first,
       );
 

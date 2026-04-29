@@ -9,10 +9,9 @@ import 'package:provider/provider.dart';
 import '../../../provider_service/add_car_provider.dart';
 import '../../../provider_service/draft_vehicle_provider.dart';
 import '../../../provider_service/file_upload_provider.dart';
-import '../../../provider_service/vehicle_category_by.dart';
+import '../../../provider_service/vehicle_brands_provider.dart';
 import '../../../provider_service/vehicle_documents_bulk_provider.dart';
 import '../../../provider_service/vehicle_model_provider.dart';
-import '../../../provider_service/vehicle_type_provider.dart';
 import '../../../resource/app_colors.dart';
 import '../../../resource/pref_utils.dart';
 
@@ -31,18 +30,20 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
   /// CONTROLLERS
   final regNo = TextEditingController();
   final regDate = TextEditingController();
+  final vehicleCategoryController = TextEditingController();
   final city = TextEditingController();
   final payload = TextEditingController();
   final chassis = TextEditingController();
   final engine = TextEditingController();
   final insuranceCompany = TextEditingController();
   final policyNo = TextEditingController();
-  bool isUpdate=false;
+  bool isUpdate = false;
   bool isLoading = false;
   String? selectedColorName;
   Color? selectedColor;
   bool? selected;
-
+  Map<String, dynamic>? setModel;
+  bool _isModelSet = false;
   /// DROPDOWN VALUES
   String? brand,
       model,
@@ -56,9 +57,11 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
       taxFrom,
       taxTo,
       lastPaidDate,
-      fleetId;
+      fleetId,
+      vehicleTypeId,vehicle_model_id;
   List<String> selectedPermitStates = [];
   bool _isFetched = false;
+
   /// FILES
   File? rc, fitness, permitDoc, insurance;
   String? rcUrl, fitnessUrl, permitDocUrl, insuranceUrl;
@@ -83,15 +86,18 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final provider = Provider.of<VehicleTypeProvider>(context, listen: false);
-      await provider.fetchVehicleType();
+      final provider = Provider.of<VehicleBrandsProvider>(
+        context,
+        listen: false,
+      );
+      await provider.fetchBrands();
     });
     if (widget.mVehicleId != null) {
-      isUpdate=true;
-      fleetId =widget.mVehicleId;
+      isUpdate = true;
+      fleetId = widget.mVehicleId;
       fetchData();
-    }else{
-      isUpdate=false;
+    } else {
+      isUpdate = false;
     }
   }
 
@@ -102,11 +108,11 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
     final provider = Provider.of<DraftVehicleProvider>(context, listen: false);
     await provider.fetchDraftVehicle(widget.mVehicleId!);
     final data = provider.vehicleQutation;
-    final providerVehicleType = Provider.of<VehicleTypeProvider>(context, listen: false);
-    final providerVehicleBrand = Provider.of<VehicleCategoryBy>(context, listen: false);
+    final providerVehicleBrand = Provider.of<VehicleBrandsProvider>(context, listen: false,);
+    final vehicleModelProvider = Provider.of<VehicleModelProvider>(context, listen: false,);
+
 
     setState(() {
-
       regNo.text = data['vehicle_number'];
       regDate.text = Utils.formatDate(data['registered_date']);
       city.text = data['location']['current_city' ?? ""];
@@ -115,36 +121,46 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
         "",
       );
 
-      status=Utils.capitalize(data['status']);
+      if (Utils.capitalize(data['status']) == 'Draft') {
+        status = 'Inactive';
+      } else {
+        status = Utils.capitalize(data['status']);
+      }
       chassis.text = data['chassis_number'] ?? "";
       engine.text = data['engine_number'] ?? "";
       city.text = data['rto'] ?? "";
       insuranceCompany.text = data['insurance_company'] ?? "";
       policyNo.text = data['insurance_policy_number'] ?? "";
       selectedColorName = data['color'] ?? "";
-      providerVehicleType.setSelectedGroup(data['VehicleType']?['v_cat']);
-      providerVehicleType.setSelectedVehicle(data['VehicleType']?['id']);
-      brand=providerVehicleBrand.selectedBrand;
+      providerVehicleBrand.setSelectedBrand(data['vehicleModel']?['brand']);
+      vehicleModelProvider.fetchVehicleModel(data['vehicleModel']?['brand']);
+      setModel=data['vehicleModel'];
+      model=data['vehicleModel']['modal'];
+      vehicleTypeId=data['VehicleType']?['id'].toString();
+      vehicleCategoryController.text=data['vehicleModel']?['v_cat'];
+      vehicle_model_id=data['vehicleModel']?['id'].toString();
+
+      brand = providerVehicleBrand.selectedBrand;
       final docs = data['documents'];
 
       if (docs != null && docs is List && docs.isNotEmpty) {
         for (var item in docs) {
-          if(item['document_type']=='rc_document'){
-             rcFrom=item['valid_from']??'';
-             rcTo=item['valid_to']??'';
-             rcUrl=item['file_path']??'';
-          }else if(item['document_type']=='fitness_certificate'){
-             fitFrom=item['valid_from']??'';
-             fitTo=item['valid_to']??'';
-             fitnessUrl=item['file_path']??'';
-          }else if(item['document_type']=='permit_document'){
-             permitFrom=item['valid_from']??'';
-             permitTo=item['valid_to']??'';
-             permitDocUrl=item['file_path']??'';
-          }else if(item['document_type']=='insurance'){
-             insFrom=item['valid_from']??'';
-             insTo=item['valid_to']??'';
-             insuranceUrl=item['file_path']??'';
+          if (item['document_type'] == 'rc_document') {
+            rcFrom = item['valid_from'] ?? '';
+            rcTo = item['valid_to'] ?? '';
+            rcUrl = item['file_path'] ?? '';
+          } else if (item['document_type'] == 'fitness_certificate') {
+            fitFrom = item['valid_from'] ?? '';
+            fitTo = item['valid_to'] ?? '';
+            fitnessUrl = item['file_path'] ?? '';
+          } else if (item['document_type'] == 'permit_document') {
+            permitFrom = item['valid_from'] ?? '';
+            permitTo = item['valid_to'] ?? '';
+            permitDocUrl = item['file_path'] ?? '';
+          } else if (item['document_type'] == 'insurance') {
+            insFrom = item['valid_from'] ?? '';
+            insTo = item['valid_to'] ?? '';
+            insuranceUrl = item['file_path'] ?? '';
           }
         }
       }
@@ -160,12 +176,12 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
           final model = PollutionCertificateModel(
             state: e['state'],
             fileUrl: e['file_upload'],
-            validFrom: e['valid_from'] != null
-                ? DateTime.tryParse(e['valid_from'])
-                : null,
-            validTo: e['valid_to'] != null
-                ? DateTime.tryParse(e['valid_to'])
-                : null,
+            validFrom:
+                e['valid_from'] != null
+                    ? DateTime.tryParse(e['valid_from'])
+                    : null,
+            validTo:
+                e['valid_to'] != null ? DateTime.tryParse(e['valid_to']) : null,
           );
 
           pollutionList.add(model);
@@ -177,8 +193,6 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
         pollutionList.clear();
         pollutionList.add(PollutionCertificateModel());
       }
-
-
 
       fuel = data['fuel_type'];
       if (data['permit_type'] != null &&
@@ -193,23 +207,23 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
         var permitStates = data['permit_states'];
 
         if (permitStates is String) {
-          selectedPermitStates = permitStates
-              .replaceAll('[', '')
-              .replaceAll(']', '')
-              .split(',')
-              .map((e) => e.trim())
-              .where((e) => e.isNotEmpty)
-              .toList();
-        } else if (permitStates is List) {
           selectedPermitStates =
-              permitStates.map((e) => e.toString()).toList();
+              permitStates
+                  .replaceAll('[', '')
+                  .replaceAll(']', '')
+                  .split(',')
+                  .map((e) => e.trim())
+                  .where((e) => e.isNotEmpty)
+                  .toList();
+        } else if (permitStates is List) {
+          selectedPermitStates = permitStates.map((e) => e.toString()).toList();
         }
       }
 
       selectedTaxPeriod =
-      data['road_tax_paid_period'] == null
-          ? null
-          : Utils.capitalize(data['road_tax_paid_period']);
+          data['road_tax_paid_period'] == null
+              ? null
+              : Utils.capitalize(data['road_tax_paid_period']);
       if (selectedTaxPeriod != null) {
         selected = true;
       }
@@ -287,12 +301,12 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
                     value: item.state,
                     hint: const Text("Select State"),
                     items:
-                    Utils.indiaStates.map((e) {
-                      return DropdownMenuItem<String>(
-                        value: e,
-                        child: Text(e),
-                      );
-                    }).toList(),
+                        Utils.indiaStates.map((e) {
+                          return DropdownMenuItem<String>(
+                            value: e,
+                            child: Text(e),
+                          );
+                        }).toList(),
                     onChanged: (v) {
                       setState(() {
                         item.state = v;
@@ -348,11 +362,11 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
                           key: ValueKey(item.validFrom),
                           // ✅ IMPORTANT
                           initialValue:
-                          item.validFrom == null
-                              ? ""
-                              : DateFormat(
-                            'dd/MM/yyyy',
-                          ).format(item.validFrom!),
+                              item.validFrom == null
+                                  ? ""
+                                  : DateFormat(
+                                    'dd/MM/yyyy',
+                                  ).format(item.validFrom!),
                           onTap: () async {
                             var d = await pickDate();
                             if (d != null) {
@@ -374,11 +388,11 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
                           key: ValueKey(item.validTo),
                           // ✅ IMPORTANT
                           initialValue:
-                          item.validTo == null
-                              ? ""
-                              : DateFormat(
-                            'dd/MM/yyyy',
-                          ).format(item.validTo!),
+                              item.validTo == null
+                                  ? ""
+                                  : DateFormat(
+                                    'dd/MM/yyyy',
+                                  ).format(item.validTo!),
                           onTap: () async {
                             var d = await pickDate();
                             if (d != null) {
@@ -426,8 +440,8 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
       child: GestureDetector(
         onTap:
             () => setState(() {
-          //step = index;
-        }),
+              //step = index;
+            }),
         // onTap: () => setState(() => step = index),
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -500,7 +514,7 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
                 dateField1("Registration Date", regDate),
                 gap(),
                 // Brand Dropdown
-                Consumer<VehicleTypeProvider>(
+                Consumer<VehicleBrandsProvider>(
                   builder: (context, provider, _) {
                     if (provider.isLoading) {
                       return const Center(child: CircularProgressIndicator());
@@ -508,142 +522,86 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
 
                     return Column(
                       children: [
-                        /// 🔹 GROUP DROPDOWN
                         DropdownButtonFormField<String>(
-                          value: provider.selectedGroup,
+                          value: provider.selectedBrand,
                           decoration: const InputDecoration(
-                            labelText: "Vehicle Category *",
+                            labelText: "Vehicle Brand *",
                             border: OutlineInputBorder(),
                           ),
                           isExpanded: true,
                           items:
-                          provider.vehicleTypes.map((group) {
+                          provider.vehicleBrands.map((brand) {
                             return DropdownMenuItem<String>(
-                              value: group.group,
-                              child: Text(group.group),
+                              value: brand,
+                              child: Text(brand),
                             );
                           }).toList(),
                           onChanged: (value) {
                             if (value != null) {
-                              provider.setSelectedGroup(value);
+                              provider.setSelectedBrand(value);
+                              brand=value;
+                              vehicleModelProvider.fetchVehicleModel(value);
                             }
                           },
                         ),
+                        SizedBox(height: 10),
+                        Consumer<VehicleModelProvider>(
+                          builder: (context, provider, _) {
 
-                        const SizedBox(height: 16),
+                            if (provider.isLoading) {
+                              return const Center(child: CircularProgressIndicator());
+                            }
 
-                        /// 🔹 VEHICLE DROPDOWN
-                        DropdownButtonFormField<int>(
-                          value: provider.selectedVehicleId,
-                          decoration: const InputDecoration(
-                            labelText: "Select Name *",
-                            border: OutlineInputBorder(),
-                          ),
-                          hint: Text("Select Name"),
-                          isExpanded: true,
-                          items:
-                          provider.selectedVehicleGroup?.options.map((
-                              item,
-                              ) {
-                            return DropdownMenuItem<int>(
-                              value: item.id,
-                              child: Text(item.name),
+                            // ✅ RUN ONLY ONCE AFTER BUILD
+                            if (!_isModelSet && setModel != null && provider.models.isNotEmpty) {
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                provider.setSelectedModelById(setModel?['id']);
+                              });
+                              _isModelSet = true;
+                            }
+
+                            return DropdownButtonFormField<Map<String, dynamic>>(
+                              value: provider.models.any(
+                                    (item) => item['id'] == provider.selectedModel?['id'],
+                              )
+                                  ? provider.selectedModel
+                                  : null,
+
+                              decoration: const InputDecoration(
+                                labelText: "Select Model *",
+                                border: OutlineInputBorder(),
+                              ),
+                              hint: const Text("Select Model"),
+                              isExpanded: true,
+
+                              items: provider.models.map((item) {
+                                return DropdownMenuItem<Map<String, dynamic>>(
+                                  value: item,
+                                  child: Text(item['model']),
+                                );
+                              }).toList(),
+
+                              onChanged: (value) {
+                                provider.setSelectedModel(value);
+
+                                vehicle_model_id = value?['id'].toString();
+                                vehicleTypeId = value?['category_id'].toString();
+                                model = value?['model'];
+                                vehicleCategoryController.text = value?['v_cat'];
+                                payload.text = value!['payload_capacity_kg'].toString();
+                              },
                             );
-                          }).toList(),
-                          onChanged: (value) async {
-                            provider.setSelectedVehicle(value);
-                            print("RanjeetTest =========>${value}");
-
-                            if (value != null) {
-                              final selectedItem = provider.selectedVehicleGroup?.options.firstWhere((e) => e.id == value);
-
-                              payload.text = selectedItem?.name ?? "";
-                              widget.mVehicleId=selectedItem?.id.toString();
-
-                              await Provider.of<VehicleCategoryBy>(
-                                context,
-                                listen: false,
-                              ).fetchVehicleCategryBy(value.toString());
-                            }
                           },
-                        ),
+                        )
                       ],
                     );
                   },
                 ),
                 gap(),
-
-                Consumer<VehicleCategoryBy>(
-                  builder: (context, provider, _) {
-                    if (provider.isLoading) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    return Column(
-                      children: [
-
-                        /// 🔹 BRAND DROPDOWN
-                        DropdownButtonFormField<String?>(
-                          value: provider.selectedBrand,
-                          decoration: const InputDecoration(
-                            labelText: "Select Brand *",
-                            border: OutlineInputBorder(),
-                          ),
-                          hint: Text("Select Brand *"),
-
-                          isExpanded: true,
-                          items: [
-                            const DropdownMenuItem<String?>(
-                              value: null,
-                              child: Text("Select Brand"),
-                            ),
-                            ...provider.brands.map((brand) {
-                              return DropdownMenuItem<String?>(
-                                value: brand,
-                                child: Text(brand),
-                              );
-                            }),
-                          ],
-                          onChanged: (value) {
-                            provider.setSelectedBrand(value);
-                            brand =value;
-                          },
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        /// 🔹 MODEL DROPDOWN
-                        DropdownButtonFormField<String?>(
-                          value: provider.selectedModel,
-                          decoration: const InputDecoration(
-                            labelText: "Select Model *",
-                            border: OutlineInputBorder(),
-                          ),
-                          hint: Text("Select Model *"),
-                          isExpanded: true,
-                          items: [
-                            const DropdownMenuItem<String?>(
-                              value: null,
-                              child: Text("Select Model"),
-                            ),
-                            ...provider.filteredModels.map((item) {
-                              return DropdownMenuItem<String?>(
-                                value: item['model'], // 🔁 change if key differs
-                                child: Text(item['model']),
-                              );
-                            }),
-                          ],
-                          onChanged: provider.selectedBrand == null
-                              ? null // disable if no brand
-                              : (value) {
-                            provider.setSelectedModel(value);
-                            model=value;
-                          },
-                        ),
-                      ],
-                    );
-                  },
-                ),
+                text('Vehicle Category *'),
+                field(vehicleCategoryController),
+                text('Payload *'),
+                field(payload),
 
                 gap(),
                 text("Service City *"),
@@ -652,9 +610,9 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
                 text("Status"),
                 dropdown(
                   "Status",
-                  ["Active", "Inactive","Under Maintenance"],
+                  ["Active", "Inactive", "Under Maintenance"],
                   status,
-                      (v) => setState(() {
+                  (v) => setState(() {
                     status = v;
                   }),
                 ),
@@ -663,7 +621,7 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
                   "Service Type *",
                   ["Within City", "Outside City"],
                   service,
-                      (v) => setState(() => service = v),
+                  (v) => setState(() => service = v),
                 ),
               ],
             ),
@@ -791,7 +749,7 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
                   "Permit Type *",
                   ["National permit", "State permit", "No permit"],
                   permit,
-                      (v) {
+                  (v) {
                     setState(() {
                       permit = v;
                       if (v != "State permit") {
@@ -828,9 +786,9 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
                                   : selectedPermitStates.join(", "),
                               style: TextStyle(
                                 color:
-                                selectedPermitStates.isEmpty
-                                    ? Colors.grey
-                                    : Colors.black,
+                                    selectedPermitStates.isEmpty
+                                        ? Colors.grey
+                                        : Colors.black,
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -847,7 +805,7 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
                   "Fuel Type *",
                   ["Diesel", "Petrol", "CNG", "Electric"],
                   fuel,
-                      (v) => setState(() => fuel = v),
+                  (v) => setState(() => fuel = v),
                 ),
                 gap(),
                 text("Payload (kg) *"),
@@ -866,7 +824,7 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
                   "Is Price Negotiable?",
                   ["Yes", "No"],
                   isNegotiable,
-                      (v) => setState(() {
+                  (v) => setState(() {
                     isNegotiable = v;
                   }),
                 ),
@@ -876,7 +834,7 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
                   "Road Tax Paid?",
                   ["Yes", "No"],
                   roadTax,
-                      (v) => setState(() {
+                  (v) => setState(() {
                     roadTax = v;
                     // selectedTaxPeriod = null;
                   }),
@@ -897,43 +855,43 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
 
                   Row(
                     children:
-                    ["Monthly", "Half-Yearly", "Yearly", "Custom"].map((e) {
-                      selected = selectedTaxPeriod == e;
+                        ["Monthly", "Half-Yearly", "Yearly", "Custom"].map((e) {
+                          selected = selectedTaxPeriod == e;
 
-                      return Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              selectedTaxPeriod = e;
-                            });
-                          },
-                          child: Container(
-                            margin: const EdgeInsets.fromLTRB(4, 0, 0, 0),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color:
-                              selected!
-                                  ? Colors.teal.shade100
-                                  : Colors.white,
-                              border: Border.all(
-                                color:
-                                selected! ? Colors.teal : Colors.grey,
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Center(
-                              child: Text(
-                                e,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
+                          return Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  selectedTaxPeriod = e;
+                                });
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.fromLTRB(4, 0, 0, 0),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color:
+                                      selected!
+                                          ? Colors.teal.shade100
+                                          : Colors.white,
+                                  border: Border.all(
+                                    color:
+                                        selected! ? Colors.teal : Colors.grey,
+                                  ),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    e,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                          );
+                        }).toList(),
                   ),
                 ],
 
@@ -972,27 +930,27 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
         children: [
           doc(
             "RC Document",
-                (f) => rc = f,
+            (f) => rc = f,
             rcFrom,
             rcTo,
-                (v) => rcFrom = v,
-                (v) => rcTo = v,
+            (v) => rcFrom = v,
+            (v) => rcTo = v,
           ),
           doc(
             "Fitness Certificate",
-                (f) => fitness = f,
+            (f) => fitness = f,
             fitFrom,
             fitTo,
-                (v) => fitFrom = v,
-                (v) => fitTo = v,
+            (v) => fitFrom = v,
+            (v) => fitTo = v,
           ),
           doc(
             "Permit Document",
-                (f) => permitDoc = f,
+            (f) => permitDoc = f,
             permitFrom,
             permitTo,
-                (v) => permitFrom = v,
-                (v) => permitTo = v,
+            (v) => permitFrom = v,
+            (v) => permitTo = v,
           ),
           card(
             child: Column(
@@ -1081,59 +1039,59 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
   }
 
   Widget dropdown(
-      String label,
-      List<String> items,
-      String? value,
-      Function(String) onChange,
-      ) {
+    String label,
+    List<String> items,
+    String? value,
+    Function(String) onChange,
+  ) {
     return DropdownButtonFormField(
       value: value,
       hint: Text(label),
       items:
-      items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+          items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
       onChanged: (v) => onChange(v as String),
       decoration: InputDecoration(border: OutlineInputBorder()),
     );
   }
 
   Widget radioRow(
-      String label,
-      List<String> options,
-      String? group,
-      Function(String) onTap,
-      ) {
+    String label,
+    List<String> options,
+    String? group,
+    Function(String) onTap,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         text(label),
         Row(
           children:
-          options.map((e) {
-            return Expanded(
-              child: GestureDetector(
-                onTap: () => onTap(e),
-                child: Container(
-                  margin: EdgeInsets.all(4),
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        group == e
-                            ? Icons.check_circle
-                            : Icons.circle_outlined,
+              options.map((e) {
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () => onTap(e),
+                    child: Container(
+                      margin: EdgeInsets.all(4),
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      SizedBox(width: 6),
-                      Text(e, style: TextStyle(fontSize: 12)),
-                    ],
+                      child: Row(
+                        children: [
+                          Icon(
+                            group == e
+                                ? Icons.check_circle
+                                : Icons.circle_outlined,
+                          ),
+                          SizedBox(width: 6),
+                          Text(e, style: TextStyle(fontSize: 12)),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            );
-          }).toList(),
+                );
+              }).toList(),
         ),
       ],
     );
@@ -1171,13 +1129,14 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
                 file != null
                     ? file.path.split('/').last
                     : (fileUrl != null && fileUrl.isNotEmpty
-                    ? fileUrl.split('/').last
-                    : "Upload File"),
+                        ? fileUrl.split('/').last
+                        : "Upload File"),
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: (file != null || (fileUrl != null && fileUrl.isNotEmpty))
-                      ? Colors.black
-                      : Colors.grey,
+                  color:
+                      (file != null || (fileUrl != null && fileUrl.isNotEmpty))
+                          ? Colors.black
+                          : Colors.grey,
                 ),
               ),
             ),
@@ -1191,7 +1150,6 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
                     //openFile(file);
                   } else if (fileUrl != null) {
                     // ✅ open URL
-
                   }
                 },
                 child: const Icon(Icons.remove_red_eye, color: Colors.teal),
@@ -1205,11 +1163,11 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
   /////////////////// Upload image /////////////////////////////////
 
   Future<void> _fileUpload(
-      String folderName,
-      File? fileName,
-      String mType,
-      int position,
-      ) async {
+    String folderName,
+    File? fileName,
+    String mType,
+    int position,
+  ) async {
     if (fileName == null) return;
     print("RanjeetTest============> callll uper _fileUpload ${"_fileUpload"}");
 
@@ -1259,18 +1217,18 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
       barrierDismissible: false,
       builder:
           (ctx) => Dialog(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: const [
-              LinearProgressIndicator(minHeight: 8),
-              SizedBox(height: 16),
-              Text("Wait we are uploading your documents"),
-            ],
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  LinearProgressIndicator(minHeight: 8),
+                  SizedBox(height: 16),
+                  Text("Wait we are uploading your documents"),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
     );
   }
 
@@ -1322,7 +1280,6 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
     );
   }
 
-
   Widget dateField1(String label, TextEditingController c) {
     return TextFormField(
       controller: c,
@@ -1341,7 +1298,7 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
         );
         if (d != null) {
           setState(() {
-            rcFrom=DateFormat("yyyy-MM-dd").format(d);
+            rcFrom = DateFormat("yyyy-MM-dd").format(d);
           });
           c.text = DateFormat("yyyy-MM-dd").format(d);
         }
@@ -1350,13 +1307,13 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
   }
 
   Widget doc(
-      String title,
-      Function(File) onPick,
-      String? from,
-      String? to,
-      Function(String) setFrom,
-      Function(String) setTo,
-      ) {
+    String title,
+    Function(File) onPick,
+    String? from,
+    String? to,
+    Function(String) setFrom,
+    Function(String) setTo,
+  ) {
     return card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1435,46 +1392,46 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children:
-              colorList.map((item) {
-                bool isSelected = selectedColorName == item.name;
+                  colorList.map((item) {
+                    bool isSelected = selectedColorName == item.name;
 
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      selectedColorName = item.name;
-                      selectedColor = item.color;
-                    });
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 12),
-                    child: Column(
-                      children: [
-                        CircleAvatar(
-                          radius: 22,
-                          backgroundColor: item.color,
-                          child:
-                          isSelected
-                              ? const Icon(
-                            Icons.check,
-                            color: Colors.white,
-                            size: 18,
-                          )
-                              : null,
-                          foregroundColor:
-                          item.color == Colors.white
-                              ? Colors.black
-                              : Colors.white,
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          selectedColorName = item.name;
+                          selectedColor = item.color;
+                        });
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 12),
+                        child: Column(
+                          children: [
+                            CircleAvatar(
+                              radius: 22,
+                              backgroundColor: item.color,
+                              child:
+                                  isSelected
+                                      ? const Icon(
+                                        Icons.check,
+                                        color: Colors.white,
+                                        size: 18,
+                                      )
+                                      : null,
+                              foregroundColor:
+                                  item.color == Colors.white
+                                      ? Colors.black
+                                      : Colors.white,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              item.name,
+                              style: const TextStyle(fontSize: 10),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          item.name,
-                          style: const TextStyle(fontSize: 10),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
+                      ),
+                    );
+                  }).toList(),
             ),
           ),
         ),
@@ -1559,12 +1516,13 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primaryColor,
           ),
-          child: (step == 2 && isLoading)
-              ? const CircularProgressIndicator(color: Colors.white)
-              : Text(
-            step == 2 ? "Update Vehicle" : "Next",
-            style: const TextStyle(color: Colors.white),
-          ),
+          child:
+              (step == 2 && isLoading)
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : Text(
+                    step == 2 ? "Update Vehicle" : "Next",
+                    style: const TextStyle(color: Colors.white),
+                  ),
         ),
       ],
     );
@@ -1581,12 +1539,12 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
       final response = await provider.validateAddNewCar(
         isUpdate: isUpdate,
         vehicle_number: regNo.text.trim(),
-        vehicle_type_id: widget.mVehicleId,
+        vehicle_type_id: vehicleTypeId,
         owner_id: PrefUtils.getUserId(),
         fleetId: fleetId,
         current_city: city.text.trim(),
         service_type: service == 'Within City' ? 'in_city' : service,
-        status: step == 2 ? (status ?? "Active") : 'draft',
+        status: 'Active',
         registered_date: regDate.text.trim(),
         rto: city.text.trim(),
         permit_type: permit ?? "No Permit",
@@ -1610,29 +1568,30 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
         permit_from_date: permitFrom,
         permit_to_date: permitTo,
         pollution_validity_date:
-        pollutionList.isEmpty
-            ? ""
-            : pollutionList[0].validTo != null
-            ? DateFormat('yyyy-MM-dd').format(pollutionList[0].validTo!)
-            : null,
+            pollutionList.isEmpty
+                ? ""
+                : pollutionList[0].validTo != null
+                ? DateFormat('yyyy-MM-dd').format(pollutionList[0].validTo!)
+                : null,
         brand: brand,
         model: model,
+        vehicle_model_id:vehicle_model_id,
         pollution_certificates: jsonEncode(
           pollutionList
               .map(
                 (p) => {
-              "state": p.state,
-              "file_upload": p.fileUrl,
-              "valid_from":
-              p.validFrom != null
-                  ? DateFormat('yyyy-MM-dd').format(p.validFrom!)
-                  : null,
-              "valid_to":
-              p.validTo != null
-                  ? DateFormat('yyyy-MM-dd').format(p.validTo!)
-                  : null,
-            },
-          )
+                  "state": p.state,
+                  "file_upload": p.fileUrl,
+                  "valid_from":
+                      p.validFrom != null
+                          ? DateFormat('yyyy-MM-dd').format(p.validFrom!)
+                          : null,
+                  "valid_to":
+                      p.validTo != null
+                          ? DateFormat('yyyy-MM-dd').format(p.validTo!)
+                          : null,
+                },
+              )
               .toList(),
         ),
         rcDocument: rcUrl,
@@ -1648,15 +1607,13 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
       final String message = response?['message'] ?? "Something went wrong";
 
       /// ✅ GET VEHICLE ID SAFELY
-      if(success==true) {
+      if (success == true) {
         setState(() {
           isUpdate = true;
-          widget.mVehicleId =
-              response?['data']?['VehicleType']['id']?.toString();
-          fleetId= response?['data']?['id']?.toString();
+          fleetId = response?['data']?['id']?.toString();
         });
-      }else{
-        isUpdate=false;
+      } else {
+        isUpdate = false;
       }
 
       /// ✅ SHOW SNACKBAR BASED ON API
@@ -1688,6 +1645,7 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
 
   Future<void> _documentUpload(String vehicleId) async {
     List<Map<String, dynamic>> documents = [];
+
     /// 🔹 Build documents list FIRST
     if (rc != null && rcUrl!.isNotEmpty) {
       documents.add({
@@ -1749,7 +1707,6 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
       context,
       listen: false,
     );
-
 
     try {
       final response = await provider.validateVehicleBuckDocumentUpload(

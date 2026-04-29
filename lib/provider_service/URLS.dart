@@ -43,11 +43,12 @@ class URLS {
   static const String addVehicle = '$baseUrl/fleets';
   static const String vehicleDocumentsBulk = '$baseUrl/vehicle-documents/bulk';
   static const String vehicleTypes = '$baseUrl/vehicle-types';
+  static const String vehicleBrand = '$baseUrl/vehicle-models/brands';
   static const String vehicleCategoryBy = '$baseUrl/vehicle-models/by-category/';
   static const String subscriptions = '$baseUrl/fleet-subscriptions/fleet/';
   static const String uploadVehicleDocumentsBulk = '$baseUrl/vehicle-documents/bulk/';
   static const String transactionHistory = '$baseUrl/credit-wallets/fleet/';
-  static const String vehicleModel = '$baseUrl/vehicle-types/brand?brand=';
+  static const String vehicleModel = '$baseUrl/vehicle-models/by-brand/';
   static const String searchDriverByPhone = '$baseUrl/drivers/by-phone';
   static const String requestOwner = '$baseUrl/owners/get-request-owner';
   static const String requestAcceptOwner = '$baseUrl/owners/request-update/';

@@ -28,12 +28,14 @@ import 'package:gocarriage_universal/provider_service/owner_price_quotations_pro
 import 'package:gocarriage_universal/provider_service/owner_profile_update_provider.dart';
 import 'package:gocarriage_universal/provider_service/owner_reqest_provider.dart';
 import 'package:gocarriage_universal/provider_service/owner_request_approve_provider.dart';
+import 'package:gocarriage_universal/provider_service/owner_un_assign_driver_provider.dart';
 import 'package:gocarriage_universal/provider_service/owner_unassign_driver_vehicle.dart';
 import 'package:gocarriage_universal/provider_service/search_driver_provider.dart';
 import 'package:gocarriage_universal/provider_service/state_provider.dart';
 import 'package:gocarriage_universal/provider_service/subscriptions_owner_list_provider.dart';
 import 'package:gocarriage_universal/provider_service/transactions_history_provider.dart';
 import 'package:gocarriage_universal/provider_service/upload_vehicle_documents_bulk_provider.dart';
+import 'package:gocarriage_universal/provider_service/vehicle_brands_provider.dart';
 import 'package:gocarriage_universal/provider_service/vehicle_category_by.dart';
 import 'package:gocarriage_universal/provider_service/vehicle_details_provider.dart';
 import 'package:gocarriage_universal/provider_service/vehicle_documents_bulk_provider.dart';
@@ -128,6 +130,8 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => FleetSubscriptionsProvider()),
         ChangeNotifierProvider(create: (_) => UploadVehicleDocumentsBulkProvider()),
         ChangeNotifierProvider(create: (_) => TransactionsHistoryProvider()),
+        ChangeNotifierProvider(create: (_) => VehicleBrandsProvider()),
+        ChangeNotifierProvider(create: (_) => OwnerUnAssignDriverProvider()),
         ChangeNotifierProvider(create: (_) => OwnerPriceQuotationsProvider()),
         ChangeNotifierProvider(create: (_) => AcceptRejectPriceProvider()),
         ChangeNotifierProvider(create: (_) => DraftVehicleProvider()),

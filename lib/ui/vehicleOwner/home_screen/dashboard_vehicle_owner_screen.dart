@@ -43,7 +43,6 @@ class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
 
-
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final provider = Provider.of<ProfileProvider>(context, listen: false);
       await provider.fetchProfile('owner', "owner", PrefUtils.getUserId());
@@ -86,12 +85,18 @@ class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen>
   Future<void> nextScreen(BuildContext context) async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => AddVehicleScreen(null)),
+      MaterialPageRoute(builder: (_) => AddVehicleScreen()),
     );
-
+    if (result == true) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        final provider = Provider.of<VechileOwnerFleetsList>(
+          context,
+          listen: false,
+        );
+        await provider.fetchList("in_city");
+      });
+    }
   }
-
-
 
   @override
   Widget build(BuildContext context) {

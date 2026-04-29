@@ -5,11 +5,36 @@ import 'package:http/http.dart' as http;
 import 'URLS.dart';
 
 class VehicleModelProvider with ChangeNotifier {
-  List<dynamic> _vehicleTypesData = [];
+  List<Map<String, dynamic>> _models = [];
+  Map<String, dynamic>? _selectedModel;
   bool _isLoading = false;
 
-  List<dynamic> get vehicleTypesData => _vehicleTypesData;
+  List<Map<String, dynamic>> get models => _models;
+  Map<String, dynamic>? get selectedModel => _selectedModel;
   bool get isLoading => _isLoading;
+
+
+  /// 🔹 SET SELECTED MODEL (MATCH FROM LIST)
+  void setSelectedModelById(int? id) {
+    if (id == null) {
+      _selectedModel = null;
+    } else {
+      try {
+        _selectedModel = _models.firstWhere(
+              (item) => item['id'] == id,
+        );
+      } catch (e) {
+        _selectedModel = null;
+      }
+    }
+    notifyListeners();
+  }
+
+  /// 🔹 SET SELECTED MODEL (FULL OBJECT)
+  void setSelectedModel(Map<String, dynamic>? model) {
+    _selectedModel = model;
+    notifyListeners();
+  }
 
   Future<void> fetchVehicleModel(String brand) async {
     _isLoading = true;
@@ -33,9 +58,11 @@ class VehicleModelProvider with ChangeNotifier {
 
       final responseData = json.decode(response.body);
 
-      if (response.statusCode == 200 &&
-          responseData['success'] == true) {
-        _vehicleTypesData = responseData['data'];
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        _models = List<Map<String, dynamic>>.from(responseData['data']['models'],);
+
+        _selectedModel = null; // reset selection
+
         notifyListeners();
       } else {
         throw Exception(
@@ -52,4 +79,6 @@ class VehicleModelProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+
+
 }

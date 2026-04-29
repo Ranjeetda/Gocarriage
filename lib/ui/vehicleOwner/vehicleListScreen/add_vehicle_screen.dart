@@ -9,7 +9,7 @@ import 'package:provider/provider.dart';
 import '../../../provider_service/add_car_provider.dart';
 import '../../../provider_service/draft_vehicle_provider.dart';
 import '../../../provider_service/file_upload_provider.dart';
-import '../../../provider_service/vehicle_category_by.dart';
+import '../../../provider_service/vehicle_brands_provider.dart';
 import '../../../provider_service/vehicle_documents_bulk_provider.dart';
 import '../../../provider_service/vehicle_model_provider.dart';
 import '../../../provider_service/vehicle_type_provider.dart';
@@ -17,9 +17,8 @@ import '../../../resource/app_colors.dart';
 import '../../../resource/pref_utils.dart';
 
 class AddVehicleScreen extends StatefulWidget {
-  String? mVehicleId;
 
-  AddVehicleScreen(this.mVehicleId);
+  AddVehicleScreen();
 
   @override
   State<AddVehicleScreen> createState() => _AddVehicleScreenState();
@@ -31,14 +30,14 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   /// CONTROLLERS
   final regNo = TextEditingController();
   final regDate = TextEditingController();
-  final vehicleTypeControler = TextEditingController();
+  final vehicleCategoryController = TextEditingController();
   final city = TextEditingController();
   final payload = TextEditingController();
   final chassis = TextEditingController();
   final engine = TextEditingController();
   final insuranceCompany = TextEditingController();
   final policyNo = TextEditingController();
-  bool isUpdate=false;
+  bool isUpdate = false;
   bool isLoading = false;
   String? selectedColorName;
   Color? selectedColor;
@@ -58,7 +57,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       taxFrom,
       taxTo,
       lastPaidDate,
-      fleetId;
+      fleetId,vehicleTypeId,vehicle_model_id;
   List<String> selectedPermitStates = [];
   String? selectedVehicleId;
 
@@ -85,88 +84,19 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   void initState() {
     super.initState();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
+/*    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final provider = Provider.of<VehicleTypeProvider>(context, listen: false);
       await provider.fetchVehicleType();
-    });
-    if (widget.mVehicleId != null) {
-      isUpdate=true;
-      fleetId =widget.mVehicleId;
-      fetchData();
-    }else{
-      isUpdate=false;
-    }
-  }
-
-  Future<void> fetchData() async {
-    final provider = Provider.of<DraftVehicleProvider>(context, listen: false);
-    await provider.fetchDraftVehicle(widget.mVehicleId!);
-    final data = provider.vehicleQutation;
-
-    print("RanjeetTest =========>${data.toString()}");
-
-    setState(() {
-
-      regNo.text = data['vehicle_number'];
-      regDate.text = Utils.formatDate(data['registered_date']);
-      city.text = data['location']['current_city' ?? ""];
-      payload.text = (data['payload']?.toString() ?? "").replaceAll(
-        RegExp(r'\.00$'),
-        "",
+    });*/
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final provider = Provider.of<VehicleBrandsProvider>(
+        context,
+        listen: false,
       );
-
-      status=Utils.capitalize(data['status']);
-      chassis.text = data['chassis_number'] ?? "";
-      engine.text = data['engine_number'] ?? "";
-      city.text = data['rto'] ?? "";
-      insuranceCompany.text = data['insurance_company'] ?? "";
-      policyNo.text = data['insurance_policy_number'] ?? "";
-      brand = data['VehicleType']?['brand']?.toString();
-      vehicleTypeControler.text = data['VehicleType']['model'].toString();
-      model = data['VehicleType']['model'].toString();
-      selectedVehicleId = data['VehicleType']?['id']?.toString();
-      widget.mVehicleId = data['vehicle_type_id']?.toString() ?? '';
-      fuel = data['fuel_type'];
-      if (data['permit_type'] != null &&
-          data['permit_type'] == 'State Permit') {
-        permit = 'State permit';
-      } else if (data['permit_type'] != null &&
-          data['permit_type'] == 'No Permit') {
-        permit = 'No permit';
-      }
-      if (data['permit_states'] != null) {
-        String raw = data['permit_states'] ?? '';
-
-        selectedPermitStates =
-            raw
-                .replaceAll('[', '')
-                .replaceAll(']', '')
-                .split(',')
-                .map((e) => e.trim())
-                .where((e) => e.isNotEmpty)
-                .toList();
-      }
-
-      selectedTaxPeriod =
-          data['road_tax_paid_period'] == null
-              ? null
-              : Utils.capitalize(data['road_tax_paid_period']);
-      if (selectedTaxPeriod != null) {
-        selected = true;
-      }
-      lastPaidDate = data['tax_paid_date'] ?? null;
-      isNegotiable = (data['is_negotiable'] ?? false) ? 'Yes' : 'No';
-      roadTax = (data['road_tax_paid'] ?? false) ? 'Yes' : 'No';
-
-      if (data['service_type']?.toString() == 'in_city') {
-        service = 'Within City';
-      } else {
-        service = data['service_type']?.toString();
-      }
+      await provider.fetchBrands();
     });
-
-    print("Vehicle Number: ${data['vehicle_number']}");
   }
+
 
   /// ================= FUNCTIONS =================
 
@@ -441,7 +371,91 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                 dateField1("Registration Date", regDate),
                 gap(),
                 // Brand Dropdown
-                Consumer<VehicleTypeProvider>(
+                Consumer<VehicleBrandsProvider>(
+                  builder: (context, provider, _) {
+                    if (provider.isLoading) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    return Column(
+                      children: [
+                        DropdownButtonFormField<String>(
+                          value: provider.selectedBrand,
+                          decoration: const InputDecoration(
+                            labelText: "Vehicle Brand *",
+                            border: OutlineInputBorder(),
+                          ),
+                          isExpanded: true,
+                          items:
+                              provider.vehicleBrands.map((brand) {
+                                return DropdownMenuItem<String>(
+                                  value: brand,
+                                  child: Text(brand),
+                                );
+                              }).toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              provider.setSelectedBrand(value);
+                              brand=value;
+                              vehicleModelProvider.fetchVehicleModel(value);
+                            }
+                          },
+                        ),
+                        SizedBox(height: 10),
+                        Consumer<VehicleModelProvider>(
+                          builder: (context, provider, _) {
+                            if (provider.isLoading) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            }
+
+                            return DropdownButtonFormField<
+                              Map<String, dynamic>
+                            >(
+                              value: provider.selectedModel,
+                              decoration: const InputDecoration(
+                                labelText: "Select Model *",
+                                border: OutlineInputBorder(),
+                              ),
+                              hint: const Text("Select Model"),
+                              isExpanded: true,
+
+                              items:
+                                  provider.models.map((item) {
+                                    return DropdownMenuItem<
+                                      Map<String, dynamic>
+                                    >(
+                                      value: item, // ✅ FULL OBJECT
+                                      child: Text(item['model']),
+                                    );
+                                  }).toList(),
+
+                              onChanged: (value) {
+                                provider.setSelectedModel(value);
+                                print(
+                                  provider.selectedModel?['model'],
+                                ); // 1217C
+                                vehicle_model_id=provider.selectedModel?['id'].toString();
+                                vehicleTypeId=provider.selectedModel?['category_id'].toString();
+                                model= provider.selectedModel?['model'];
+                                vehicleCategoryController.text=provider.selectedModel?['v_cat'];
+                                payload.text=provider.selectedModel!['payload_capacity_kg'].toString();
+                              },
+                            );
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                ),
+                gap(),
+                text('Vehicle Category *'),
+                field(vehicleCategoryController),
+                text('Payload *'),
+                field(payload),
+
+                /*  Consumer<VehicleTypeProvider>(
                   builder: (context, provider, _) {
                     if (provider.isLoading) {
                       return const Center(child: CircularProgressIndicator());
@@ -496,11 +510,13 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                             provider.setSelectedVehicle(value);
 
                             if (value != null) {
-                              final selectedItem = provider.selectedVehicleGroup?.options
+                              final selectedItem = provider
+                                  .selectedVehicleGroup
+                                  ?.options
                                   .firstWhere((e) => e.id == value);
 
                               payload.text = selectedItem?.name ?? "";
-                              widget.mVehicleId=selectedItem?.id.toString();
+                              widget.mVehicleId = selectedItem?.id.toString();
 
                               await Provider.of<VehicleCategoryBy>(
                                 context,
@@ -514,7 +530,6 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                   },
                 ),
                 gap(),
-
                 Consumer<VehicleCategoryBy>(
                   builder: (context, provider, _) {
                     if (provider.isLoading) {
@@ -523,7 +538,6 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
                     return Column(
                       children: [
-
                         /// 🔹 BRAND DROPDOWN
                         DropdownButtonFormField<String?>(
                           value: provider.selectedBrand,
@@ -548,7 +562,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                           ],
                           onChanged: (value) {
                             provider.setSelectedBrand(value);
-                            brand =value;
+                            brand = value;
                           },
                         ),
 
@@ -570,23 +584,24 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                             ),
                             ...provider.filteredModels.map((item) {
                               return DropdownMenuItem<String?>(
-                                value: item['model'], // 🔁 change if key differs
+                                value: item['model'],
+                                // 🔁 change if key differs
                                 child: Text(item['model']),
                               );
                             }),
                           ],
-                          onChanged: provider.selectedBrand == null
-                              ? null // disable if no brand
-                              : (value) {
-                            provider.setSelectedModel(value);
-                            model=value;
-                          },
+                          onChanged:
+                              provider.selectedBrand == null
+                                  ? null // disable if no brand
+                                  : (value) {
+                                    provider.setSelectedModel(value);
+                                    model = value;
+                                  },
                         ),
                       ],
                     );
                   },
-                ),
-
+                ),*/
                 gap(),
                 text("Service City *"),
                 field(city),
@@ -1252,7 +1267,6 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     );
   }
 
-
   Widget dateField1(String label, TextEditingController c) {
     return TextFormField(
       controller: c,
@@ -1271,7 +1285,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
         );
         if (d != null) {
           setState(() {
-            rcFrom=DateFormat("yyyy-MM-dd").format(d);
+            rcFrom = DateFormat("yyyy-MM-dd").format(d);
           });
           c.text = DateFormat("yyyy-MM-dd").format(d);
         }
@@ -1509,7 +1523,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       final response = await provider.validateAddNewCar(
         isUpdate: isUpdate,
         vehicle_number: regNo.text.trim(),
-        vehicle_type_id: widget.mVehicleId,
+        vehicle_type_id: vehicleTypeId,
         owner_id: PrefUtils.getUserId(),
         fleetId: fleetId,
         current_city: city.text.trim(),
@@ -1545,6 +1559,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                 : null,
         brand: brand,
         model: model,
+        vehicle_model_id:vehicle_model_id,
         pollution_certificates: jsonEncode(
           pollutionList
               .map(
@@ -1576,15 +1591,14 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       final String message = response?['message'] ?? "Something went wrong";
 
       /// ✅ GET VEHICLE ID SAFELY
-      if(success==true) {
+      if (success == true) {
         setState(() {
           isUpdate = true;
-          widget.mVehicleId =
-              response?['data']?['VehicleType']['id']?.toString();
-          fleetId= response?['data']?['id']?.toString();
+          vehicleTypeId = response?['data']?['VehicleType']['id']?.toString();
+          fleetId = response?['data']?['id']?.toString();
         });
-      }else{
-        isUpdate=false;
+      } else {
+        isUpdate = false;
       }
 
       /// ✅ SHOW SNACKBAR BASED ON API
@@ -1600,7 +1614,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
         if (step < 2) {
           setState(() => step++);
         } else {
-          if (widget.mVehicleId != null) {
+          if (vehicleTypeId != null) {
             _documentUpload(response!['data']['id'].toString());
           } else {
             debugPrint("❌ Vehicle ID missing in response");
