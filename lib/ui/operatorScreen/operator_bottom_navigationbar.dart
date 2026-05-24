@@ -4,9 +4,11 @@ import 'package:geolocator/geolocator.dart';
 import 'package:gocarriage_universal/resource/pref_utils.dart';
 import 'package:gocarriage_universal/ui/operatorScreen/operator_booing_screen.dart';
 import 'package:gocarriage_universal/ui/operatorScreen/vehicles_changes_screen.dart';
+import 'package:page_transition/page_transition.dart';
 import '../../resource/app_colors.dart';
 import '../../resource/image_paths.dart';
 import '../commanScreen/menu_screen.dart';
+import '../dashboardScreen/customer_bottom_navigation_bar.dart';
 import 'operator_home_screen.dart';
 
 class OperatorBottomNavigationbar extends StatefulWidget {
@@ -120,11 +122,28 @@ class _OperatorBottomNavigationbar extends State<OperatorBottomNavigationbar> {
             ],
           ),
           const Spacer(),
-          const Icon(
-            Icons.notifications_none_outlined,
-            size: 28,
-            color: Colors.white,
-          ),
+          Row(
+            children: [
+              IconButton(
+                icon: Icon(Icons.house, color: Colors.white),
+                onPressed: () {
+                  PrefUtils.clearPreferences();
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    PageTransition(
+                      child: CustomerBottomNavigationBar(),
+                      type: PageTransitionType.fade,
+                      duration: const Duration(milliseconds: 900),
+                      reverseDuration: const Duration(milliseconds: 900),
+                    ),
+                        (Route<dynamic> route) => false,
+                  );
+                },
+              ),
+              SizedBox(width: 10),
+              Icon(Icons.notifications, color: Colors.white),
+            ],
+          )
         ],
       ),
     );

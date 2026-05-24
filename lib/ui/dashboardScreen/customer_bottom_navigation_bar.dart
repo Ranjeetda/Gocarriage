@@ -151,7 +151,7 @@ class _CustomerBottomNavigationBar extends State<CustomerBottomNavigationBar> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        PrefUtils.getName().isEmpty?'----':PrefUtils.getName(),
+                        PrefUtils.getName().isEmpty?'Guest':PrefUtils.getName(),
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
@@ -220,6 +220,40 @@ class _CustomerBottomNavigationBar extends State<CustomerBottomNavigationBar> {
     });
 
     try {
+      // ✅ 1. Check if location service is enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() {
+          mLocation = "Location services are disabled";
+          isGettingLocation = false;
+        });
+        return;
+      }
+
+      // ✅ 2. Check permission
+      LocationPermission permission = await Geolocator.checkPermission();
+
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied) {
+        setState(() {
+          mLocation = "Location permission denied";
+          isGettingLocation = false;
+        });
+        return;
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        setState(() {
+          mLocation = "Permission permanently denied";
+          isGettingLocation = false;
+        });
+        return;
+      }
+
+      // ✅ 3. Get position
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
@@ -227,6 +261,7 @@ class _CustomerBottomNavigationBar extends State<CustomerBottomNavigationBar> {
       fromLatitude = position.latitude.toString();
       fromLongitude = position.longitude.toString();
 
+      // ✅ 4. Convert to address
       List<Placemark> placemarks = await placemarkFromCoordinates(
         position.latitude,
         position.longitude,
@@ -234,13 +269,21 @@ class _CustomerBottomNavigationBar extends State<CustomerBottomNavigationBar> {
 
       if (placemarks.isNotEmpty) {
         final place = placemarks.first;
-        mLocation = "${place.locality}, ${place.administrativeArea}";
+        setState(() {
+          mLocation =
+          "${place.locality ?? ''}, ${place.administrativeArea ?? ''}";
+        });
       }
     } catch (e) {
-      mLocation = "Unable to get location";
+      debugPrint("Location Error: $e");
+      setState(() {
+        mLocation = "Unable to get location";
+      });
     }
 
-    setState(() => isGettingLocation = false);
+    setState(() {
+      isGettingLocation = false;
+    });
   }
 
 

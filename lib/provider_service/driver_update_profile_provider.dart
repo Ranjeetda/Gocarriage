@@ -25,6 +25,7 @@ class DriverUpdateProfileProvider with ChangeNotifier {
   bool get success => _success;
 
   Future<void> updateProfile({
+    required String userId,
     required String fullName,
     required String email,
     required String mobileNo,
@@ -62,7 +63,7 @@ class DriverUpdateProfileProvider with ChangeNotifier {
     required String accountNumber,
     required String ifscCode,
   }) async {
-    final Uri url = Uri.parse(URLS.fetchProfileDriver + PrefUtils.getUserId());
+    final Uri url = Uri.parse(URLS.fetchProfileDriver + userId);
 
     final Map<String, String> headers = {
       "Content-Type": "application/json",

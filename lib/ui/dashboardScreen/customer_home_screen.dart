@@ -8,21 +8,22 @@ import 'package:gocarriage_universal/ui/auth/login_screen.dart';
 import 'package:gocarriage_universal/ui/dashboardScreen/vehicle_selection_sheet.dart';
 import 'package:google_places_flutter/google_places_flutter.dart';
 import 'package:provider/provider.dart';
-import '../../eventModel/notification_event.dart';
 import '../../provider_service/booking_provider.dart';
 import '../../provider_service/booking_trip.dart';
 import '../../provider_service/check_area_provider.dart';
+import '../../provider_service/distance_provider.dart';
 import '../../provider_service/driver_booing_request_provider.dart';
+import '../../provider_service/fare_calculate_provider.dart';
+import '../../provider_service/near_by_vehicle_provider.dart';
 import '../../provider_service/place_details_provider.dart';
 import '../../resource/Utils.dart';
 import '../../resource/app_colors.dart';
 import '../../resource/image_paths.dart';
 import '../dialogBox/driver_bottom_sheet.dart';
-import '../dialogBox/login_register_dialog.dart';
 import '../dialogBox/special_instructions_dialog.dart';
 import '../model/booking_trip_request.dart';
-import '../model/grid_item.dart';
 import '../model/location_modal.dart';
+import '../model/special_requirements.dart';
 import '../model/vehicle_model.dart';
 import 'package:http/http.dart' as http;
 
@@ -36,13 +37,13 @@ class CustomerHomeScreen extends StatefulWidget {
 }
 
 class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
-  final  fromController = TextEditingController();
-  final  toController = TextEditingController();
-  final  pickupDateController = TextEditingController();
-  final  pickupTimeController = TextEditingController();
-  final  searchClusterController = TextEditingController();
-  final  metrialController = TextEditingController();
-  final  weightController = TextEditingController();
+  final fromController = TextEditingController();
+  final toController = TextEditingController();
+  final pickupDateController = TextEditingController();
+  final pickupTimeController = TextEditingController();
+  final searchClusterController = TextEditingController();
+  final metrialController = TextEditingController();
+  final weightController = TextEditingController();
 
   bool isWithinCity = true;
   bool isBookingType = true;
@@ -57,7 +58,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   String? toLongitude;
 
   String bookingMode = "NOW";
+  String clusterId = "";
+  String distance = "";
+  String mDistance = "";
+  String mDuration = "";
   String vehicleType = "";
+  String weightUnit = "";
   String mfromLable = "";
   String mtoLable = "";
   String? mPrice;
@@ -66,6 +72,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   String? mPincode1;
   String? mPincode2;
   BookingTripRequest? globalBookingRequest;
+  Map<String, dynamic>? nearbyData;
+  Map<String, dynamic>? fareData;
 
   String? selectedRequirement;
   final Map<String, bool> specialRequirements = {
@@ -105,6 +113,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       fromController.text = globalBookingRequest!.fromLocation.address;
       toController.text = globalBookingRequest!.toLocation.address;
       vehicleType = globalBookingRequest!.vehicleType;
+      weightUnit = globalBookingRequest!.weightUnit;
       toLatitude = globalBookingRequest!.toLocation.lat.toString();
       toLongitude = globalBookingRequest!.toLocation.lng.toString();
       fromLatitude = globalBookingRequest!.fromLocation.lat.toString();
@@ -112,6 +121,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       mPincode1 = PrefUtils.getpinCode1();
       mPincode2 = PrefUtils.getpinCode2();
       _checkCluster(PrefUtils.getpinCode1(), PrefUtils.getpinCode2());
+      _checkDistance(PrefUtils.getpinCode1(), PrefUtils.getpinCode2());
       print(globalBookingRequest!.weight);
     }
   }
@@ -182,6 +192,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         if (sameCluster == true) {
           mtoLable = "Service is available";
           mfromLable = "Service is available";
+          clusterId = data['cluster_id'].toString();
+          nearByVehicleData(
+            bookingMode,
+            toLatitude.toString(),
+            fromLongitude.toString(),
+          );
           //Utils.showCustomToast(context, "Service is available");
         } else {
           mtoLable = "Service is not available";
@@ -199,6 +215,22 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       isLoading = false;
 
       // Utils.showErrorMessage(context, e.toString());
+    }
+  }
+
+  Future<void> _checkDistance(String pinCode1, String pinCode2) async {
+    try {
+      final response = await Provider.of<DistanceProvider>(
+        context,
+        listen: false,
+      ).fetchDistance(pinCode1, pinCode2);
+      distance =
+          double.parse(response['distance']!.replaceAll(" km", "")).toString();
+      mDistance = response['distance']!;
+      mDuration = response['duration']!;
+      print("distance ${distance}");
+    } catch (e) {
+      print("Exception${e.toString()}");
     }
   }
 
@@ -221,6 +253,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         fromController.text = "";
         toController.text = "";
         vehicleType = "";
+        weightUnit = "";
         mtoLable = "";
         mfromLable = "";
         PrefUtils.setPinCode1("");
@@ -238,6 +271,34 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           responseData['message'] ?? 'Booking failed. Please try again.';
       Utils.showErrorMessage(context, errorMessage);
     }
+  }
+
+  void nearByVehicleData(String bookingMode, String lat, String lng) async {
+    final response = await Provider.of<NearByVehicleProvider>(
+      context,
+      listen: false,
+    ).fetchNearByVehicle(bookingMode, lat, lng);
+
+    nearbyData = response;
+    List<int> vehicleTypeIds = List<int>.from(
+      nearbyData?['data']['vehicleTypeIds'] ?? [],
+    );
+
+    fareCalculateData(clusterId, distance, vehicleTypeIds);
+    print(response);
+  }
+
+  void fareCalculateData(
+    String clusterId,
+    String totalDistance,
+    List<int> vehicleTypeIds,
+  ) async {
+    final response = await Provider.of<FareCalculateProvider>(
+      context,
+      listen: false,
+    ).fetchFareCalculate(clusterId, totalDistance, vehicleTypeIds);
+
+    fareData = response;
   }
 
   @override
@@ -310,7 +371,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       ),
     );
   }
-
 
   // ================= TOGGLES =================
   Widget bookingTypeToggle() {
@@ -640,11 +700,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   }
 
   void _openLocationBottomSheet(
-      String label,
-      TextEditingController controller,
-      ) async {
-    final TextEditingController searchController =
-    TextEditingController(text: controller.text);
+    String label,
+    TextEditingController controller,
+  ) async {
+    final TextEditingController searchController = TextEditingController(
+      text: controller.text,
+    );
 
     final FocusNode searchFocusNode = FocusNode();
 
@@ -666,8 +727,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 searchController.text.isEmpty && recentLocations.isNotEmpty;
 
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!searchFocusNode.hasFocus &&
-                  searchController.text.isEmpty) {
+              if (!searchFocusNode.hasFocus && searchController.text.isEmpty) {
                 searchFocusNode.requestFocus();
               }
             });
@@ -774,8 +834,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
                         /// 🔥 SAFE PLACE SELECTION HANDLER
                         itemClick: (prediction) async {
-                          final selected =
-                              prediction.description ?? "";
+                          final selected = prediction.description ?? "";
 
                           controller.text = selected;
                           searchController.text = selected;
@@ -784,15 +843,13 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
                           if (!mounted) return;
 
-                          final provider =
-                          Provider.of<PlaceDetailsProvider>(
+                          final provider = Provider.of<PlaceDetailsProvider>(
                             context,
                             listen: false,
                           );
 
                           // Manual place details fetch
-                          await provider.fetchPlaceDetails(
-                              prediction.placeId!);
+                          await provider.fetchPlaceDetails(prediction.placeId!);
 
                           if (!mounted) return;
 
@@ -802,24 +859,19 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                             if (label == "Pickup Location") {
                               mPincode1 = details.postalCode;
                               PrefUtils.setPinCode1(mPincode1!);
-                              fromLatitude =
-                                  details.lat.toString();
-                              fromLongitude =
-                                  details.lng.toString();
+                              fromLatitude = details.lat.toString();
+                              fromLongitude = details.lng.toString();
                             } else {
                               mPincode2 = details.postalCode;
                               PrefUtils.setPinCode2(mPincode2!);
-                              toLatitude =
-                                  details.lat.toString();
-                              toLongitude =
-                                  details.lng.toString();
+                              toLatitude = details.lat.toString();
+                              toLongitude = details.lng.toString();
                             }
                           }
 
-                          if (mPincode1 != null &&
-                              mPincode2 != null) {
-                            _checkCluster(
-                                mPincode1!, mPincode2!);
+                          if (mPincode1 != null && mPincode2 != null) {
+                            _checkCluster(mPincode1!, mPincode2!);
+                            _checkDistance(mPincode1!, mPincode2!);
                           } else if (mPincode1 != null) {
                             _checkArea(mPincode1!);
                           }
@@ -836,8 +888,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     /// Recent Searches
                     if (showRecent) ...[
                       Padding(
-                        padding:
-                        const EdgeInsets.symmetric(horizontal: 16),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
                           "Recent Searches",
                           style: TextStyle(
@@ -861,8 +912,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                               ),
                               title: Text(
                                 loc,
-                                style:
-                                const TextStyle(fontSize: 15),
+                                style: const TextStyle(fontSize: 15),
                               ),
                               onTap: () async {
                                 controller.text = loc;
@@ -870,10 +920,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
                                 await PrefUtils.addLocation(loc);
 
-                                if (Navigator.of(sheetContext)
-                                    .canPop()) {
-                                  Navigator.of(sheetContext)
-                                      .pop();
+                                if (Navigator.of(sheetContext).canPop()) {
+                                  Navigator.of(sheetContext).pop();
                                 }
                               },
                             );
@@ -891,7 +939,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       },
     );
   }
-
 
   Widget dateTimeFields() {
     return Row(
@@ -1168,9 +1215,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 color: const Color(0xFF356AE6),
                 fontWeight: FontWeight.w600,
                 decoration: TextDecoration.underline,
-                // 👈 underline
                 decorationColor: const Color(0xFF356AE6),
-                // optional
                 decorationThickness: 1.5, // optional thickness
               ),
             ),
@@ -1193,7 +1238,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(height: 10,),
+            SizedBox(height: 10),
             const Text(
               "Add Special Instructions",
               style: TextStyle(
@@ -1254,16 +1299,29 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             vehicleType: vehicleType!,
             fromLocation: LocationModal(
               address: fromController.text.trim(),
-              lat: double.parse(toLatitude!),
-              lng: double.parse(toLongitude!),
-            ),
-            toLocation: LocationModal(
-              address: toController.text.trim(),
               lat: double.parse(fromLatitude!),
               lng: double.parse(fromLongitude!),
             ),
-            materialName: "",
-            weight: 0,
+
+            toLocation: LocationModal(
+              address: toController.text.trim(),
+              lat: double.parse(toLatitude!),
+              lng: double.parse(toLongitude!),
+            ),
+
+            materialName: "General",
+            weight: double.parse(vehicleType),
+            weightUnit: 'KG',
+            customerId: int.parse(PrefUtils.getUserId()),
+
+            // replace with dynamic user id
+            specialRequirements: SpecialRequirements(
+              container: false,
+              extraLength: false,
+              covered: false,
+              hydraulic: false,
+              extraLarge: false,
+            ),
           );
 
           if (PrefUtils.isLoggedIn()) {
@@ -1294,29 +1352,36 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   }
 
   Future<void> showVehicleBottomSheet(
-    BuildContext context,
-    String pincode1,
-    String pincode2,
-  ) async {
-    final result = await showModalBottomSheet<VehicleModel>(
+      BuildContext context,
+      String pincode1,
+      String pincode2,
+      ) async {
+    final result =
+    await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
       builder: (_) {
         return FractionallySizedBox(
-          heightFactor: 0.5,
-          child: VehicleSelectionSheet(pincode1, pincode2),
+          heightFactor: 0.8,
+          child: VehicleSelectionSheet(
+            pincode1,
+            pincode2,
+            mDistance,
+            mDuration,
+            fareData,
+          ),
         );
       },
     );
 
     if (result != null) {
       setState(() {
-        vehicleType = result.name;
-        mPrice = result.price.toString();
-        print("Selected Vehicle: ${result.name}");
-        print("Price: ₹${result.price}");
+        vehicleType = result["vehicleType"] ?? "";
+        mPrice = result["price"]?.toString() ?? "0";
       });
+
+      print("Vehicle: $vehicleType");
+      print("Price: ₹$mPrice");
     }
   }
 }

@@ -3,16 +3,22 @@ class URLS {
   static const String baseUrl = 'https://api.gocarriage.com/api';
   static const String imagBaseUrlOwner = 'https://zebraffeebucket2026.s3.ap-south-1.amazonaws.com/owners/';
   static const String bookingBaseUrl = 'https://booking.api.gocarriage.com';
+  static const String managementBaseUrl = 'https://management.api.gocarriage.com';
   static const String clusterBaseUrl = 'https://management.api.gocarriage.com/api';
   static const String fileUpload = 'https://api.gocarriage.com/api/upload';
   static const String imageUrlGet = 'https://api.gocarriage.com/api/upload/signed-url?key=';
 
   static const String login = '$baseUrl/auth/login';
+  static const String sendOtp = '$baseUrl/phone-otp/send-registration';
+  static const String verifyOtp = '$baseUrl/phone-otp/verify-registration';
+  
   static const String forgotPassword = '$baseUrl/auth/forgot-password';
   static const String resetPassword = '$baseUrl/auth/reset-password';
   static const String registerCustomer = '$baseUrl/customers/create';
   static const String bookingAllRide = '${bookingBaseUrl}/booking/history';
   static const String rescheduleApi = '${baseUrl}/bookings/reschedule';
+  static const String nearByVehicle = '${bookingBaseUrl}/booking/nearby-vehicle-types';
+  static const String fareCalculate = '${managementBaseUrl}/api/fares/calculate/bulk-approximate';
 
   static const String fetchProfileCustomer = '$baseUrl/customers/';
   static const String clustersPinCheck = '$clusterBaseUrl/clusters/check-pincode?pincode=';

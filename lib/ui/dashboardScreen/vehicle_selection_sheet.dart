@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:gocarriage_universal/resource/Utils.dart';
-import 'package:gocarriage_universal/resource/app_colors.dart';
-import '../model/vehicle_model.dart';
+import 'package:provider/provider.dart';
+
+import '../../provider_service/vehicle_type_provider.dart';
+import '../../resource/Utils.dart';
+import '../../resource/app_colors.dart';
 
 class VehicleSelectionSheet extends StatefulWidget {
   final String pincode1;
   final String pincode2;
+  final String mDistance;
+  final String mDuration;
+  final Map<String, dynamic>? fareData;
 
-
-  VehicleSelectionSheet(this.pincode1, this.pincode2);
+  const VehicleSelectionSheet(
+      this.pincode1, this.pincode2,this.mDistance,this.mDuration,this.fareData,
+      {super.key});
 
   @override
   State<VehicleSelectionSheet> createState() =>
@@ -16,117 +22,96 @@ class VehicleSelectionSheet extends StatefulWidget {
 }
 
 class _VehicleSelectionSheetState extends State<VehicleSelectionSheet> {
-  int selectedIndex = 0;
 
-  double? totalDistance;
-  int? totalTime;
-  bool isLoading = true;
-
-  final vehicles = [
-    VehicleModel(
-      name: "3 Wheeler",
-      time: "---",
-      capacity: "500 kg",
-      size: "5.5ft x 4.5ft x 5ft",
-      price: 653,
-      recommended: true,
-    ),
-    VehicleModel(
-      name: "Tata Ace",
-      time: "",
-      capacity: "750 kg",
-      size: "7ft x 4.5ft x 5ft",
-      price: 844,
-    ),
-    VehicleModel(
-      name: "Pickup 8ft",
-      time: "---",
-      capacity: "1200 kg",
-      size: "8ft x 4.5ft x 5.5ft",
-      price: 1064,
-    ),
-    VehicleModel(
-      name: "14ft Truck",
-      time: "---",
-      capacity: "3500 kg",
-      size: "14ft x 6ft x 6ft",
-      price: 1857,
-    ),
-  ];
 
   @override
   void initState() {
     super.initState();
-    _loadDistanceAndTime();
-  }
 
-  Future<void> _loadDistanceAndTime() async {
-    final result =
-    await Utils.calculateDistanceAndTime(
-      widget.pincode1,
-      widget.pincode2,
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final provider =
+      Provider.of<VehicleTypeProvider>(context, listen: false);
 
-    if (!mounted) return;
+      await provider.fetchVehicleType();
 
-    setState(() {
-      totalDistance = result['distanceKm'];
-      totalTime = result['estimatedTimeMin'];
-      isLoading = false;
+      // ✅ Apply fare selection
+      if (widget.fareData != null) {
+        provider.applyFareResponse(widget.fareData!);
+      }
     });
+
   }
 
   @override
   Widget build(BuildContext context) {
-    final selectedVehicle = vehicles[selectedIndex];
-
     return SafeArea(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           _header(),
           const SizedBox(height: 10),
-
-          /// DISTANCE + TIME CARD
-          isLoading
-              ? const Padding(
-            padding: EdgeInsets.all(16),
-            child: CircularProgressIndicator(),
-          )
-              : _distanceCard(),
+          _distanceCard(),
 
           const SizedBox(height: 10),
 
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: vehicles.length,
-              itemBuilder: (context, index) {
-                return _vehicleTile(
-                  vehicle: vehicles[index],
-                  selected: selectedIndex == index,
-                  onTap: () =>
-                      setState(() => selectedIndex = index),
+          /// ✅ VEHICLE LIST
+          Consumer<VehicleTypeProvider>(
+            builder: (context, provider, _) {
+              if (provider.isLoading) {
+                return const Expanded(
+                  child: Center(child: CircularProgressIndicator()),
                 );
-              },
-            ),
+              }
+
+              final fareList =
+                  widget.fareData?['data']?['fares'] ?? [];
+
+              return Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: provider.vehicleTypes.length,
+                  itemBuilder: (context, index) {
+                    final group = provider.vehicleTypes[index];
+
+                    // ✅ filter by vehicle_type_id
+                    final options = group.options.where((option) {
+                      return fareList.any(
+                            (f) =>
+                        f['vehicle_type_id'] == option.id,
+                      );
+                    }).toList();
+
+                    if (options.isEmpty) {
+                      return const SizedBox();
+                    }
+
+                    return _vehicleGroupCard(
+                      groupName: group.group ?? "",
+                      options: options,
+                      provider: provider,
+                      fareList: fareList,
+                    );
+                  },
+                ),
+              );
+            },
           ),
 
-          _bottomBar(selectedVehicle),
+          _bottomBar(),
         ],
       ),
     );
   }
 
-  // ================= UI WIDGETS =================
+  // ================= UI =================
 
   Widget _header() {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration:  BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.primaryColor,
         borderRadius:
-        BorderRadius.vertical(top: Radius.circular(20)),
+        const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -134,9 +119,10 @@ class _VehicleSelectionSheetState extends State<VehicleSelectionSheet> {
           const Text(
             "Select Vehicle Type",
             style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold),
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           GestureDetector(
             onTap: () => Navigator.pop(context),
@@ -149,8 +135,8 @@ class _VehicleSelectionSheetState extends State<VehicleSelectionSheet> {
 
   Widget _distanceCard() {
     return Container(
-      padding:
-      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(0xFFF1F7FF),
         borderRadius: BorderRadius.circular(12),
@@ -163,12 +149,10 @@ class _VehicleSelectionSheetState extends State<VehicleSelectionSheet> {
               const Icon(Icons.location_on, color: Colors.blue),
               const SizedBox(width: 6),
               Text(
-                "${totalDistance!.toStringAsFixed(1)} km",
+                widget.mDistance,
                 style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.blue,
-                ),
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue),
               ),
             ],
           ),
@@ -177,12 +161,10 @@ class _VehicleSelectionSheetState extends State<VehicleSelectionSheet> {
               const Icon(Icons.access_time, color: Colors.blue),
               const SizedBox(width: 6),
               Text(
-                "~$totalTime min",
+                widget.mDuration,
                 style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.blue,
-                ),
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue),
               ),
             ],
           ),
@@ -191,147 +173,193 @@ class _VehicleSelectionSheetState extends State<VehicleSelectionSheet> {
     );
   }
 
-  Widget _bottomBar(VehicleModel vehicle) {
+  // ================= GROUP CARD =================
+
+  Widget _vehicleGroupCard({
+    required String groupName,
+    required List options,
+    required VehicleTypeProvider provider,
+    required List fareList,
+  }) {
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(color: Colors.black12, blurRadius: 6)
-        ],
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "Selected Vehicle\n${vehicle.name}",
-                style: const TextStyle(fontWeight: FontWeight.w500),
-              ),
-              Text(
-                "₹${vehicle.price}",
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green,
+          // HEADER
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(12)),
+            ),
+            child: Row(
+              mainAxisAlignment:
+              MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  groupName,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryColor,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              onPressed: () {
-                Navigator.pop(context, vehicle);
-              },
-              child: Text(
-                "Confirm ${vehicle.name}",
-                style: const TextStyle(color: Colors.white),
-              ),
+                Text("${options.length} option"),
+              ],
             ),
           ),
+
+          // OPTIONS
+          ...options.map((option) {
+            final fare = fareList.firstWhere(
+                  (f) => f['vehicle_type_id'] == option.id,
+              orElse: () => {},
+            );
+
+            final price =
+                fare['approximate_fare']?['total'] ?? 0;
+
+            final isSelected =
+                provider.selectedVehicleId == option.id;
+
+            return GestureDetector(
+              onTap: () {
+                provider.setSelectedGroup(groupName);
+                provider.setSelectedVehicle(option.id, option.name);
+              },
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? Colors.blue.shade50
+                      : Colors.white,
+                  border: Border(
+                    top: BorderSide(
+                        color: Colors.grey.shade200),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.local_shipping),
+                    const SizedBox(width: 10),
+
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "${option.name} kg",
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold),
+                          ),
+                          const Text(
+                            "Payload capacity",
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    Column(
+                      crossAxisAlignment:
+                      CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          "₹${price.toStringAsFixed(0)}",
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold),
+                        ),
+                        const Text("incl. toll",
+                            style: TextStyle(fontSize: 12)),
+                      ],
+                    ),
+
+                    if (isSelected)
+                      const Padding(
+                        padding: EdgeInsets.only(left: 8),
+                        child: Icon(Icons.check_circle,
+                            color: Colors.blue),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
         ],
       ),
     );
   }
 
-  Widget _vehicleTile({
-    required VehicleModel vehicle,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color:
-          selected ? Colors.blue.shade50 : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color:
-            selected ? Colors.blue : Colors.grey.shade300,
-            width: selected ? 2 : 1,
+  // ================= BOTTOM =================
+
+  Widget _bottomBar() {
+    return Consumer<VehicleTypeProvider>(
+      builder: (context, provider, _) {
+        final fareList =
+            widget.fareData?['data']?['fares'] ?? [];
+
+        final selectedFare = fareList.firstWhere(
+              (f) =>
+          f['vehicle_type_id'] ==
+              provider.selectedVehicleId,
+          orElse: () => {},
+        );
+
+        final price = selectedFare['approximate_fare']?['total'] ?? 0;
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(color: Colors.black12, blurRadius: 6)
+            ],
           ),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.local_shipping, size: 40),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment:
+                MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Text(
-                        vehicle.name,
-                        style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold),
-                      ),
-                      if (vehicle.recommended)
-                        Container(
-                          margin:
-                          const EdgeInsets.only(left: 8),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.green,
-                            borderRadius:
-                            BorderRadius.circular(12),
-                          ),
-                          child: const Text(
-                            "Recommended",
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                 /* Text(vehicle.time,
-                      style:
-                      const TextStyle(color: Colors.blue)),
-                  const SizedBox(height: 4),*/
                   Text(
-                    "${vehicle.capacity} • ${vehicle.size}",
-                    style: const TextStyle(fontSize: 12),
+                    "Selected Vehicle\n${provider.selectedVehicleId ?? "-"} kg",
+                  ),
+                  Text(
+                    "₹${price.toStringAsFixed(0)}",
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
                   ),
                 ],
               ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  "₹${vehicle.price}",
-                  style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                    AppColors.primaryColor,
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context, {
+                      "vehicleType": provider.selectedVehicleName,
+                      "price": price,
+                    });
+                  },
+                  child: const Text("Confirm",style: TextStyle(color: Colors.white),),
                 ),
-                const Text("incl. toll",
-                    style: TextStyle(fontSize: 12)),
-                if (selected)
-                  const Icon(Icons.check_circle,
-                      color: Colors.blue),
-              ],
-            )
-          ],
-        ),
-      ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

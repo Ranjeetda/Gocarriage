@@ -725,7 +725,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                         FontAwesomeIcons.whatsapp,
                       ),
                     ],
-                    sectionTitle('Email Address', isRequired: true),
+                    sectionTitle('Email Address', isRequired: false),
                     _emailSection(),
                     const SizedBox(height: 10),
                     const Text(
@@ -1143,7 +1143,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
         controller: _emailController,
         enabled: !isEmailVerified,
         decoration: _dec("Enter email").copyWith(
-          suffixIcon: (!isEmailVerified &&
+          /*suffixIcon: (!isEmailVerified &&
               _isValidEmail(_emailController.text))
               ? TextButton(
             onPressed: isLoadingEmail ||
@@ -1167,7 +1167,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                   : "Send OTP",
             ),
           )
-              : null,
+              : null,*/
         ),
         onChanged: (_) => setState(() {}),
         validator: (v) =>

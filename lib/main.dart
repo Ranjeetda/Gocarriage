@@ -1,8 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:gocarriage_universal/provider_service/accept_reject_price_provider.dart';
 import 'package:gocarriage_universal/provider_service/add_car_provider.dart';
@@ -10,13 +10,17 @@ import 'package:gocarriage_universal/provider_service/assign_driver_provider.dar
 import 'package:gocarriage_universal/provider_service/assign_vehicle_driver_provider.dart';
 import 'package:gocarriage_universal/provider_service/audio_provider.dart';
 import 'package:gocarriage_universal/provider_service/delete_vehicle_provider.dart';
+import 'package:gocarriage_universal/provider_service/distance_provider.dart';
 import 'package:gocarriage_universal/provider_service/draft_vehicle_provider.dart';
 import 'package:gocarriage_universal/provider_service/driver_booking_history_full_provider.dart';
+import 'package:gocarriage_universal/provider_service/driver_profile_provider.dart';
+import 'package:gocarriage_universal/provider_service/fare_calculate_provider.dart';
 import 'package:gocarriage_universal/provider_service/fetch_image_url_provider.dart';
 import 'package:gocarriage_universal/provider_service/file_upload_provider.dart';
 import 'package:gocarriage_universal/provider_service/fleet_subscriptions_provider.dart';
 import 'package:gocarriage_universal/provider_service/forgot_password_provider.dart';
 import 'package:gocarriage_universal/provider_service/forgot_verify_otp_provider.dart';
+import 'package:gocarriage_universal/provider_service/near_by_vehicle_provider.dart';
 import 'package:gocarriage_universal/provider_service/operator_permission_list_provider.dart';
 import 'package:gocarriage_universal/provider_service/operator_profile_update_provider.dart';
 import 'package:gocarriage_universal/provider_service/operator_vechile_booking.dart';
@@ -31,6 +35,7 @@ import 'package:gocarriage_universal/provider_service/owner_request_approve_prov
 import 'package:gocarriage_universal/provider_service/owner_un_assign_driver_provider.dart';
 import 'package:gocarriage_universal/provider_service/owner_unassign_driver_vehicle.dart';
 import 'package:gocarriage_universal/provider_service/search_driver_provider.dart';
+import 'package:gocarriage_universal/provider_service/send_otp_provider.dart';
 import 'package:gocarriage_universal/provider_service/state_provider.dart';
 import 'package:gocarriage_universal/provider_service/subscriptions_owner_list_provider.dart';
 import 'package:gocarriage_universal/provider_service/transactions_history_provider.dart';
@@ -41,8 +46,8 @@ import 'package:gocarriage_universal/provider_service/vehicle_details_provider.d
 import 'package:gocarriage_universal/provider_service/vehicle_documents_bulk_provider.dart';
 import 'package:gocarriage_universal/provider_service/vehicle_model_provider.dart';
 import 'package:gocarriage_universal/provider_service/vehicle_type_provider.dart';
+import 'package:gocarriage_universal/provider_service/verify_otp_provider..dart';
 import 'package:provider/provider.dart';
-
 import '../eventModel/notification_event.dart';
 import '../resource/shared_preferences.dart';
 import '../ui/splashScreen/splash_screen.dart';
@@ -74,7 +79,7 @@ import 'package:gocarriage_universal/provider_service/status_provider.dart';
 import 'package:gocarriage_universal/provider_service/update_profile_provider.dart';
 import 'package:gocarriage_universal/provider_service/vechile_owner_driver_list.dart';
 import 'package:gocarriage_universal/provider_service/vechile_owner_fleets_list.dart';
-import 'package:gocarriage_universal/provider_service/verify_otp_provider.dart';
+import 'package:gocarriage_universal/provider_service/driver_otp_provider.dart';
 
 import 'firebase_options.dart';
 
@@ -93,6 +98,8 @@ Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => SendOtpProvider()),
+        ChangeNotifierProvider(create: (_) => VerifyOtpProvider()),
         ChangeNotifierProvider(create: (_) => SignInProvider()),
         ChangeNotifierProvider(create: (_) => ForgotPasswordProvider()),
         ChangeNotifierProvider(create: (_) => ForgotVerifyOtpProvider()),
@@ -102,6 +109,9 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => StatusProvider()),
         ChangeNotifierProvider(create: (_) => CheckAreaProvider()),
         ChangeNotifierProvider(create: (_) => ClusterCheckProvider()),
+        ChangeNotifierProvider(create: (_) => NearByVehicleProvider()),
+        ChangeNotifierProvider(create: (_) => FareCalculateProvider()),
+        ChangeNotifierProvider(create: (_) => DistanceProvider()),
         ChangeNotifierProvider(create: (_) => BookingTrip()),
         ChangeNotifierProvider(create: (_) => DeleteProfileProvider()),
         ChangeNotifierProvider(create: (_) => MyridesProvider()),
@@ -132,6 +142,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => TransactionsHistoryProvider()),
         ChangeNotifierProvider(create: (_) => VehicleBrandsProvider()),
         ChangeNotifierProvider(create: (_) => OwnerUnAssignDriverProvider()),
+        ChangeNotifierProvider(create: (_) => DriverProfileProvider()),
         ChangeNotifierProvider(create: (_) => OwnerPriceQuotationsProvider()),
         ChangeNotifierProvider(create: (_) => AcceptRejectPriceProvider()),
         ChangeNotifierProvider(create: (_) => DraftVehicleProvider()),
@@ -143,7 +154,7 @@ Future<void> main() async {
           create: (_) => OwnerBookingRequestListProvider(),
         ),
         ChangeNotifierProvider(create: (_) => SubscriptionsOwnerListProvider()),
-        ChangeNotifierProvider(create: (_) => VerifyOtpProvider()),
+        ChangeNotifierProvider(create: (_) => DriverOtpProvider()),
         ChangeNotifierProvider(create: (_) => PlaceDetailsProvider()),
         ChangeNotifierProvider(create: (_) => PlaceProvider()),
         ChangeNotifierProvider(create: (_) => StateProvider()),

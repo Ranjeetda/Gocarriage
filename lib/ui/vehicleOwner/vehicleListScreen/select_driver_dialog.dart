@@ -52,7 +52,7 @@ class _SelectDriverDialogState extends State<SelectDriverDialog> {
       } else {
         Utils.showErrorMessage(
           context,
-          responseData['message'] ?? "Driver not found",
+          responseData['message'],
         );
       }
     } catch (e) {

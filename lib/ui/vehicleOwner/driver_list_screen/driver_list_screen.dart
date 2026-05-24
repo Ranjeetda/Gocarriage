@@ -85,9 +85,12 @@ class _DriverListScreen extends State<DriverListScreen> {
       });
     }
   }
+
   Future<void> refreshDrivers() async {
-    final provider =
-    Provider.of<VechileOwnerDriverList>(context, listen: false);
+    final provider = Provider.of<VechileOwnerDriverList>(
+      context,
+      listen: false,
+    );
 
     await provider.fetchList('in_city');
 
@@ -95,6 +98,7 @@ class _DriverListScreen extends State<DriverListScreen> {
       filteredList = provider.listData ?? [];
     });
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -138,7 +142,7 @@ class _DriverListScreen extends State<DriverListScreen> {
               : null,
 
       body: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
         child: Column(
           children: [
             // 🔍 Search Bar
@@ -148,7 +152,7 @@ class _DriverListScreen extends State<DriverListScreen> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.grey.shade300),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
               child: Row(
                 children: [
                   Expanded(
@@ -168,170 +172,263 @@ class _DriverListScreen extends State<DriverListScreen> {
 
             const SizedBox(height: 12),
 
-            Consumer<VechileOwnerDriverList>(
-              builder: (context, provider, _) {
-                return Expanded(
-                  child: RefreshIndicator(
+            Expanded(
+              child: Consumer<VechileOwnerDriverList>(
+                builder: (context, provider, _) {
+                  return RefreshIndicator(
                     onRefresh: refreshDrivers,
-                    child: (provider.isLoading && filteredList.isEmpty)
-
-                    /// ✅ SHIMMER (first load)
-                        ? shimmerList()
-
-                    /// ✅ EMPTY STATE
-                        : filteredList.isEmpty
-                        ? ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: const [
-                        SizedBox(height: 300),
-                        Center(child: Text('No driver list available')),
-                      ],
-                    )
-
-                    /// ✅ YOUR ORIGINAL LIST (UNCHANGED)
-                        : ListView.builder(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      itemCount: filteredList.length,
-                      itemBuilder: (context, index) {
-                        final driverData = filteredList[index];
-                        final driver = driverData['Driver'];
-
-                        return InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => DriverProfile(
-                                  'ownerDriverList',
-                                  driver['id'].toString(),
-                                ),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black12.withOpacity(0.05),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
+                    child:
+                        (provider.isLoading && filteredList.isEmpty)
+                            ? shimmerList()
+                            : filteredList.isEmpty
+                            ? ListView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              children: const [
+                                SizedBox(height: 300),
+                                Center(child: Text('No driver list available')),
                               ],
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Stack(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 26,
-                                      backgroundImage:
-                                      AssetImage(ImagePaths.carIcon),
-                                    ),
-                                    Positioned(
-                                      bottom: 0,
-                                      right: 0,
-                                      child: CircleAvatar(
-                                        radius: 8,
-                                        backgroundColor:
-                                        driverData['is_active']
-                                            ? Colors.green
-                                            : Colors.red,
-                                        child: const Icon(
-                                          Icons.check,
-                                          size: 10,
-                                          color: Colors.white,
+                            )
+                            : MediaQuery.removePadding(
+                              context: context,
+                              removeTop: true,
+                              child: ListView.builder(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                itemCount: filteredList.length,
+                                itemBuilder: (context, index) {
+                                  final driverData = filteredList[index];
+                                  final driver = driverData['Driver'];
+
+                                  /// 👇 your card widget here
+                                  return InkWell(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (_) => DriverProfile(
+                                                'ownerDriverList',
+                                                driver['id'].toString(),
+                                              ),
+                                        ),
+                                      );
+                                    },
+                                    child: Container(
+                                      margin: const EdgeInsets.only(bottom: 14),
+                                      padding: const EdgeInsets.all(14),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(18),
+                                        border: Border.all(
+                                          color: Colors.grey.shade200,
                                         ),
                                       ),
-                                    ),
-                                  ],
-                                ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          /// TOP ROW (Avatar + Name + Status)
+                                          Row(
+                                            children: [
+                                              CircleAvatar(
+                                                radius: 26,
+                                                backgroundImage: AssetImage(
+                                                  ImagePaths.carIcon,
+                                                ),
+                                              ),
 
-                                const SizedBox(width: 12),
+                                              const SizedBox(width: 12),
 
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                    children: [
-                                      Text("Name : ${driver['fullName']}"),
-                                      Text("Mobile : ${driver['mobileNo']}"),
-                                      Text("Email : ${driver['email']}"),
-                                      Text(
-                                        "Service Type : ${driver['service_type'] ?? "--"}",
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      driver['fullName'] ?? "",
+                                                      style: const TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
+                                                    ),
+
+                                                    const SizedBox(height: 6),
+
+                                                    Container(
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 10,
+                                                            vertical: 4,
+                                                          ),
+                                                      decoration: BoxDecoration(
+                                                        color:
+                                                            driverData['is_active']
+                                                                ? Colors.green
+                                                                    .withOpacity(
+                                                                      0.1,
+                                                                    )
+                                                                : Colors.orange
+                                                                    .withOpacity(
+                                                                      0.1,
+                                                                    ),
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              20,
+                                                            ),
+                                                      ),
+                                                      child: Text(
+                                                        driver['driver_assigned_status']
+                                                            ? "On Vehicle"
+                                                            : "Available",
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          color:
+                                                              driver['driver_assigned_status']
+                                                                  ? Colors
+                                                                      .orange
+                                                                  : Colors
+                                                                      .green,
+                                                          fontWeight:
+                                                              FontWeight.w500,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+
+                                              PopupMenuButton<String>(
+                                                onSelected: (value) {
+                                                  if (value == 'Unassign') {
+                                                    showUnassignDialog(
+                                                      context,
+                                                      driverData,
+                                                    );
+                                                  }
+                                                },
+                                                itemBuilder:
+                                                    (context) => const [
+                                                      PopupMenuItem(
+                                                        value: 'Unassign',
+                                                        child: Text(
+                                                          "Unassign",
+                                                          style: TextStyle(
+                                                            color: Colors.red,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                              ),
+                                            ],
+                                          ),
+
+                                          const SizedBox(height: 12),
+                                          const Divider(),
+
+                                          const SizedBox(height: 8),
+
+                                          /// PHONE
+                                          Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.phone,
+                                                size: 18,
+                                                color: Colors.grey,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(driver['mobileNo'] ?? ""),
+                                            ],
+                                          ),
+
+                                          const SizedBox(height: 10),
+
+                                          /// LOCATION
+                                          Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.location_on,
+                                                size: 18,
+                                                color: Colors.grey,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 4,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.blue
+                                                      .withOpacity(0.1),
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
+                                                ),
+                                                child: const Text(
+                                                  "Within City",
+                                                  style: TextStyle(
+                                                    color: Colors.blue,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+
+                                          const SizedBox(height: 12),
+
+                                          /// LICENSE ROW
+                                          /* Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Row(
+                                                children: const [
+                                                  Icon(
+                                                    Icons.description,
+                                                    size: 18,
+                                                    color: Colors.grey,
+                                                  ),
+                                                  SizedBox(width: 6),
+                                                  Text("License"),
+                                                ],
+                                              ),
+
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 6,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.green
+                                                      .withOpacity(0.1),
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
+                                                ),
+                                                child: Text(
+                                                  "${Utils.getValidity(driverData['assigned_at'])}",
+                                                  style: const TextStyle(
+                                                    color: Colors.green,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),*/
+                                        ],
                                       ),
-                                    ],
-                                  ),
-                                ),
-
-                                PopupMenuButton<String>(
-                                  onSelected: (value) {
-                                    if (value == 'Unassign') {
-                                      showUnassignDialog(
-                                        context,
-                                        driverData,
-                                      );
-
-                                    }
-                                  },
-                                  itemBuilder: (context) => const [
-                                    PopupMenuItem(
-                                      value: 'Unassign',
-                                      child: Text(
-                                        'Unassign',
-                                        style: TextStyle(color: Colors.red),
-                                      ),
                                     ),
-                                  ],
-                                ),
-                              ],
+                                  );
+                                },
+                              ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                );
-              },
-            )
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),
-    );
-  }
-
-  Future<void> showDeleteDriverDialog(BuildContext context, final data) {
-    return showDialog(
-      context: context,
-      builder:
-          (_) => AlertDialog(
-            title: const Text("Unassign Driver"),
-            content: const Text(
-              "Are you sure you want to Unassign this driver?",
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("No"),
-              ),
-              TextButton(
-                onPressed: () {
-                  _unAssignDriver(data['driver_id'].toString());
-                },
-                child:
-                    isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                          "Yes",
-                          style: TextStyle(color: Colors.red),
-                        ),
-              ),
-            ],
-          ),
     );
   }
 
@@ -402,18 +499,24 @@ class _DriverListScreen extends State<DriverListScreen> {
                         /// ✅ CONFIRM BUTTON WITH LOADER
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: isLoading
-                                ? null
-                                : () async {
-                              setStateDialog(() => isLoading = true);
+                            onPressed:
+                                isLoading
+                                    ? null
+                                    : () async {
+                                      setStateDialog(() => isLoading = true);
 
-                              await _unAssignDriver(
-                                  data['driver_id'].toString());
+                                      bool success = await _unAssignDriver(
+                                        data['driver_id'].toString(),
+                                      );
 
-                              setStateDialog(() => isLoading = false);
+                                      setStateDialog(() => isLoading = false);
 
-                              Navigator.pop(context); // close dialog*/
-                            },
+                                      if (success) {
+                                        Navigator.pop(
+                                          context,
+                                        ); // ✅ close ONLY on success
+                                      }
+                                    },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.red,
                               padding: const EdgeInsets.symmetric(vertical: 14),
@@ -421,20 +524,23 @@ class _DriverListScreen extends State<DriverListScreen> {
                                 borderRadius: BorderRadius.circular(14),
                               ),
                             ),
-                            child: isLoading
-                                ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                                : const Text(
-                              "Yes, Unassign",
-                              style: TextStyle(
-                                  fontSize: 16, color: Colors.white),
-                            ),
+                            child:
+                                isLoading
+                                    ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                    : const Text(
+                                      "Yes, Unassign",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.white,
+                                      ),
+                                    ),
                           ),
                         ),
 
@@ -443,7 +549,7 @@ class _DriverListScreen extends State<DriverListScreen> {
                         Expanded(
                           child: OutlinedButton(
                             onPressed:
-                            isLoading ? null : () => Navigator.pop(context),
+                                isLoading ? null : () => Navigator.pop(context),
                             style: OutlinedButton.styleFrom(
                               backgroundColor: Colors.grey.shade200,
                               padding: const EdgeInsets.symmetric(vertical: 14),
@@ -473,47 +579,48 @@ class _DriverListScreen extends State<DriverListScreen> {
     );
   }
 
-  Future<void> _unAssignDriver(String? driverId) async {
+  Future<bool> _unAssignDriver(String? driverId) async {
     if (driverId == null) {
       Utils.showErrorMessage(context, "Please select Driver");
-      return;
+      return false;
     }
-    setState(() {
-      isLoading = true;
-    });
+
+    setState(() => isLoading = true);
+
     http.Response response = await Provider.of<OwnerUnAssignDriverProvider>(
       context,
       listen: false,
     ).unAssignDriver(driverId);
+
     var responseData = json.decode(response.body);
-    setState(() {
-      isLoading = false;
-    });
+
+    setState(() => isLoading = false);
 
     if (responseData['success'] == true) {
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        final provider = Provider.of<VechileOwnerDriverList>(
-          context,
-          listen: false,
-        );
+      final provider = Provider.of<VechileOwnerDriverList>(
+        context,
+        listen: false,
+      );
 
-        await provider.fetchList('in_city');
+      await provider.fetchList('in_city');
 
-        setState(() {
-          filteredList = provider.listData ?? [];
-        });
+      setState(() {
+        filteredList = provider.listData ?? [];
       });
+
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(responseData['message'])));
+
+      return true; // ✅ success
     } else {
-      setState(() {
-        isLoading = false;
-      });
       String errorMessage =
           responseData['message'] ??
           'Unassign Driver failed. Please try again.';
+
       Utils.showErrorMessage(context, errorMessage);
+
+      return false; // ❌ failure
     }
   }
 

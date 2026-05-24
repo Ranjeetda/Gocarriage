@@ -36,12 +36,10 @@ class SearchDriverProvider with ChangeNotifier {
 
       final responseData = json.decode(response.body);
 
-      if (response.statusCode == 200 &&
-          responseData['success'] == true) {
+      if (response.statusCode == 200 && responseData['success'] == true) {
         _driverListData = responseData;
       } else {
-        throw Exception(
-            responseData['message'] ?? 'Failed to load driver.');
+        _driverListData = responseData;
       }
     } catch (e) {
       if (kDebugMode) {

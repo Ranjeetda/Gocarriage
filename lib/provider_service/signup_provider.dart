@@ -11,6 +11,7 @@ class SignupProvider with ChangeNotifier {
     String email,
     String phone,
     String password,
+    String referralCode,
     String address,
     String city,
     String state,
@@ -48,6 +49,7 @@ class SignupProvider with ChangeNotifier {
         "email": email,
         "mobileNo": phone,
         "password": password,
+        "referralCode":referralCode
       };
     } else if (type == "owner") {
       bodyMap = {
@@ -57,6 +59,7 @@ class SignupProvider with ChangeNotifier {
         "phone": phone,
         "password": password,
         "companyName": companyName,
+        "referralCode":referralCode
       };
     } else if (type == "customer") {
       bodyMap = {
@@ -77,7 +80,8 @@ class SignupProvider with ChangeNotifier {
         "password": password,
         "type": mode,
         "companyName": companyName,
-        "ownerName": name
+        "ownerName": name,
+        "referralCode":referralCode
       };
     } else {
       throw Exception("Invalid signup type: $type");

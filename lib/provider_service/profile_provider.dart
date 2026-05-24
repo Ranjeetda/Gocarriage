@@ -31,9 +31,7 @@ class ProfileProvider with ChangeNotifier {
       mainUrl=URLS.fetchProfileDriver+userId;
     }
 
-
     final url = Uri.parse(mainUrl!);
-
     final headers = {
       'Authorization': "Bearer ${PrefUtils.getToken()}",
     };

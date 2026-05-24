@@ -14,7 +14,7 @@ import '../../../provider_service/booking_provider.dart';
 import '../../../provider_service/driver_booing_request_provider.dart';
 import '../../../provider_service/driver_booking_ongoing_provider.dart';
 import '../../../provider_service/driver_trip_start_provider.dart';
-import '../../../provider_service/verify_otp_provider.dart';
+import '../../../provider_service/driver_otp_provider.dart';
 import '../../../resource/Utils.dart';
 import '../../../resource/app_colors.dart';
 import '../../../resource/image_paths.dart';
@@ -396,7 +396,7 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
 
   Future<bool> _verifyOtp(String pinCode) async {
     try {
-      final response = await Provider.of<VerifyOtpProvider>(
+      final response = await Provider.of<DriverOtpProvider>(
         context,
         listen: false,
       ).verifyOtp(pinCode, mBookingId);

@@ -169,7 +169,7 @@ class _LoginPageState extends State<LoginPage> {
         //PrefUtils.setUserId(responseData["user"]["id"].toString());
         PrefUtils.setName(responseData['data']["user"]["name"]);
         PrefUtils.setRole(responseData['data']["user"]["role"]);
-        PrefUtils.setEmail(responseData['data']["user"]["email"]);
+        PrefUtils.setEmail(responseData['data']["user"]["email"]??'');
         PrefUtils.setMobile(responseData['data']["user"]["mobile"]);
         if (responseData['data']['user']['role'] == 'driver') {
           PrefUtils.setUserId(
@@ -202,38 +202,62 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Widget header() {
+  Widget header(BuildContext context) {
     return ClipPath(
       clipper: CurvedHeaderClipper(),
       child: Container(
         width: double.infinity,
         height: 300,
         color: AppColors.primaryColor,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
           children: [
-            const SizedBox(height: 20),
-            const Text(
-              "Join Gocarriage Partner!",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontFamily: 'Poppins',
-                fontWeight: FontWeight.w600,
+            // 🔙 Back Arrow (Top Left)
+            Positioned(
+              top: 40,
+              left: 10,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () {
+                  Navigator.pop(context); // go back
+                },
               ),
             ),
-            const SizedBox(height: 8),
-            const Text(
-              "community",
-              style: TextStyle(
-                color: Colors.white,
-                fontFamily: 'Poppins',
-                fontWeight: FontWeight.w400,
-                fontSize: 14,
+
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 20),
+                  const Text(
+                    "Join Gocarriage Partner!",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    "community",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w400,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 27),
+                  Image.asset(
+                    ImagePaths.appLogoVertical,
+                    height: 80,
+                    fit: BoxFit.contain,
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 27),
-            Image.asset(ImagePaths.appLogoVertical, height: 80, fit: BoxFit.contain),
           ],
         ),
       ),
@@ -246,7 +270,7 @@ class _LoginPageState extends State<LoginPage> {
       resizeToAvoidBottomInset: true,
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(300),
-        child: header(),
+        child: header(context),
       ),
 
       body: Container(

@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import '../resource/pref_utils.dart';
 import 'URLS.dart';
 
-class VerifyOtpProvider with ChangeNotifier {
+class DriverOtpProvider with ChangeNotifier {
 
   Future<http.Response> verifyOtp(
       String pinCode,

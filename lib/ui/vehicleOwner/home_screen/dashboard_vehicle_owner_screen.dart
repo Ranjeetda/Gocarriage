@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:page_transition/page_transition.dart';
 import 'package:provider/provider.dart';
 
 import '../../../provider_service/delete_vehicle_provider.dart';
@@ -13,6 +14,7 @@ import '../../../resource/image_paths.dart';
 import '../../../resource/pref_utils.dart';
 
 import '../../commanScreen/menu_screen.dart';
+import '../../dashboardScreen/customer_bottom_navigation_bar.dart';
 import '../assignDriverScreen/assign_driver_list_screen.dart';
 import '../bookingRequestScreen/booking_request_screen.dart';
 import '../driver_list_screen/driver_list_screen.dart';
@@ -192,7 +194,28 @@ class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen>
                       ],
                     ),
                     Spacer(),
-                    Icon(Icons.notifications, color: Colors.white),
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.house, color: Colors.white),
+                          onPressed: () {
+                            PrefUtils.clearPreferences();
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              PageTransition(
+                                child: CustomerBottomNavigationBar(),
+                                type: PageTransitionType.fade,
+                                duration: const Duration(milliseconds: 900),
+                                reverseDuration: const Duration(milliseconds: 900),
+                              ),
+                                  (Route<dynamic> route) => false,
+                            );
+                          },
+                        ),
+                        SizedBox(width: 10),
+                        Icon(Icons.notifications, color: Colors.white),
+                      ],
+                    )
                   ],
                 ),
               ),
@@ -253,7 +276,6 @@ class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen>
               children: [
                 /// VEHICLES TAB
                 VehicleListScreen(false),
-
                 /// DRIVERS TAB
                 DriverListScreen(false),
               ],

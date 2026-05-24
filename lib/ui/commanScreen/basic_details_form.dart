@@ -57,7 +57,10 @@ class _BasicDetailsFormState extends State<BasicDetailsForm> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<ProfileProvider>(context, listen: false).fetchProfile('customer',"customer",PrefUtils.getUserId());
+      Provider.of<ProfileProvider>(
+        context,
+        listen: false,
+      ).fetchProfile('customer', "customer", PrefUtils.getUserId());
     });
   }
 
@@ -66,22 +69,26 @@ class _BasicDetailsFormState extends State<BasicDetailsForm> {
     final email = _emailController.text.trim();
 
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter your name')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter your name')));
       return;
     }
 
     if (email.isEmpty ||
         !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter a valid email')));
+        const SnackBar(content: Text('Please enter a valid email')),
+      );
       return;
     }
 
     setState(() => isLoading = true);
 
-    await Provider.of<UpdateProfileProvider>(context, listen: false)
-        .updateProfile(
+    await Provider.of<UpdateProfileProvider>(
+      context,
+      listen: false,
+    ).updateProfile(
       customerName: _nameController.text,
       email: _emailController.text,
       phone: _phoneController.text,
@@ -104,17 +111,21 @@ class _BasicDetailsFormState extends State<BasicDetailsForm> {
     setState(() => isLoading = false);
 
     if (message == 'Customer updated successfully') {
-      Provider.of<ProfileProvider>(context, listen: false).fetchProfile('customer',"customer",PrefUtils.getUserId());
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
+      Provider.of<ProfileProvider>(
+        context,
+        listen: false,
+      ).fetchProfile('customer', "customer", PrefUtils.getUserId());
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
   Future<void> _fileUpload(
-      String folderName,
-      File? fileName,
-      String mType,
-      ) async {
+    String folderName,
+    File? fileName,
+    String mType,
+  ) async {
     if (fileName == null) return;
 
     showUploadingDialog(context);
@@ -141,20 +152,19 @@ class _BasicDetailsFormState extends State<BasicDetailsForm> {
         }
       });
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     } else {
       final message = response?['message'] ?? 'Upload failed';
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
   // Updated to accept specific loading state
-  Future<void> _showImage(
-      String fileName,
-      Function(bool) setLoading,
-      ) async {
+  Future<void> _showImage(String fileName, Function(bool) setLoading) async {
     setLoading(true);
 
     http.Response response = await Provider.of<FetchImageUrlProvider>(
@@ -173,8 +183,9 @@ class _BasicDetailsFormState extends State<BasicDetailsForm> {
       }
     } else {
       final message = responseData?['message'] ?? 'Image fetch failed';
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -322,9 +333,10 @@ class _BasicDetailsFormState extends State<BasicDetailsForm> {
                           "Profile Photo",
                           profilePhotoFile,
                           profilePhotoUrl,
-                              (f) => setState(() => profilePhotoFile = f),
+                          (f) => setState(() => profilePhotoFile = f),
                           isProfileLoading,
-                              (loading) => setState(() => isProfileLoading = loading),
+                          (loading) =>
+                              setState(() => isProfileLoading = loading),
                         ),
                         const SizedBox(height: 10),
 
@@ -332,9 +344,9 @@ class _BasicDetailsFormState extends State<BasicDetailsForm> {
                           "PAN Document",
                           panDocumentFile,
                           panDocumentUrl,
-                              (f) => setState(() => panDocumentFile = f),
+                          (f) => setState(() => panDocumentFile = f),
                           isPanLoading,
-                              (loading) => setState(() => isPanLoading = loading),
+                          (loading) => setState(() => isPanLoading = loading),
                         ),
                         const SizedBox(height: 10),
 
@@ -342,9 +354,9 @@ class _BasicDetailsFormState extends State<BasicDetailsForm> {
                           "GST Certificate",
                           gstDocumentFile,
                           gstCertificateUrl,
-                              (f) => setState(() => gstDocumentFile = f),
+                          (f) => setState(() => gstDocumentFile = f),
                           isGstLoading,
-                              (loading) => setState(() => isGstLoading = loading),
+                          (loading) => setState(() => isGstLoading = loading),
                         ),
 
                         const SizedBox(height: 30),
@@ -357,16 +369,23 @@ class _BasicDetailsFormState extends State<BasicDetailsForm> {
                               backgroundColor: AppColors.primaryColor,
                               padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
-                            child: isLoading
-                                ? const CircularProgressIndicator(color: Colors.white)
-                                : const Text("Update",
-                                style: TextStyle(color: Colors.white)),
+                            child:
+                                isLoading
+                                    ? const CircularProgressIndicator(
+                                      color: Colors.white,
+                                    )
+                                    : const Text(
+                                      "Update",
+                                      style: TextStyle(color: Colors.white),
+                                    ),
                           ),
                         ),
                       ],
                     );
                   } else {
-                    return const Center(child: Text('Failed to load profile data'));
+                    return const Center(
+                      child: Text('Failed to load profile data'),
+                    );
                   }
                 },
               ),
@@ -384,7 +403,9 @@ class _BasicDetailsFormState extends State<BasicDetailsForm> {
       text: TextSpan(
         text: "* ",
         style: const TextStyle(color: Colors.red),
-        children: [TextSpan(text: text, style: const TextStyle(color: Colors.black))],
+        children: [
+          TextSpan(text: text, style: const TextStyle(color: Colors.black)),
+        ],
       ),
     );
   }
@@ -408,13 +429,13 @@ class _BasicDetailsFormState extends State<BasicDetailsForm> {
   }
 
   Widget textField(
-      String hint,
-      TextEditingController controller,
-      IconData icon, {
-        TextInputType keyboard = TextInputType.text,
-        List<TextInputFormatter>? formatters,
-        bool enabled = true,
-      }) {
+    String hint,
+    TextEditingController controller,
+    IconData icon, {
+    TextInputType keyboard = TextInputType.text,
+    List<TextInputFormatter>? formatters,
+    bool enabled = true,
+  }) {
     return TextField(
       controller: controller,
       keyboardType: keyboard,
@@ -439,14 +460,15 @@ class _BasicDetailsFormState extends State<BasicDetailsForm> {
 
   // Updated buildUploadBox with individual loading
   Widget buildUploadBox(
-      String label,
-      File? localFile,
-      String? url,
-      Function(File) callback,
-      bool isLoading,                    // ← Individual loading
-      Function(bool) setLoading,         // ← Callback to update loading
-      ) {
-    final safeUrl = (url != null && url.isNotEmpty) ? Uri.encodeFull(url) : null;
+    String label,
+    File? localFile,
+    String? url,
+    Function(File) callback,
+    bool isLoading, // ← Individual loading
+    Function(bool) setLoading, // ← Callback to update loading
+  ) {
+    final safeUrl =
+        (url != null && url.isNotEmpty) ? Uri.encodeFull(url) : null;
     print("RanjeetTest===============>${safeUrl}");
     return GestureDetector(
       onTap: () => pickImage(callback, label),
@@ -486,11 +508,16 @@ class _BasicDetailsFormState extends State<BasicDetailsForm> {
                   else
                     Column(
                       children: const [
-                        Icon(Icons.cloud_upload_outlined,
-                            size: 40, color: AppColors.primaryColor),
+                        Icon(
+                          Icons.cloud_upload_outlined,
+                          size: 40,
+                          color: AppColors.primaryColor,
+                        ),
                         SizedBox(height: 4),
-                        Text("(Max 25 MB)",
-                            style: TextStyle(fontSize: 11, color: Colors.grey)),
+                        Text(
+                          "(Max 25 MB)",
+                          style: TextStyle(fontSize: 11, color: Colors.grey),
+                        ),
                       ],
                     ),
                 ],
@@ -510,20 +537,21 @@ class _BasicDetailsFormState extends State<BasicDetailsForm> {
                       color: Colors.black54,
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: isLoading
-                        ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                        : const Icon(
-                      Icons.remove_red_eye,
-                      color: Colors.white,
-                      size: 18,
-                    ),
+                    child:
+                        isLoading
+                            ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                            : const Icon(
+                              Icons.remove_red_eye,
+                              color: Colors.white,
+                              size: 18,
+                            ),
                   ),
                 ),
               ),
@@ -537,19 +565,20 @@ class _BasicDetailsFormState extends State<BasicDetailsForm> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => Dialog(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: const [
-              LinearProgressIndicator(minHeight: 8),
-              SizedBox(height: 16),
-              Text("Wait we are uploading your documents"),
-            ],
+      builder:
+          (ctx) => Dialog(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  LinearProgressIndicator(minHeight: 8),
+                  SizedBox(height: 16),
+                  Text("Wait we are uploading your documents"),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
     );
   }
 
@@ -560,136 +589,156 @@ class _BasicDetailsFormState extends State<BasicDetailsForm> {
       context: context,
       barrierDismissible: true,
       barrierColor: Colors.black.withOpacity(0.85), // Darker elegant overlay
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: EdgeInsets.symmetric(
-          horizontal: size.width * 0.05,   // 5% margin from sides
-          vertical: size.height * 0.1,     // 10% from top & bottom
-        ),
-        child: Container(
-          width: size.width * 0.9,         // 90% of screen width
-          height: size.height * 0.75,      // 75% of screen height (you can adjust)
-          decoration: BoxDecoration(
-            color: Colors.black,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.6),
-                blurRadius: 30,
-                spreadRadius: 5,
+      builder:
+          (context) => Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: EdgeInsets.symmetric(
+              horizontal: size.width * 0.05, // 5% margin from sides
+              vertical: size.height * 0.1, // 10% from top & bottom
+            ),
+            child: Container(
+              width: size.width * 0.9,
+              // 90% of screen width
+              height: size.height * 0.75,
+              // 75% of screen height (you can adjust)
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.6),
+                    blurRadius: 30,
+                    spreadRadius: 5,
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: Stack(
-              children: [
-                // Main Image with Interactive Zoom
-                InteractiveViewer(
-                  minScale: 0.5,
-                  maxScale: 5.0,
-                  child: Container(
-                    width: double.infinity,
-                    height: double.infinity,
-                    color: Colors.black,
-                    child: Image.network(
-                      imageUrl,
-                      fit: BoxFit.contain,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return const Center(
-                          child: CircularProgressIndicator(color: Colors.white),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.broken_image, color: Colors.white70, size: 60),
-                              SizedBox(height: 10),
-                              Text("Failed to load image",
-                                  style: TextStyle(color: Colors.white70)),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Stack(
+                  children: [
+                    // Main Image with Interactive Zoom
+                    InteractiveViewer(
+                      minScale: 0.5,
+                      maxScale: 5.0,
+                      child: Container(
+                        width: double.infinity,
+                        height: double.infinity,
+                        color: Colors.black,
+                        child: Image.network(
+                          imageUrl,
+                          fit: BoxFit.contain,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.broken_image,
+                                    color: Colors.white70,
+                                    size: 60,
+                                  ),
+                                  SizedBox(height: 10),
+                                  Text(
+                                    "Failed to load image",
+                                    style: TextStyle(color: Colors.white70),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+
+                    // Top Bar with Title & Close Button
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withOpacity(0.8),
+                              Colors.transparent,
                             ],
                           ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-
-                // Top Bar with Title & Close Button
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withOpacity(0.8),
-                          Colors.transparent,
-                        ],
+                        ),
+                        child: Row(
+                          children: [
+                            const Text(
+                              "Preview",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const Spacer(),
+                            GestureDetector(
+                              onTap: () => Navigator.pop(context),
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.close,
+                                  color: Colors.white,
+                                  size: 22,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        const Text(
-                          "Preview",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
+
+                    // Optional: Bottom indicator
+                    Positioned(
+                      bottom: 16,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.6),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Text(
+                            "Pinch to zoom • Drag to move",
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
-                        const Spacer(),
-                        GestureDetector(
-                          onTap: () => Navigator.pop(context),
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.close,
-                              color: Colors.white,
-                              size: 22,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Optional: Bottom indicator
-                Positioned(
-                  bottom: 16,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.6),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        "Pinch to zoom • Drag to move",
-                        style: TextStyle(color: Colors.white70, fontSize: 12),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
     );
   }
 }
@@ -697,9 +746,9 @@ class _BasicDetailsFormState extends State<BasicDetailsForm> {
 class UpperCaseTextFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue,
-      TextEditingValue newValue,
-      ) {
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     return TextEditingValue(
       text: newValue.text.toUpperCase(),
       selection: newValue.selection,

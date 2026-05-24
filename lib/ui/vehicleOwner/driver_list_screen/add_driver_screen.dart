@@ -38,6 +38,7 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
   final _confirmPasswordController = TextEditingController();
   final _experienceController = TextEditingController();
   final drivingLicenseController = TextEditingController();
+  final _referralCodeController = TextEditingController();
 
   final List<TextEditingController> mobileOtpControllers = List.generate(
     6,
@@ -691,6 +692,7 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
         _emailController.text.trim(),
         _mobileController.text.trim(),
         _passwordController.text.trim(),
+        _referralCodeController.text.trim(),
         "",
         "",
         "",

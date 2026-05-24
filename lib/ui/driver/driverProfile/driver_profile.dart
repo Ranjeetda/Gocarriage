@@ -8,9 +8,12 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
+import '../../../provider_service/driver_profile_provider.dart';
 import '../../../provider_service/fetch_image_url_provider.dart';
 import '../../../provider_service/file_upload_provider.dart';
 import '../../../provider_service/profile_provider.dart';
+import '../../../provider_service/vehicle_brands_provider.dart';
+import '../../../provider_service/vehicle_model_provider.dart';
 import '../../../resource/CurvedHeaderClipper.dart';
 import '../../../resource/app_colors.dart';
 import '../../../resource/image_paths.dart';
@@ -55,10 +58,10 @@ class _DriverProfileState extends State<DriverProfile> {
   final accountHolderController = TextEditingController();
   final branchAddressController = TextEditingController();
 
-  final vehicleTypeController = TextEditingController();
+  final vehicleCategoryController = TextEditingController();
   final vehicleNumberController = TextEditingController();
   final vehicleOwnerController = TextEditingController();
-  final vehicleModelController = TextEditingController();
+  final payload = TextEditingController();
 
   // ---------------------- IMAGES ------------------------
   File? driversLicenseUploadFile;
@@ -74,6 +77,8 @@ class _DriverProfileState extends State<DriverProfile> {
   String? panCardUploadUrl;
   String? insuranceDocumentUploadUrl;
   String? profile_pictureUrl;
+  String?  brand;
+  String?  model;
 
   String? service;
 
@@ -492,9 +497,7 @@ class _DriverProfileState extends State<DriverProfile> {
     accountHolderController.text = data["accountHolderName"] ?? "";
     branchAddressController.text = data["bankName"] ?? "";
 
-    vehicleTypeController.text = data["transportType"] ?? "";
     vehicleNumberController.text = data["vehicleNumber"] ?? "";
-    vehicleModelController.text = data["vehicleModel"] ?? "";
     vehicleOwnerController.text = data["vehicleOwner"] ?? "";
     license_from_date=data["license_from_date"] ?? "";
     license_to_date=data["license_expiry_date"] ?? "";
@@ -519,11 +522,19 @@ class _DriverProfileState extends State<DriverProfile> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final provider = Provider.of<ProfileProvider>(context, listen: false);
-      await provider.fetchProfile(widget.comeFrom, "driver", widget.userId);
+      final provider = Provider.of<DriverProfileProvider>(context, listen: false);
+      await provider.fetchProfile(widget.userId);
       if (provider.profileData.isNotEmpty) {
         setProfileData(provider.profileData);
       }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final provider = Provider.of<VehicleBrandsProvider>(
+        context,
+        listen: false,
+      );
+      await provider.fetchBrands();
     });
   }
 
@@ -553,11 +564,12 @@ class _DriverProfileState extends State<DriverProfile> {
       context,
       listen: false,
     ).updateProfile(
+      userId: widget.userId,
       fullName: _nameController.text,
       email: _emailController.text,
       mobileNo: _phoneController.text,
       alternateNumber: _alternateNumberController.text,
-      houseNumber: '',
+      houseNumber: _houseNoController.text,
       street: _houseNoController.text,
       area: _areaController.text,
       city: _cityController.text,
@@ -566,19 +578,19 @@ class _DriverProfileState extends State<DriverProfile> {
       completeAddress: _addressController.text,
       emergencyContactName: emergencyNameController.text,
       emergencyContactNumber: emergencyPhoneController.text,
-      transportType: vehicleTypeController.text,
+      transportType: brand!,
       vehicleOwner: vehicleOwnerController.text,
       vehicleNumber: vehicleNumberController.text,
-      vehicleModel: vehicleModelController.text,
-      vehicleFeatures: 'vehicleFeatures',
-      vehicleDetails: 'vehicleDetails',
+      vehicleModel: model!,
+      vehicleFeatures: vehicleCategoryController.text,
+      vehicleDetails: payload.text,
 
       licenseNumber: drivingLicenseController.text,
       license_expiry_date: license_to_date ?? "",
       license_from_date: license_from_date ?? "",
       experience_in_yrs: experienceController.text,
 
-      vehicle_type_preference: 'vehicle_type_preference',
+      vehicle_type_preference: vehicleCategoryController.text,
       service_type: service == 'Within City' ? 'in_city' : service ?? '',
       aadhaarCardNumber: aadhaarNumberController.text,
       panCardNumber: panNumberController.text,
@@ -885,6 +897,10 @@ class _DriverProfileState extends State<DriverProfile> {
   }
 
   List<Step> _buildSteps() {
+    final vehicleModelProvider = Provider.of<VehicleModelProvider>(
+      context,
+      listen: false,
+    );
     return [
       Step(
         title: Text("Personal Info"),
@@ -910,7 +926,6 @@ class _DriverProfileState extends State<DriverProfile> {
               _addressController,
               Icons.location_on,
             ),
-            textField("House No. / Flat No.", _houseNoController, Icons.home),
             textField("Area / Locality", _areaController, Icons.map),
             text("City *"),
             textField("City", _cityController, Icons.location_city),
@@ -939,12 +954,83 @@ class _DriverProfileState extends State<DriverProfile> {
         isActive: _currentStep >= 3,
         content: Column(
           children: [
-            textField(
-              "Vehicle Type",
-              vehicleTypeController,
-              Icons.directions_car,
+            Consumer<VehicleBrandsProvider>(
+              builder: (context, provider, _) {
+                if (provider.isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                return Column(
+                  children: [
+                    DropdownButtonFormField<String>(
+                      value: provider.selectedBrand,
+                      decoration: const InputDecoration(
+                        labelText: "Vehicle Brand *",
+                        border: OutlineInputBorder(),
+                      ),
+                      isExpanded: true,
+                      items:
+                      provider.vehicleBrands.map((brand) {
+                        return DropdownMenuItem<String>(
+                          value: brand,
+                          child: Text(brand),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          provider.setSelectedBrand(value);
+                          brand=value;
+                          vehicleModelProvider.fetchVehicleModel(value);
+                        }
+                      },
+                    ),
+                    SizedBox(height: 10),
+                    Consumer<VehicleModelProvider>(
+                      builder: (context, provider, _) {
+                        if (provider.isLoading) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+
+                        return DropdownButtonFormField<
+                            Map<String, dynamic>
+                        >(
+                          value: provider.selectedModel,
+                          decoration: const InputDecoration(
+                            labelText: "Select Model *",
+                            border: OutlineInputBorder(),
+                          ),
+                          hint: const Text("Select Model"),
+                          isExpanded: true,
+
+                          items:
+                          provider.models.map((item) {
+                            return DropdownMenuItem<
+                                Map<String, dynamic>
+                            >(
+                              value: item, // ✅ FULL OBJECT
+                              child: Text(item['model']),
+                            );
+                          }).toList(),
+
+                          onChanged: (value) {
+                            provider.setSelectedModel(value);
+                            print(
+                              provider.selectedModel?['model'],
+                            ); // 1217C
+                            model= provider.selectedModel?['model'];
+                            vehicleCategoryController.text=provider.selectedModel?['v_cat'];
+                            payload.text=provider.selectedModel!['payload_capacity_kg'].toString();
+                          },
+                        );
+                      },
+                    ),
+                  ],
+                );
+              },
             ),
-            textField("Vehicle Model", vehicleModelController, Icons.build),
+
             text("Vehicle Number *"),
             textField(
               "Vehicle Number",

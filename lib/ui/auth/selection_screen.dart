@@ -72,7 +72,7 @@ class _SelectionScreen extends State<SelectionScreen> {
 
             const SizedBox(height: 12),
 
-            PrefUtils.getRole()!='Vehicle Owner'?accountTypeCard(
+            PrefUtils.getRole()=='operator'?accountTypeCard(
               title: "Transporter",
               subtitle:
               "For transport operators optimizing routes and improving delivery efficiency",

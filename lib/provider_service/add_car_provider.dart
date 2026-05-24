@@ -146,7 +146,7 @@ class AddCarProvider with ChangeNotifier {
       }
 
       /// 🔹 PRINT RESPONSE
-      debugPrint("🟢 VERIFY OTP IN RESPONSE");
+      debugPrint("🟢 Add New Vehicle RESPONSE");
       debugPrint("Status Code: ${response.statusCode}");
 
       final responseData = json.decode(response.body);

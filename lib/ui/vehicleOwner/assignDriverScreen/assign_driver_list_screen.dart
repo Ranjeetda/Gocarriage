@@ -85,10 +85,21 @@ class _AssignDriverListScreen extends State<AssignDriverListScreen> {
     );
   }
 
+  Future<void> refreshAssignDrivers() async {
+    final provider = Provider.of<AssignDriverListProvider>(
+      context,
+      listen: false,
+    );
+
+    await provider.fetchList();
+
+    setState(() {
+      filteredList = provider.listData;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -160,128 +171,148 @@ class _AssignDriverListScreen extends State<AssignDriverListScreen> {
                 }
 
                 return Expanded(
-                  child: ListView.builder(
-                    itemCount: filteredList.length,
-                    itemBuilder: (context, index) {
-                      final data = filteredList[index];
-                      final driver = data['Driver'];
+                  child: RefreshIndicator(
+                    onRefresh: refreshAssignDrivers,
+                    child: ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      // 👈 important
+                      itemCount: filteredList.length,
+                      itemBuilder: (context, index) {
+                        final data = filteredList[index];
+                        final driver = data['Driver'];
 
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black12.withOpacity(0.05),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // 👤 Avatar
-                            Stack(
-                              children: [
-                                CircleAvatar(
-                                  radius: 26,
-                                  backgroundImage: AssetImage(
-                                    ImagePaths.carIcon,
-                                  ),
-                                ),
-                                Positioned(
-                                  bottom: 0,
-                                  right: 0,
-                                  child: CircleAvatar(
-                                    radius: 8,
-                                    backgroundColor:
-                                        data['is_active']
-                                            ? Colors.green
-                                            : Colors.red,
-                                    child: const Icon(
-                                      Icons.check,
-                                      size: 10,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(width: 12),
-
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black12.withOpacity(0.05),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // 👤 Avatar
+                              Stack(
                                 children: [
-                                  Text(
-                                    "Name : ${driver['fullName']}",
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
+                                  CircleAvatar(
+                                    radius: 26,
+                                    backgroundImage: AssetImage(
+                                      ImagePaths.carIcon,
                                     ),
                                   ),
-
-                                  Text(
-                                    "Mobile : ${driver['mobileNo']}",
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: CircleAvatar(
+                                      radius: 8,
+                                      backgroundColor:
+                                          data['is_active']
+                                              ? Colors.green
+                                              : Colors.red,
+                                      child: const Icon(
+                                        Icons.check,
+                                        size: 10,
+                                        color: Colors.white,
+                                      ),
                                     ),
-                                  ),
-
-                                  Text(
-                                    "Service Type : ${driver['service_type'] ?? "--"}",
-                                    style: const TextStyle(fontSize: 15),
-                                  ),
-
-                                  const SizedBox(height: 6),
-
-                                  Text(
-                                    "Assigned : ${Utils.formatIsoDate(data['assigned_at'] ?? "--")}",
-                                    style: const TextStyle(fontSize: 15),
                                   ),
                                 ],
                               ),
-                            ),
 
-                            PopupMenuButton<String>(
-                              icon: const Icon(Icons.more_vert),
-                              itemBuilder:
-                                  (context) => const [
-                                    PopupMenuItem(
-                                      value: 'View Details',
-                                      child: Text(
-                                        'View Details',
-                                        style: TextStyle(color: Colors.red),
+                              const SizedBox(width: 12),
+
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Name : ${driver['fullName']}",
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
                                       ),
                                     ),
-                                    PopupMenuItem(
-                                      value: 'Unassign',
-                                      child: Text(
-                                        'Unassign',
-                                        style: TextStyle(color: Colors.red),
+
+                                    Text(
+                                      "Mobile : ${driver['mobileNo']}",
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
                                       ),
+                                    ),
+
+                                    Text(
+                                      "Service Type : ${driver['service_type'] ?? "--"}",
+                                      style: const TextStyle(fontSize: 15),
+                                    ),
+
+                                    const SizedBox(height: 6),
+
+                                    Text(
+                                      "Assigned : ${Utils.formatIsoDate(data['assigned_at'] ?? "--")}",
+                                      style: const TextStyle(fontSize: 15),
                                     ),
                                   ],
-                              onSelected: (value) {
-                                if (value == 'Unassign') {
-                                  showDeleteDriverDialog(context,data);
-                                }else if (value == 'View Details') {
-                                  showDialog(
-                                    context: context,
-                                    builder: (_) => AssignmentDetailsDialog(data),
-                                  );
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                                ),
+                              ),
+
+                              PopupMenuButton<String>(
+                                icon: const Icon(Icons.more_vert),
+                                itemBuilder:
+                                    (context) => const [
+                                      PopupMenuItem(
+                                        value: 'View Details',
+                                        child: Text(
+                                          'View Details',
+                                          style: TextStyle(color: Colors.red),
+                                        ),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'Unassign',
+                                        child: Text(
+                                          'Unassign',
+                                          style: TextStyle(color: Colors.red),
+                                        ),
+                                      ),
+                                    ],
+                                onSelected: (value) {
+                                  if (value == 'Unassign') {
+                                    showUnassignDialog(
+                                      context,
+                                      driverName: driver['fullName'],
+                                      vehicleNo: data['Fleet']['vehicle_number'],
+                                      onConfirm: (dialogContext) async {
+                                        bool success = await _unAssignDriver(
+                                          data['driver_id'].toString(),
+                                          data['vehicle_id'].toString(),
+                                        );
+
+                                        if (success) {
+                                          Navigator.pop(dialogContext); // ✅ correct context
+                                        }
+                                      },
+                                    );
+                                  } else if (value == 'View Details') {
+                                    showDialog(
+                                      context: context,
+                                      builder:
+                                          (_) => AssignmentDetailsDialog(data),
+                                    );
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 );
               },
@@ -292,81 +323,232 @@ class _AssignDriverListScreen extends State<AssignDriverListScreen> {
     );
   }
 
-  Future<void> showDeleteDriverDialog(BuildContext context, final data) {
-    return showDialog(
+  void showUnassignDialog(
+    BuildContext context, {
+    required String driverName,
+    required String vehicleNo, required Function(BuildContext dialogContext) onConfirm,
+  }) {
+    showDialog(
       context: context,
-      builder:
-          (_) => AlertDialog(
-            title: const Text("Unassign"),
-            content: const Text(
-              "Are you sure you want to delete this unassigned driver?",
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("No"),
-              ),
-              TextButton(
-                onPressed: () {
-                  _unAssignDriver(data['driver_id'].toString(), data['vehicle_id'].toString());
-                },
-                child:
-                    isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                          "Yes",
-                          style: TextStyle(color: Colors.red),
+      barrierDismissible: false,
+      builder: (_) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              /// 🔴 HEADER
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.person_off, color: Colors.white),
+                    ),
+                    const SizedBox(width: 12),
+                    const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Unassign Driver",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
+                        SizedBox(height: 4),
+                        Text(
+                          "Remove driver from this vehicle",
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              /// ⚪ BODY
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    /// DRIVER + VEHICLE BOX
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.amber),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.person, color: Colors.orange),
+                              const SizedBox(width: 10),
+                              Text(
+                                "Driver: ",
+                                style: TextStyle(color: Colors.grey.shade700),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  driverName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.local_shipping,
+                                color: Colors.orange,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                "Vehicle: ",
+                                style: TextStyle(color: Colors.grey.shade700),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  vehicleNo,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    /// MESSAGE
+                    const Text(
+                      "Are you sure you want to unassign this driver? "
+                      "The driver will become available for new assignments.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    /// BUTTONS
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: onConfirm(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            child:isLoading
+                                ? const CircularProgressIndicator(color: Colors.white)
+                                :  const Text(
+                              "Yes, Unassign",
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(width: 12),
+
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.grey.shade300,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            child: const Text(
+                              "Cancel",
+                              style: TextStyle(color: Colors.black87),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
+        );
+      },
     );
   }
 
-  Future<void> _unAssignDriver(String? driverId, String? vehicleId) async {
+  Future<bool> _unAssignDriver(String? driverId, String? vehicleId) async {
     if (vehicleId == null) {
       Utils.showErrorMessage(context, "Please select vehicle");
-      return;
+      return false;
     }
     if (driverId == null) {
       Utils.showErrorMessage(context, "Please select Driver");
-      return;
+      return false;
     }
-    setState(() {
-      isLoading = true;
-    });
+
+    setState(() => isLoading = true);
+
     http.Response response = await Provider.of<OwnerUnassignDriverVehicle>(
       context,
       listen: false,
     ).unAssignDriver(driverId, vehicleId);
+
     var responseData = json.decode(response.body);
-    setState(() {
-      isLoading = false;
-    });
+
+    setState(() => isLoading = false);
 
     if (responseData['success'] == true) {
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        final provider = Provider.of<AssignDriverListProvider>(
-          context,
-          listen: false,
-        );
+      final provider = Provider.of<AssignDriverListProvider>(
+        context,
+        listen: false,
+      );
 
-        await provider.fetchList();
+      await provider.fetchList();
 
-        setState(() {
-          filteredList = provider.listData;
-        });
+      setState(() {
+        filteredList = provider.listData;
       });
+
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(responseData['message'])));
+
+      return true; // ✅ success
     } else {
-      setState(() {
-        isLoading = false;
-      });
       String errorMessage =
-          responseData['message'] ?? 'Assign Driver failed. Please try again.';
+          responseData['message'] ??
+          'Unassign Driver failed. Please try again.';
+
       Utils.showErrorMessage(context, errorMessage);
+
+      return false; // ❌ failure
     }
   }
 }
