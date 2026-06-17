@@ -18,12 +18,11 @@ class SignInProvider with ChangeNotifier {
 
     final Map<String, dynamic> requestBody = {
       if (Utils.isEmail(emailOrPhone))
-        "email":emailOrPhone
+        "email": emailOrPhone
       else
         "phone": emailOrPhone,
       "password": password,
-      "device_token": deviceToken,
-      "device_type": "Android",
+      "device_id": deviceToken,
       "role": PrefUtils.getRole(),
     };
 

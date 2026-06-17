@@ -12,6 +12,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'app_colors.dart';
 
 
@@ -22,9 +23,6 @@ class Utils {
   static bool _isLoadingDialogShowing = false;
   static late Timer toastTimer;
 
-  static bool isEmail(String input) {
-    return RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(input);
-  }
 
 
 //  Checks
@@ -440,7 +438,7 @@ class Utils {
   }
 
   static String formatToDDMMYYYY(String isoDate) {
-    final DateTime dateTime = DateTime.parse(isoDate).toLocal();
+     final DateTime dateTime = DateTime.parse(isoDate).toLocal();
     return DateFormat('dd/MM/yyyy').format(dateTime);
   }
   static String formatToValide(DateTime now) {
@@ -622,6 +620,60 @@ class Utils {
       return "$years year${years > 1 ? 's' : ''}";
     } else {
       return "$years yr $months mo";
+    }
+  }
+  static String formatServiceType(String value) {
+    return value
+        .split('_')
+        .map((word) => word[0].toUpperCase() + word.substring(1))
+        .join(' ');
+  }
+
+  static Future<String> getBuildNumber() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+
+    String buildNumber = packageInfo.buildNumber; // e.g. "44"
+    String version = packageInfo.version; // e.g. "1.0.0"
+
+    print("Build Number: $buildNumber");
+    print("Version: $version");
+
+    return buildNumber;
+  }
+
+  static Future<String> getVersionNumber() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+
+    String buildNumber = packageInfo.buildNumber; // e.g. "44"
+    String version = packageInfo.version; // e.g. "1.0.0"
+
+    print("Build Number: $buildNumber");
+    print("Version: $version");
+
+    return version;
+  }
+
+  static bool isEmail(String input) {
+    final emailRegex = RegExp(
+      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+    );
+    return emailRegex.hasMatch(input);
+  }
+
+  static bool isPhone(String input) {
+    final phoneRegex = RegExp(
+      r'^[0-9]{10,15}$', // adjust length as needed
+    );
+    return phoneRegex.hasMatch(input);
+  }
+
+  static String checkInputType(String input) {
+    if (isEmail(input)) {
+      return "email";
+    } else if (isPhone(input)) {
+      return "mobile";
+    } else {
+      return "Invalid";
     }
   }
 

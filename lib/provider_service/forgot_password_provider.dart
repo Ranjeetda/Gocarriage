@@ -9,15 +9,19 @@ class ForgotPasswordProvider with ChangeNotifier {
   Future<http.Response> forgotPassword(
       String emailOrPhone,
       ) async {
+
+
     final Uri url = Uri.parse(URLS.forgotPassword);
 
     final Map<String, String> headers = {
       "Content-Type": "application/json",
     };
 
+    final inputType = Utils.checkInputType(emailOrPhone);
+
     final Map<String, dynamic> requestBody = {
-        "email": emailOrPhone,
-        "role": PrefUtils.getRole(),
+      inputType: emailOrPhone,
+      "role": PrefUtils.getRole(),
     };
 
     final String body = jsonEncode(requestBody);

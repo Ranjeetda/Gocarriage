@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:gocarriage_universal/provider_service/accept_reject_price_provider.dart';
 import 'package:gocarriage_universal/provider_service/add_car_provider.dart';
+import 'package:gocarriage_universal/provider_service/add_driver_provider.dart';
 import 'package:gocarriage_universal/provider_service/assign_driver_provider.dart';
 import 'package:gocarriage_universal/provider_service/assign_vehicle_driver_provider.dart';
 import 'package:gocarriage_universal/provider_service/audio_provider.dart';
@@ -34,6 +34,7 @@ import 'package:gocarriage_universal/provider_service/owner_reqest_provider.dart
 import 'package:gocarriage_universal/provider_service/owner_request_approve_provider.dart';
 import 'package:gocarriage_universal/provider_service/owner_un_assign_driver_provider.dart';
 import 'package:gocarriage_universal/provider_service/owner_unassign_driver_vehicle.dart';
+import 'package:gocarriage_universal/provider_service/reward_wallet_provider.dart';
 import 'package:gocarriage_universal/provider_service/search_driver_provider.dart';
 import 'package:gocarriage_universal/provider_service/send_otp_provider.dart';
 import 'package:gocarriage_universal/provider_service/state_provider.dart';
@@ -47,10 +48,11 @@ import 'package:gocarriage_universal/provider_service/vehicle_documents_bulk_pro
 import 'package:gocarriage_universal/provider_service/vehicle_model_provider.dart';
 import 'package:gocarriage_universal/provider_service/vehicle_type_provider.dart';
 import 'package:gocarriage_universal/provider_service/verify_otp_provider..dart';
+import 'package:gocarriage_universal/provider_service/version_control_provider.dart';
+import 'package:gocarriage_universal/screens/splashScreen/splash_screen.dart';
 import 'package:provider/provider.dart';
 import '../eventModel/notification_event.dart';
 import '../resource/shared_preferences.dart';
-import '../ui/splashScreen/splash_screen.dart';
 
 // ALL PROVIDERS
 import 'package:gocarriage_universal/provider_service/accept_reject_provider.dart';
@@ -136,7 +138,10 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => AddCarProvider()),
         ChangeNotifierProvider(create: (_) => VehicleDetailsProvider()),
         ChangeNotifierProvider(create: (_) => VehicleTypeProvider()),
+        ChangeNotifierProvider(create: (_) => AddDriverProvider()),
         ChangeNotifierProvider(create: (_) => VehicleCategoryBy()),
+        ChangeNotifierProvider(create: (_) => RewardWalletProvider()),
+        ChangeNotifierProvider(create: (_) => VersionControlProvider()),
         ChangeNotifierProvider(create: (_) => FleetSubscriptionsProvider()),
         ChangeNotifierProvider(create: (_) => UploadVehicleDocumentsBulkProvider()),
         ChangeNotifierProvider(create: (_) => TransactionsHistoryProvider()),

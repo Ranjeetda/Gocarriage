@@ -13,6 +13,7 @@ class DistanceProvider with ChangeNotifier {
 
   Future<Map<String, String>> fetchDistance(
       String origin, String destination) async {
+
     final url = Uri.parse(
       "https://maps.googleapis.com/maps/api/distancematrix/json"
           "?origins=$origin"
@@ -21,21 +22,45 @@ class DistanceProvider with ChangeNotifier {
           "&key=$apiKey",
     );
 
+    // 🔹 Print Request URL
+    print("===== API REQUEST =====");
+    print(url.toString());
+
     final response = await http.get(url);
+
+    // 🔹 Print Status Code
+    print("===== STATUS CODE =====");
+    print(response.statusCode);
+
+    // 🔹 Print Raw Response Body
+    print("===== RAW RESPONSE =====");
+    print(response.body);
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
+
+      // 🔹 Pretty JSON Print
+      print("===== PARSED JSON =====");
+      print(const JsonEncoder.withIndent('  ').convert(data));
+
       final element = data['rows'][0]['elements'][0];
-      print("RanjeetTest =========${data.toString()}");
+
       if (element['status'] == "OK") {
+        print("===== SUCCESS DATA =====");
+        print("Distance: ${element['distance']['text']}");
+        print("Duration: ${element['duration']['text']}");
+
         return {
           "distance": element['distance']['text'],
           "duration": element['duration']['text'],
         };
       } else {
+        print("===== ERROR IN ELEMENT =====");
+        print(element['status']);
         throw Exception("No route found");
       }
     } else {
+      print("===== API ERROR =====");
       throw Exception("API error");
     }
   }

@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../resource/pref_utils.dart';
-import '../ui/model/booking_trip_request.dart';
+import '../screens/model/booking_trip_request.dart';
 import 'URLS.dart';
 
 class BookingTrip with ChangeNotifier {

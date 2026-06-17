@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../resource/pref_utils.dart';
-import '../ui/pleacePickerScreen/place_model.dart';
+import '../screens/pleacePickerScreen/place_model.dart';
 import 'URLS.dart';
 
 class PlaceProvider with ChangeNotifier {

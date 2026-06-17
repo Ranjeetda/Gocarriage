@@ -8,10 +8,14 @@ import 'URLS.dart';
 
 class ProfileProvider with ChangeNotifier {
   Map<String, dynamic> _profileData = {};
+  Map<String, dynamic> _pointsWallet = {};
+  List<dynamic> _rewardsProgress = [];
   bool _isLoading = false;
   String? mainUrl;
 
   Map<String, dynamic> get profileData => _profileData;
+  Map<String, dynamic> get pointsWallet => _pointsWallet;
+  List<dynamic> get rewardsProgress => _rewardsProgress;
   bool get isLoading => _isLoading;
 
   Future<void> fetchProfile(String comeFrome,String role,String userId) async {
@@ -49,8 +53,12 @@ class ProfileProvider with ChangeNotifier {
 
       if (response.statusCode == 200 && responseData['success'] == true) {
         _profileData = responseData['data']; // ✅ Contains all profile key-values
+        _pointsWallet = responseData['pointsWallet']; // ✅ Contains all profile key-values
+        _rewardsProgress = responseData['rewardsProgress']; // ✅ Contains all profile key-values
       } else {
-        throw Exception(responseData['message'] ?? 'Failed to load profile.');
+        _profileData={};
+        print(responseData['message'] ?? 'Failed to load profile.');
+
       }
     } catch (e) {
       print('Error fetching profile: $e');

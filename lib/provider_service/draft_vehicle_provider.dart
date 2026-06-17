@@ -4,7 +4,6 @@ import 'package:gocarriage_universal/resource/Utils.dart';
 import 'package:http/http.dart' as http;
 
 import '../resource/pref_utils.dart';
-import '../ui/model/VehicleType.dart';
 import 'URLS.dart';
 
 class DraftVehicleProvider with ChangeNotifier {

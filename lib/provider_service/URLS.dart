@@ -7,6 +7,7 @@ class URLS {
   static const String clusterBaseUrl = 'https://management.api.gocarriage.com/api';
   static const String fileUpload = 'https://api.gocarriage.com/api/upload';
   static const String imageUrlGet = 'https://api.gocarriage.com/api/upload/signed-url?key=';
+  static const String versionControl = '$baseUrl/app-version/check?platform=android&build=';
 
   static const String login = '$baseUrl/auth/login';
   static const String sendOtp = '$baseUrl/phone-otp/send-registration';
@@ -62,6 +63,7 @@ class URLS {
   static const String quatationsService = '$baseUrl/owners/me/quotations';
   static const String draftVehicle = '$baseUrl/fleets/get-by-id/';
   static const String subscriptionsList = '$baseUrl/fleets/owner-summary/';
+  static const String rewardsWallet = '$baseUrl/rewards/me';
 
 
   /////////////Driver/////////////////////

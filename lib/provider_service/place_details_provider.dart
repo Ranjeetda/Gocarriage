@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-import '../ui/model/place_details_model.dart';
+import '../screens/model/place_details_model.dart';
 
 class PlaceDetailsProvider extends ChangeNotifier {
   PlaceDetailsModel? _placeDetails;

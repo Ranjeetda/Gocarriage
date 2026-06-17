@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../resource/Utils.dart';
 import '../resource/pref_utils.dart';
 import 'URLS.dart';
 
@@ -13,6 +14,7 @@ class ForgotVerifyOtpProvider with ChangeNotifier {
       String newpass,
       ) async {
     final Uri url = Uri.parse(URLS.resetPassword);
+    final inputType = Utils.checkInputType(email);
 
     final Map<String, String> headers = {
       "Content-Type": "application/json",
@@ -28,7 +30,7 @@ class ForgotVerifyOtpProvider with ChangeNotifier {
     try {
       final Map<String, dynamic> requestBody = {
         "otp": pinCode,
-        "email": email,
+        inputType: email,
         "role": PrefUtils.getRole(),
         "newPassword": newpass
       };

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:gocarriage_universal/resource/image_paths.dart';
 import 'package:gocarriage_universal/resource/pref_utils.dart';
-import '../ui/dialogBox/login_register_dialog.dart';
+
+import '../screens/dialogBox/login_register_dialog.dart';
 
 class SelectableScrollBox extends StatefulWidget {
   @override

@@ -1,9 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-
-import '../ui/model/VehicleType.dart';
-import '../ui/model/vehicle_option.dart';
+import '../screens/model/VehicleType.dart';
 import 'URLS.dart';
 
 class VehicleTypeProvider with ChangeNotifier {

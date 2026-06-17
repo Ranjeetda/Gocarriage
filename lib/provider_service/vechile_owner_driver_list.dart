@@ -25,36 +25,44 @@ class VechileOwnerDriverList with ChangeNotifier {
       'Authorization': 'Bearer ${PrefUtils.getToken()}',
     };
 
+    final Map<String, dynamic> requestBody = {
+      "ownerId": PrefUtils.getUserId(),
+      "service_type": serviceType.isEmpty ? "in_city" : serviceType
+    };
+
+    final String body = jsonEncode(requestBody);
+
     try {
       // 🔹 PRINT REQUEST
-      debugPrint('📤 REQUEST');
+      debugPrint('================ REQUEST ================');
       debugPrint('URL: $url');
+      debugPrint('METHOD: POST');
       debugPrint('HEADERS: $headers');
-      final Map<String, dynamic> requestBody = {
-        "ownerId": PrefUtils.getUserId(),
-        "service_type": serviceType.isEmpty?"in_city":serviceType
-      };
+      debugPrint('BODY: $body');
 
-      final String body = jsonEncode(requestBody);
+      final response = await http.post(
+        url,
+        body: body,
+        headers: headers,
+      );
 
-
-      final response = await http.post(url,body: body, headers: headers);
-
-      // 🔹 PRINT RESPONSE STATUS
-      debugPrint('📥 RESPONSE');
+      // 🔹 PRINT RESPONSE
+      debugPrint('================ RESPONSE ================');
       debugPrint('STATUS CODE: ${response.statusCode}');
-      debugPrint('Accepted BODY: ${response.body}');
+      debugPrint('BODY: ${response.body}');
 
       final responseData = json.decode(response.body);
 
-      if (responseData['success'] == true) {
+      if (response.statusCode == 200 && responseData['success'] == true) {
         _listData = responseData['data'];
       } else {
-        debugPrint('⚠️ API MESSAGE: ${responseData['message']}');
+        debugPrint('⚠️ API ERROR MESSAGE: ${responseData['message']}');
         _listData = [];
       }
-    } catch (e) {
-      debugPrint('❌ Error fetching booking: $e');
+
+    } catch (e, stackTrace) {
+      debugPrint('❌ ERROR: $e');
+      debugPrint('STACKTRACE: $stackTrace');
       _listData = [];
     } finally {
       _isLoading = false;

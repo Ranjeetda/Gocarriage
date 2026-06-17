@@ -1,9 +1,9 @@
 import 'dart:convert';
-
 import 'package:flutter/cupertino.dart';
 import 'package:gocarriage_universal/resource/shared_preferences.dart';
 
-import '../ui/model/booking_trip_request.dart';
+import '../screens/model/RecentLocation.dart';
+import '../screens/model/booking_trip_request.dart';
 
 class PrefUtils {
   static const int maxItems = 5;
@@ -224,29 +224,56 @@ class PrefUtils {
     return BookingTripRequest.fromJson(jsonMap);
   }
 
+  static Future<List<RecentLocation>> getRecentLocations() async {
+    final String? jsonStr = Prefs.prefs!.getString("recent_locations");
+    if (jsonStr == null || jsonStr.isEmpty) return [];
 
-  static Future<List<String>> getRecentLocations() async {
-
-    final jsonString = Prefs.prefs!.getString("recent_locations");
-    if (jsonString == null || jsonString.isEmpty) {
+    try {
+      final List<dynamic> decoded = json.decode(jsonStr);
+      return decoded
+          .map((item) => RecentLocation.fromJson(item as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
       return [];
     }
-
-    final List<dynamic> list = json.decode(jsonString);
-    return list.cast<String>();
   }
 
-  static Future<void> addLocation(String location) async {
+  static Future<void> addLocation({
+    required String location,
+    String? postalCode,
+    double? lat,
+    double? lng,
+  }) async {
     if (location.trim().isEmpty) return;
-    List<String> recent = await getRecentLocations();
-    recent.remove(location);
-    recent.insert(0, location);
+
+    List<RecentLocation> recent = await getRecentLocations();
+
+    // Remove if already exists (compare by location)
+    recent.removeWhere((item) => item.location == location);
+
+    // Add to top
+    recent.insert(
+      0,
+      RecentLocation(
+        location: location,
+        postalCode: postalCode,
+        lat: lat,
+        lng: lng,
+      ),
+    );
+
     // Limit to maxItems
     if (recent.length > maxItems) {
       recent = recent.sublist(0, maxItems);
     }
-    await Prefs.prefs!.setString("recent_locations", json.encode(recent));
+
+    // Save to SharedPreferences
+    final List<Map<String, dynamic>> jsonList =
+    recent.map((loc) => loc.toJson()).toList();
+
+    await Prefs.prefs!.setString("recent_locations", json.encode(jsonList));
   }
+
 
   static Future<void> clearBookingRequest() async {
     await Prefs.prefs!.remove('booking_request');

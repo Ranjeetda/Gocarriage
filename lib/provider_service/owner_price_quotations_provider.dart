@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../resource/pref_utils.dart';
-import '../ui/model/VehicleType.dart';
 import 'URLS.dart';
 
 class OwnerPriceQuotationsProvider with ChangeNotifier {
