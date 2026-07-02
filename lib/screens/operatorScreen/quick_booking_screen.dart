@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../resource/app_colors.dart';
-import '../../resource/step_progress_header.dart';
+import '../widgets/step_progress_header.dart';
 
 class QuickBookingScreen extends StatefulWidget {
   const QuickBookingScreen({super.key});

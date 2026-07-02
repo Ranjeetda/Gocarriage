@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../provider_service/fetch_image_url_provider.dart';
@@ -10,7 +11,6 @@ import '../../provider_service/file_upload_provider.dart';
 import 'dart:convert';
 
 import '../../resource/app_colors.dart';
-
 
 class ImageBox extends StatefulWidget {
   final String label;
@@ -39,7 +39,6 @@ class ImageBox extends StatefulWidget {
 }
 
 class _ImageBoxState extends State<ImageBox> {
-
   void pickImage(Function(File file) onPicked, String fileType) {
     showModalBottomSheet(
       context: context,
@@ -71,23 +70,23 @@ class _ImageBoxState extends State<ImageBox> {
   }
 
   Future<void> _pickFromSource(
-      ImageSource source,
-      Function(File file) onPicked,
-      String fileType,
-      ) async {
+    ImageSource source,
+    Function(File file) onPicked,
+    String fileType,
+  ) async {
     final pickedFile = await widget.picker.pickImage(source: source);
     if (pickedFile != null) {
       final file = File(pickedFile.path);
-      widget.callback(file);       // update parent UI
+      widget.callback(file); // update parent UI
       _fileUpload('owners', file, fileType);
     }
   }
 
   Future<void> _fileUpload(
-      String folderName,
-      File? fileName,
-      String mType,
-      ) async {
+    String folderName,
+    File? fileName,
+    String mType,
+  ) async {
     if (fileName == null) return;
 
     _showUploadingDialog();
@@ -142,19 +141,20 @@ class _ImageBoxState extends State<ImageBox> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => const Dialog(
-        child: Padding(
-          padding: EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              LinearProgressIndicator(minHeight: 8),
-              SizedBox(height: 16),
-              Text("Uploading your document..."),
-            ],
+      builder:
+          (ctx) => const Dialog(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  LinearProgressIndicator(minHeight: 8),
+                  SizedBox(height: 16),
+                  Text("Uploading your document..."),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
     );
   }
 
@@ -163,76 +163,80 @@ class _ImageBoxState extends State<ImageBox> {
     showDialog(
       context: context,
       barrierColor: Colors.black.withOpacity(0.9),
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: EdgeInsets.symmetric(
-          horizontal: size.width * 0.05,
-          vertical: size.height * 0.1,
-        ),
-        child: Container(
-          width: size.width * 0.9,
-          height: size.height * 0.75,
-          decoration: BoxDecoration(
-            color: Colors.black,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: Stack(
-              children: [
-                InteractiveViewer(
-                  minScale: 0.5,
-                  maxScale: 5.0,
-                  child: Image.network(imageUrl, fit: BoxFit.contain),
-                ),
-                Positioned(
-                  top: 0, left: 0, right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.black.withOpacity(0.8),
-                          Colors.transparent,
-                        ],
+      builder:
+          (context) => Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: EdgeInsets.symmetric(
+              horizontal: size.width * 0.05,
+              vertical: size.height * 0.1,
+            ),
+            child: Container(
+              width: size.width * 0.9,
+              height: size.height * 0.75,
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Stack(
+                  children: [
+                    InteractiveViewer(
+                      minScale: 0.5,
+                      maxScale: 5.0,
+                      child: Image.network(imageUrl, fit: BoxFit.contain),
+                    ),
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.black.withOpacity(0.8),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Text(
+                              "Preview",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const Spacer(),
+                            GestureDetector(
+                              onTap: () => Navigator.pop(context),
+                              child: const Icon(
+                                Icons.close,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        const Text(
-                          "Preview",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const Spacer(),
-                        GestureDetector(
-                          onTap: () => Navigator.pop(context),
-                          child: const Icon(
-                            Icons.close,
-                            color: Colors.white,
-                            size: 28,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final safeUrl = (widget.url != null && widget.url!.isNotEmpty)
-        ? Uri.encodeFull(widget.url!)
-        : null;
+    final safeUrl =
+        (widget.url != null && widget.url!.isNotEmpty)
+            ? Uri.encodeFull(widget.url!)
+            : null;
 
     return GestureDetector(
       onTap: () => pickImage(widget.callback, widget.label),
@@ -261,7 +265,11 @@ class _ImageBoxState extends State<ImageBox> {
                       ),
                     )
                   else if (safeUrl != null)
-                    const Icon(Icons.check_circle, size: 50, color: Colors.green)
+                    const Icon(
+                      Icons.check_circle,
+                      size: 50,
+                      color: Colors.green,
+                    )
                   else
                     const Icon(
                       Icons.cloud_upload_outlined,
@@ -294,20 +302,21 @@ class _ImageBoxState extends State<ImageBox> {
                   child: CircleAvatar(
                     radius: 18,
                     backgroundColor: Colors.blue,
-                    child: widget.isLoading
-                        ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                        : const Icon(
-                      Icons.remove_red_eye,
-                      color: Colors.white,
-                      size: 18,
-                    ),
+                    child:
+                        widget.isLoading
+                            ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                            : const Icon(
+                              Icons.remove_red_eye,
+                              color: Colors.white,
+                              size: 18,
+                            ),
                   ),
                 ),
               ),
@@ -329,12 +338,20 @@ class CommonTextField extends StatefulWidget {
   final String? Function(String?)? validator;
   final String? label;
   final VoidCallback? onChanged;
+
+  /// Called when text field is tapped
+  final VoidCallback? onTap;
+
+  /// Called when prefix icon is tapped
+  final VoidCallback? onIconTap;
+
   final int? maxLines;
+  final int? maxLength;
   final TextCapitalization textCapitalization;
   final bool isRequired;
   final bool isObscure;
 
-  // ✅ OTP / Verify support
+  /// OTP / Verify support
   final bool isVerified;
   final bool isOtpSent;
   final bool isLoadingAction;
@@ -342,7 +359,7 @@ class CommonTextField extends StatefulWidget {
   final VoidCallback? onSendOtp;
 
   const CommonTextField({
-    super.key,
+    Key? key,
     required this.hint,
     required this.controller,
     required this.icon,
@@ -353,7 +370,10 @@ class CommonTextField extends StatefulWidget {
     this.validator,
     this.label,
     this.onChanged,
+    this.onTap,
+    this.onIconTap,
     this.maxLines = 1,
+    this.maxLength,
     this.textCapitalization = TextCapitalization.none,
     this.isRequired = false,
     this.isObscure = false,
@@ -362,7 +382,7 @@ class CommonTextField extends StatefulWidget {
     this.isLoadingAction = false,
     this.secondsRemaining = 0,
     this.onSendOtp,
-  });
+  }) : super(key: key);
 
   @override
   State<CommonTextField> createState() => _CommonTextFieldState();
@@ -379,6 +399,7 @@ class _CommonTextFieldState extends State<CommonTextField> {
 
   Widget _buildLabel(String text) {
     if (!widget.isRequired) return Text(text);
+
     return RichText(
       text: TextSpan(
         text: text,
@@ -393,17 +414,18 @@ class _CommonTextFieldState extends State<CommonTextField> {
     );
   }
 
-  // ✅ Suffix icon logic
   Widget? _buildSuffixIcon() {
-    // Verified — show green tick
     if (widget.isVerified) {
       return const Icon(Icons.verified, color: Colors.green);
     }
 
-    // Obscure toggle
     if (widget.isObscure) {
       return GestureDetector(
-        onTap: () => setState(() => _obscureText = !_obscureText),
+        onTap: () {
+          setState(() {
+            _obscureText = !_obscureText;
+          });
+        },
         child: Icon(
           _obscureText ? Icons.visibility_off : Icons.visibility,
           color: Colors.grey,
@@ -411,38 +433,33 @@ class _CommonTextFieldState extends State<CommonTextField> {
       );
     }
 
-    // OTP Send / Resend button
     if (widget.onSendOtp != null) {
       final bool canSend =
           !widget.isLoadingAction &&
-              !(widget.isOtpSent && widget.secondsRemaining > 0);
+          !(widget.isOtpSent && widget.secondsRemaining > 0);
 
       return Padding(
         padding: const EdgeInsets.only(right: 8),
         child: TextButton(
           onPressed: canSend ? widget.onSendOtp : null,
-          style: TextButton.styleFrom(
-            foregroundColor: AppColors.primaryColor,
-          ),
-          child: widget.isLoadingAction
-              ? const SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          )
-              : Text(
-            widget.isOtpSent
-                ? (widget.secondsRemaining > 0
-                ? "Resend (${widget.secondsRemaining}s)"
-                : "Resend")
-                : "Send OTP",
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
+          child:
+              widget.isLoadingAction
+                  ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                  : Text(
+                    widget.isOtpSent
+                        ? (widget.secondsRemaining > 0
+                            ? "Resend (${widget.secondsRemaining}s)"
+                            : "Resend")
+                        : "Send OTP",
+                  ),
         ),
       );
     }
 
-    // Lock icon when not editable
     if (!widget.isEditable) {
       return const Icon(Icons.lock_outline, color: Colors.grey, size: 18);
     }
@@ -464,63 +481,89 @@ class _CommonTextFieldState extends State<CommonTextField> {
         readOnly: !widget.isEditable,
         validator: widget.validator,
         maxLines: widget.isObscure ? 1 : widget.maxLines,
+        maxLength: widget.maxLength,
         obscureText: _obscureText,
         textCapitalization: widget.textCapitalization,
         autovalidateMode: AutovalidateMode.onUserInteraction,
+
         onChanged: (_) => widget.onChanged?.call(),
+
+        /// TextField Tap
+        onTap: widget.onTap,
+
         decoration: InputDecoration(
-          prefixIcon: Icon(
-            widget.icon,
-            color: widget.isVerified
-                ? Colors.green
-                : widget.isEditable
-                ? AppColors.primaryColor
-                : Colors.grey,
-          ),
+          /// Clickable Prefix Icon
+          prefixIcon:
+              widget.onIconTap != null
+                  ? IconButton(
+                    onPressed: widget.onIconTap,
+                    icon: Icon(
+                      widget.icon,
+                      color:
+                          widget.isVerified
+                              ? Colors.green
+                              : widget.isEditable
+                              ? AppColors.primaryColor
+                              : Colors.grey,
+                    ),
+                  )
+                  : Icon(
+                    widget.icon,
+                    color:
+                        widget.isVerified
+                            ? Colors.green
+                            : widget.isEditable
+                            ? AppColors.primaryColor
+                            : Colors.grey,
+                  ),
+
           suffixIcon: _buildSuffixIcon(),
+
           label: _buildLabel(labelText),
           hintText: widget.hint,
           floatingLabelBehavior: FloatingLabelBehavior.auto,
+
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(
-              color: widget.isVerified
-                  ? Colors.green
-                  : AppColors.primaryColor,
+              color: widget.isVerified ? Colors.green : AppColors.primaryColor,
               width: 2,
             ),
           ),
+
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(
-              color: widget.isVerified
-                  ? Colors.green
-                  : Colors.grey.shade400,
+              color: widget.isVerified ? Colors.green : Colors.grey.shade400,
             ),
           ),
+
           disabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(
-              color: widget.isVerified
-                  ? Colors.green
-                  : Colors.grey.shade300,
+              color: widget.isVerified ? Colors.green : Colors.grey.shade300,
             ),
           ),
+
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: Colors.red),
           ),
+
           focusedErrorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: Colors.red, width: 2),
           ),
+
           filled: true,
-          fillColor: widget.isVerified
-              ? Colors.green.shade50
-              : widget.isEditable
-              ? Colors.white
-              : Colors.grey.shade100,
+          fillColor:
+              widget.isVerified
+                  ? Colors.green.shade50
+                  : widget.isEditable
+                  ? Colors.white
+                  : Colors.grey.shade100,
         ),
       ),
     );
@@ -555,10 +598,7 @@ class OtpBoxes extends StatelessWidget {
             maxLength: 1,
             textAlign: TextAlign.center,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             decoration: InputDecoration(
               counterText: "",
               contentPadding: EdgeInsets.zero,
@@ -567,10 +607,7 @@ class OtpBoxes extends StatelessWidget {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(
-                  color: AppColors.primaryColor,
-                  width: 2,
-                ),
+                borderSide: BorderSide(color: AppColors.primaryColor, width: 2),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -633,14 +670,13 @@ class EmailSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-
         // ✅ Email field using CommonTextField
         CommonTextField(
           hint: 'Enter email',
           controller: emailController,
           icon: Icons.email_outlined,
           label: 'Email Address',
-          isRequired: true,
+          isRequired: false,
           keyboard: TextInputType.emailAddress,
           isVerified: isEmailVerified,
           isOtpSent: isEmailOtpSent,
@@ -674,17 +710,18 @@ class EmailSection extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: isLoadingEmailOtp
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text(
-                "Confirm Email OTP",
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.white,
-                  fontFamily: 'Poppins',
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+              child:
+                  isLoadingEmailOtp
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
+                        "Confirm Email OTP",
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                          fontFamily: 'Poppins',
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
             ),
           ),
         ],
@@ -703,6 +740,137 @@ class EmailSection extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+// lib/resource/mobile_section.dart
+
+class MobileSection extends StatelessWidget {
+  final TextEditingController mobileController;
+  final List<TextEditingController> otpControllers;
+
+  final bool isMobileVerified;
+  final bool isMobileOtpSent;
+  final bool isLoadingMobile;
+  final bool isLoadingMobileOtp;
+  final int secondsRemaining;
+
+  final VoidCallback onSendOtp;
+  final VoidCallback onVerifyOtp;
+  final VoidCallback onChanged;
+  final VoidCallback? onChangeMobile;
+
+  const MobileSection({
+    super.key,
+    required this.mobileController,
+    required this.otpControllers,
+    required this.isMobileVerified,
+    required this.isMobileOtpSent,
+    required this.isLoadingMobile,
+    required this.isLoadingMobileOtp,
+    required this.secondsRemaining,
+    required this.onSendOtp,
+    required this.onVerifyOtp,
+    required this.onChanged,
+    this.onChangeMobile,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        /// Mobile Field
+        CommonTextField(
+          hint: 'Enter mobile number',
+          controller: mobileController,
+          icon: Icons.phone_android,
+          label: 'Mobile Number',
+          keyboard: TextInputType.number,
+          isRequired: false,
+          enabled: !isMobileVerified,
+          maxLength: 10,
+          isVerified: isMobileVerified,
+          isOtpSent: isMobileOtpSent,
+          isLoadingAction: isLoadingMobile,
+          secondsRemaining: secondsRemaining,
+          onSendOtp: mobileController.text.length == 10 ? onSendOtp : null,
+          onChanged: onChanged,
+          validator: (v) {
+            if (v == null || v.isEmpty) {
+              return 'Mobile number is required';
+            }
+            if (v.length != 10) {
+              return 'Enter a valid mobile number';
+            }
+            return null;
+          },
+        ),
+
+        /// OTP Section
+        if (isMobileOtpSent && !isMobileVerified) ...[
+          const SizedBox(height: 12),
+          OtpBoxes(
+            controllers: otpControllers,
+            length: 6,
+            onCompleted: onVerifyOtp,
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 55,
+            child: ElevatedButton(
+              onPressed: isLoadingMobileOtp ? null : onVerifyOtp,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.secondarycolor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child:
+                  isLoadingMobileOtp
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
+                        "Confirm Mobile OTP",
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                          fontFamily: 'Poppins',
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+            ),
+          ),
+        ],
+
+        /// Verified Section
+        if (isMobileVerified) ...[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: const [
+                  Icon(Icons.check_circle, color: Colors.green, size: 18),
+                  SizedBox(width: 6),
+                  Text(
+                    "Mobile Verified",
+                    style: TextStyle(
+                      color: Colors.green,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              if (onChangeMobile != null)
+                TextButton(
+                  onPressed: onChangeMobile,
+                  child: const Text("Change"),
+                ),
             ],
           ),
         ],
@@ -760,8 +928,9 @@ class CommonDropdown extends StatelessWidget {
         value: value,
         isExpanded: true,
         autovalidateMode: AutovalidateMode.onUserInteraction,
-        validator: validator ??
-                (v) {
+        validator:
+            validator ??
+            (v) {
               if (isRequired && (v == null || v.isEmpty)) {
                 return '$labelText is required';
               }
@@ -770,17 +939,14 @@ class CommonDropdown extends StatelessWidget {
         decoration: InputDecoration(
           label: _buildLabel(labelText),
           hintText: hint,
-          prefixIcon: icon != null
-              ? Icon(icon, color: AppColors.primaryColor)
-              : null,
+          prefixIcon:
+              icon != null ? Icon(icon, color: AppColors.primaryColor) : null,
           floatingLabelBehavior: FloatingLabelBehavior.auto,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 12,
             vertical: 14,
           ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(color: AppColors.primaryColor, width: 2),
@@ -802,14 +968,63 @@ class CommonDropdown extends StatelessWidget {
         ),
         hint: Text(hint, style: TextStyle(color: Colors.grey.shade500)),
         icon: const Icon(Icons.keyboard_arrow_down_rounded),
-        items: items.map((e) {
-          return DropdownMenuItem<String>(
-            value: e,
-            child: Text(e),
-          );
-        }).toList(),
+        items:
+            items.map((e) {
+              return DropdownMenuItem<String>(value: e, child: Text(e));
+            }).toList(),
         onChanged: onChanged,
       ),
+    );
+  }
+}
+
+class CommonDatePicker extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final String hint;
+  final bool isRequired;
+  final DateTime? firstDate;
+  final DateTime? lastDate;
+  final ValueChanged<DateTime>? onDateSelected;
+  final String? Function(String?)? validator;
+
+  const CommonDatePicker({
+    super.key,
+    required this.controller,
+    required this.label,
+    required this.hint,
+    this.isRequired = false,
+    this.firstDate,
+    this.lastDate,
+    this.onDateSelected,
+    this.validator,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CommonTextField(
+      hint: hint,
+      controller: controller,
+      icon: Icons.calendar_month,
+      label: label,
+      isRequired: isRequired,
+      onTap: () async {
+        final DateTime? picked = await showDatePicker(
+          context: context,
+          initialDate:
+              controller.text.isNotEmpty
+                  ? DateFormat("yyyy-MM-dd").parse(controller.text)
+                  : DateTime.now(),
+          firstDate: firstDate ?? DateTime(2000),
+          lastDate: lastDate ?? DateTime(2100),
+        );
+
+        if (picked != null) {
+          controller.text = DateFormat("yyyy-MM-dd").format(picked);
+          onDateSelected?.call(picked);
+        }
+      },
+      validator: validator,
     );
   }
 }
@@ -819,18 +1034,20 @@ class CommonDropdown extends StatelessWidget {
 // ═══════════════════════════════════════════════════════════════
 
 class RewardsBar extends StatelessWidget {
-
   final String percentage, points, complete;
   final bool isActive;
   final Map<String, dynamic> pointsWallet;
+
   const RewardsBar({
-    required this.percentage, required this.points,
-    required this.complete,required this.pointsWallet,required this.isActive
+    required this.percentage,
+    required this.points,
+    required this.complete,
+    required this.pointsWallet,
+    required this.isActive,
   });
 
   @override
   Widget build(BuildContext context) {
-
     return Container(
       padding: const EdgeInsets.all(10),
       color: const Color(0xFF0F766E),
@@ -849,20 +1066,25 @@ class RewardsBar extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${percentage}% completed · $complete/4',
-                    style: const TextStyle(color: Colors.white70)),
+                Text(
+                  '${percentage}% completed · $complete/4',
+                  style: const TextStyle(color: Colors.white70),
+                ),
                 const SizedBox(height: 4),
-                Text('All sections complete!',
-                    style: const TextStyle(color: Colors.white70)),
+                Text(
+                  'All sections complete!',
+                  style: const TextStyle(color: Colors.white70),
+                ),
                 const SizedBox(height: 10),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
                   child: LinearProgressIndicator(
-                    value: isActive==true?100:0,
+                    value: isActive == true ? 100 : 0,
                     minHeight: 6,
                     backgroundColor: Colors.white24,
-                    valueColor:
-                    const AlwaysStoppedAnimation<Color>(Colors.yellow),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      Colors.yellow,
+                    ),
                   ),
                 ),
               ],
@@ -871,7 +1093,7 @@ class RewardsBar extends StatelessWidget {
           const SizedBox(width: 12),
           Row(
             children: [
-              _StatBox('WALLET',   '₹ ${pointsWallet['balance']}'),
+              _StatBox('WALLET', '₹ ${pointsWallet['balance']}'),
               const SizedBox(width: 8),
               _StatBox('LIFETIME', '₹ ${pointsWallet['lifetime_earned']}'),
             ],
@@ -884,6 +1106,7 @@ class RewardsBar extends StatelessWidget {
 
 class _StatBox extends StatelessWidget {
   final String title, value;
+
   const _StatBox(this.title, this.value);
 
   @override
@@ -896,9 +1119,17 @@ class _StatBox extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(title, style: const TextStyle(color: Colors.white70, fontSize: 10)),
-          Text(value,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          Text(
+            title,
+            style: const TextStyle(color: Colors.white70, fontSize: 10),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );

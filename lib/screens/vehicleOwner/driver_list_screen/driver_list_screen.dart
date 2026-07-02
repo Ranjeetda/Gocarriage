@@ -35,7 +35,6 @@ class _DriverListScreen extends State<DriverListScreen> {
         context,
         listen: false,
       );
-
       await provider.fetchList('in_city');
 
       setState(() {

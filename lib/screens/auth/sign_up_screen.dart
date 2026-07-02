@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -24,6 +23,7 @@ import '../dashboardScreen/customer_bottom_navigation_bar.dart';
 import '../driver/home_screen/driver_bottom_navigationBar.dart';
 import '../operatorScreen/operator_bottom_navigationbar.dart';
 import '../vehicleOwner/home_screen/dashboard_vehicle_owner_screen.dart';
+import '../widgets/shared_widgets.dart';
 
 class SignUpScreen extends StatefulWidget {
   final String? mAccountType;
@@ -69,7 +69,7 @@ class _SignUpScreen extends State<SignUpScreen> {
   int _secondsRemaining = 60;
   Timer? _timer;
 
-  String? selectedLicense;
+  String selectedLicense = 'LMV - Light Motor Vehicle (Car)';
 
   String? phoneVerificationToken;
   String? registered_time_lat;
@@ -106,11 +106,12 @@ class _SignUpScreen extends State<SignUpScreen> {
     super.initState();
     print("RanjeetTest ============>${PrefUtils.getRole()}");
     print("RanjeetTest ============>${widget.mMode}");
-    if(PrefUtils.getFcmToken().isEmpty){
+    if (PrefUtils.getFcmToken().isEmpty) {
       getToken();
     }
     Future.microtask(() => _setCurrentLocation());
   }
+
   Future<void> getToken() async {
     if (Prefs.prefs == null) await Prefs.init();
 
@@ -118,11 +119,7 @@ class _SignUpScreen extends State<SignUpScreen> {
 
     /// iOS Permission
     if (Platform.isIOS) {
-      await messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
+      await messaging.requestPermission(alert: true, badge: true, sound: true);
 
       /// Wait for APNS token
       await Future.delayed(const Duration(seconds: 1));
@@ -130,7 +127,6 @@ class _SignUpScreen extends State<SignUpScreen> {
       String? apnsToken = await messaging.getAPNSToken();
       print("APNS TOKEN: $apnsToken");
       // PrefUtils.setFcmToken(apnsToken!);
-
     }
 
     /// Get FCM token (Android + iOS)
@@ -179,11 +175,12 @@ class _SignUpScreen extends State<SignUpScreen> {
       position.longitude,
     );
     setState(() {
-       registered_time_lat = position.latitude.toString();
-       registered_time_long = position.longitude.toString();
-       location_accuracy = position.accuracy.toString();
+      registered_time_lat = position.latitude.toString();
+      registered_time_long = position.longitude.toString();
+      location_accuracy = position.accuracy.toString();
 
-      _locationController.text = "${placemarks.first.name}, ${placemarks.first.locality}";
+      _locationController.text =
+          "${placemarks.first.name}, ${placemarks.first.locality}";
       city = placemarks.first.locality ?? "";
       state = placemarks.first.administrativeArea ?? "";
       isGettingLocation = false;
@@ -256,7 +253,7 @@ class _SignUpScreen extends State<SignUpScreen> {
 
     if (response.statusCode == 200 && responseData['success'] == true) {
       setState(() {
-       /* _secondsRemaining = int.parse(
+        /* _secondsRemaining = int.parse(
           responseData['data']['expiresIn'].replaceAll(RegExp(r'[^0-9]'), ''),
         );*/
         isMobileOtpSent = true;
@@ -297,7 +294,7 @@ class _SignUpScreen extends State<SignUpScreen> {
 
     if (responseData['success'] == true) {
       setState(() {
-        phoneVerificationToken=responseData['data']['phoneVerificationToken'];
+        phoneVerificationToken = responseData['data']['phoneVerificationToken'];
         isLoadingMobileOtp = false;
         isMobileVerified = true;
         isMobileOtpSent = false;
@@ -321,7 +318,9 @@ class _SignUpScreen extends State<SignUpScreen> {
     final versionNumber = await Utils.getVersionNumber();
 
     /// ---------------- VALIDATIONS ----------------
-    if (role == "Vehicle Owner" && widget.mMode == "Company" && _companyNameController.text.isEmpty) {
+    if (role == "Vehicle Owner" &&
+        widget.mMode == "Company" &&
+        _companyNameController.text.isEmpty) {
       Utils.showErrorMessage(context, 'Please enter your company name');
       return;
     }
@@ -332,10 +331,7 @@ class _SignUpScreen extends State<SignUpScreen> {
     }
 
     if (!isMobileVerified) {
-      Utils.showErrorMessage(
-        context,
-        "Please verify your Mobile number first",
-      );
+      Utils.showErrorMessage(context, "Please verify your Mobile number first");
       return;
     }
 
@@ -382,7 +378,8 @@ class _SignUpScreen extends State<SignUpScreen> {
         pincode: role == "driver" ? "" : _pinCodeController.text.trim(),
 
         selectedLicense: role == "driver" ? (selectedLicense ?? '') : "",
-        mode: (role == "owner" || role == "operator") ? (widget.mMode ?? "") : "",
+        mode:
+            (role == "owner" || role == "operator") ? (widget.mMode ?? "") : "",
 
         bankName: role == "owner" ? _bankNameController.text.trim() : "",
         accountNumber: role == "owner" ? _accountNoController.text.trim() : "",
@@ -398,7 +395,6 @@ class _SignUpScreen extends State<SignUpScreen> {
         app_version: versionNumber,
         registration_source: Utils.getDeviceType(),
       );
-
 
       final responseData = json.decode(response.body);
 
@@ -417,19 +413,16 @@ class _SignUpScreen extends State<SignUpScreen> {
           PrefUtils.setEmail(data["driver"]["email"] ?? '');
           PrefUtils.setName(data["driver"]["fullName"]);
           PrefUtils.setMobile(data["driver"]["mobileNo"] ?? '');
-        }
-        else if (userRole == 'operator') {
+        } else if (userRole == 'operator') {
           PrefUtils.setUserId(data["operator"]["id"].toString());
           PrefUtils.setEmail(data["user"]["email"] ?? '');
           PrefUtils.setName(data["operator"]["ownerName"]);
-        }
-        else if (userRole == 'customer') {
+        } else if (userRole == 'customer') {
           PrefUtils.setUserId(data["customer"]["id"].toString());
           PrefUtils.setEmail(data["customer"]["email"] ?? '');
           PrefUtils.setMobile(data["customer"]["phone"] ?? '');
           PrefUtils.setName(data["customer"]["customerName"]);
-        }
-        else if (userRole == 'owner') {
+        } else if (userRole == 'owner') {
           PrefUtils.setUserId(data["owner"]["id"].toString());
           PrefUtils.setEmail(data["user"]["email"] ?? '');
           PrefUtils.setName(data["owner"]["ownerName"]);
@@ -438,13 +431,12 @@ class _SignUpScreen extends State<SignUpScreen> {
         PrefUtils.setLoggedIn(true);
         PrefUtils.setFirstTime(true);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(responseData['message'])),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(responseData['message'])));
 
         _sendOTP();
-      }
-      else {
+      } else {
         Utils.showErrorMessage(context, responseData['message']);
       }
     } catch (e) {
@@ -454,7 +446,6 @@ class _SignUpScreen extends State<SignUpScreen> {
       setState(() => isLoading = false);
     }
   }
-
 
   void _sendOTP() {
     if (PrefUtils.getRole() == "customer") {
@@ -466,7 +457,7 @@ class _SignUpScreen extends State<SignUpScreen> {
           duration: const Duration(milliseconds: 900),
           reverseDuration: const Duration(milliseconds: 900),
         ),
-            (Route<dynamic> route) => false,
+        (Route<dynamic> route) => false,
       );
     } else if (PrefUtils.getRole() == "driver") {
       Navigator.pushAndRemoveUntil(
@@ -477,9 +468,9 @@ class _SignUpScreen extends State<SignUpScreen> {
           duration: const Duration(milliseconds: 900),
           reverseDuration: const Duration(milliseconds: 900),
         ),
-            (Route<dynamic> route) => false,
+        (Route<dynamic> route) => false,
       );
-    }else if (PrefUtils.getRole() == "owner") {
+    } else if (PrefUtils.getRole() == "owner") {
       Navigator.pushAndRemoveUntil(
         context,
         PageTransition(
@@ -488,9 +479,9 @@ class _SignUpScreen extends State<SignUpScreen> {
           duration: const Duration(milliseconds: 900),
           reverseDuration: const Duration(milliseconds: 900),
         ),
-            (Route<dynamic> route) => false,
+        (Route<dynamic> route) => false,
       );
-    }else if (PrefUtils.getRole() == "operator") {
+    } else if (PrefUtils.getRole() == "operator") {
       Navigator.pushAndRemoveUntil(
         context,
         PageTransition(
@@ -499,7 +490,7 @@ class _SignUpScreen extends State<SignUpScreen> {
           duration: const Duration(milliseconds: 900),
           reverseDuration: const Duration(milliseconds: 900),
         ),
-            (Route<dynamic> route) => false,
+        (Route<dynamic> route) => false,
       );
     }
   }
@@ -544,8 +535,11 @@ class _SignUpScreen extends State<SignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
-    bool isCompanyUser = (PrefUtils.getRole() == "owner" || PrefUtils.getRole() == "operator") && widget.mMode == "Company";
+    bool isCompanyUser =
+        (PrefUtils.getRole() == "owner" || PrefUtils.getRole() == "operator") &&
+        widget.mMode == "Company";
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: AppColors.primaryColor,
         foregroundColor: Colors.white,
@@ -558,67 +552,174 @@ class _SignUpScreen extends State<SignUpScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              isCompanyUser ? _label("Company Name *") : SizedBox(),
-              isCompanyUser ? _textField(_companyNameController, "Enter company name") : SizedBox(),
+              isCompanyUser
+                  ? CommonTextField(
+                    hint: 'Please enter company name',
+                    controller: _companyNameController,
+                    icon: Icons.business,
+                    isRequired: true,
+                    label: 'Enter company name',
+                  )
+                  : SizedBox(),
+              SizedBox(height: 10),
 
-              _label("Full Name *"),
-              _textField(_nameController, "Enter full name"),
+              CommonTextField(
+                hint: 'Please enter full name',
+                controller: _nameController,
+                icon: Icons.person,
+                isRequired: true,
+                label: 'Full Name',
+              ),
+              SizedBox(height: 10),
+              EmailSection(
+                emailController: _emailController,
+                otpControllers: emailOtpControllers,
+                isEmailVerified: isEmailVerified,
+                isEmailOtpSent: isEmailOtpSent,
+                isLoadingEmail: isLoadingEmail,
+                isLoadingEmailOtp: isLoadingEmailOtp,
+                secondsRemaining: _secondsRemaining,
+                isValidEmail: Utils.isEmail,
+                onSendOtp: () {
+                  sendOtpOnEmail();
+                  _startCountdown();
+                },
+                onVerifyOtp: _verifyEmailOtp,
+                onChanged: () => setState(() {}),
+              ),
 
-              _label("Email Address"),
-              _emailSection(),
+              SizedBox(height: 10),
 
-              _label("Mobile Number *"),
-              _mobileSection(),
+              MobileSection(
+                mobileController: _mobileController,
+                otpControllers: mobileOtpControllers,
+                isMobileVerified: isMobileVerified,
+                isMobileOtpSent: isMobileOtpSent,
+                isLoadingMobile: isLoadingMobile,
+                isLoadingMobileOtp: isLoadingMobileOtp,
+                secondsRemaining: _secondsRemaining,
+                onSendOtp: () {
+                  _sendMobileOtp();
+                  _startCountdown();
+                },
+                onVerifyOtp: _verifyMobileOtp,
+                onChanged: () => setState(() {}),
+                onChangeMobile: () {
+                  setState(() {
+                    isMobileVerified = false;
+                    isMobileOtpSent = false;
+                    _secondsRemaining = 0;
 
-              _label("Password *"),
-              _passwordField(),
-
-              _label("Confirm Password *"),
-              _confirmPasswordField(),
-              if (PrefUtils.getRole() == "driver") ...[
-                SizedBox(height: 20,),
-                DropdownButtonFormField<String>(
-                  value: selectedLicense,
-                  decoration: InputDecoration(
-                    labelText: 'Driving License Type',
-                    hintText: 'Select DL Category',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    prefixIcon: const Icon(Icons.directions_car),
-                  ),
-                  icon: const Icon(Icons.arrow_drop_down_circle),
-                  isExpanded: true,
-                  items:
-                  licenseTypes.map((String type) {
-                    return DropdownMenuItem<String>(
-                      value: type,
-                      child: Text(type),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      selectedLicense = newValue;
-                    });
-                    print('Selected Driving License: $newValue');
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please select driving license type';
+                    for (var c in mobileOtpControllers) {
+                      c.clear();
                     }
-                    return null;
-                  },
+                  });
+                },
+              ),
+              CommonTextField(
+                hint: 'Enter your password',
+                controller: _passwordController,
+                icon: Icons.lock,
+                label: 'Password',
+                isRequired: true,
+                isObscure: true,
+                keyboard: TextInputType.text,
+                onChanged: () => setState(() {}),
+                validator: (v) {
+                  if (v == null || v.isEmpty) {
+                    return 'Password is required';
+                  }
+
+                  if (v.length < 8) {
+                    return 'Password must be at least 8 characters';
+                  }
+
+                  if (!RegExp(r'[A-Z]').hasMatch(v)) {
+                    return 'Must contain at least one uppercase letter';
+                  }
+
+                  if (!RegExp(r'[a-z]').hasMatch(v)) {
+                    return 'Must contain at least one lowercase letter';
+                  }
+
+                  if (!RegExp(r'\d').hasMatch(v)) {
+                    return 'Must contain at least one number';
+                  }
+
+                  if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(v)) {
+                    return 'Must contain at least one special character';
+                  }
+
+                  return null;
+                },
+              ),
+
+              SizedBox(height: 10),
+
+              CommonTextField(
+                hint: 'Enter your confirm password',
+                controller: _confirmPasswordController,
+                icon: Icons.lock,
+                label: 'Confirm Password',
+                isRequired: true,
+                isObscure: true,
+                keyboard: TextInputType.text,
+                onChanged: () => setState(() {}),
+                validator: (v) {
+                  if (v == null || v.isEmpty) {
+                    return 'Confirm Password is required';
+                  }
+
+                  if (v != _passwordController.text) {
+                    return 'Passwords do not match';
+                  }
+
+                  return null;
+                },
+              ),
+
+              const SizedBox(height: 10),
+
+              if (PrefUtils.getRole() == "driver") ...[
+                SizedBox(height: 20),
+                CommonDropdown(
+                  hint: 'Driving License Type',
+                  label: 'Select DL Category',
+                  value: selectedLicense.isEmpty ? null : selectedLicense,
+                  items: Utils.licenseTypes,
+                  icon: Icons.directions_car,
+                  isRequired: true,
+                  onChanged: (v) => setState(() => selectedLicense = v ?? ''),
                 ),
               ],
-              _label("Referral Code (optional)"),
-              _textField1(_referralCodeController, "Enter referral code"),
+              CommonTextField(
+                hint: 'Enter referral code (optional)',
+                controller: _referralCodeController,
+                icon: Icons.person,
+                isRequired: false,
+                label: 'Referral Code (optional)',
+              ),
+
               if (PrefUtils.getRole() != "driver" &&
                   PrefUtils.getRole() != "owner" &&
                   PrefUtils.getRole() != "operator") ...[
-                _label("Address *"),
-                _addressField(),
-                _label("Pin Code *"),
-                _pinField(),
+                SizedBox(height: 10),
+                CommonTextField(
+                  hint: 'Please enter address',
+                  controller: _locationController,
+                  icon: Icons.my_location,
+                  label: 'Address',
+                  isRequired: true,
+                  onIconTap: _setCurrentLocation,
+                ),
+                SizedBox(height: 10),
+                CommonTextField(
+                  hint: 'Please enter pin code',
+                  controller: _pinCodeController,
+                  icon: Icons.person,
+                  isRequired: true,
+                  label: 'Pin Code',
+                ),
               ],
 
               const SizedBox(height: 30),
@@ -658,296 +759,6 @@ class _SignUpScreen extends State<SignUpScreen> {
       ),
     );
   }
-
-  // ---------------- HELPERS ----------------
-
-  Widget _label(String t) => Padding(
-    padding: const EdgeInsets.only(top: 16, bottom: 6),
-    child: Text(t),
-  );
-
-  InputDecoration _dec(String h) =>
-      InputDecoration(hintText: h, border: OutlineInputBorder());
-
-  Widget _textField(TextEditingController c, String h) => TextFormField(
-    controller: c,
-    decoration: _dec(h),
-    validator: (v) => v!.isEmpty ? "Required" : null,
-  );
-
-  Widget _textField1(TextEditingController c, String h) =>
-      TextFormField(controller: c, decoration: _dec(h));
-
-  Widget _passwordField() => TextFormField(
-    controller: _passwordController,
-    obscureText: true,
-    decoration: _dec("Password"),
-  );
-
-  Widget _confirmPasswordField() => TextFormField(
-    controller: _confirmPasswordController,
-    obscureText: true,
-    decoration: _dec("Confirm Password"),
-  );
-
-  Widget _addressField() => TextFormField(
-    controller: _locationController,
-    readOnly: true,
-    decoration: _dec("Location").copyWith(
-      suffixIcon: IconButton(
-        icon: const Icon(Icons.my_location),
-        onPressed: _setCurrentLocation,
-      ),
-    ),
-  );
-
-  Widget _pinField() => TextFormField(
-    controller: _pinCodeController,
-    decoration: _dec("Pin Code"),
-  );
-
-  // ---------------- OTP UI ----------------
-
-  Widget _otpBoxes(List<TextEditingController> controllers) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: List.generate(6, (i) {
-        return SizedBox(
-          width: 45,
-          child: TextField(
-            controller: controllers[i],
-            keyboardType: TextInputType.number,
-            maxLength: 1,
-            textAlign: TextAlign.center,
-            decoration: const InputDecoration(
-              counterText: "",
-              border: OutlineInputBorder(),
-            ),
-            onChanged: (v) {
-              if (v.isNotEmpty && i < 5) {
-                FocusScope.of(context).nextFocus();
-              }
-              if (v.isEmpty && i > 0) {
-                FocusScope.of(context).previousFocus();
-              }
-            },
-          ),
-        );
-      }),
-    );
-  }
-
-  Widget _emailSection() => Column(
-    children: [
-      TextFormField(
-        controller: _emailController,
-        enabled: !isEmailVerified,
-        decoration: _dec("Enter email").copyWith(
-          /* suffixIcon:
-              (!isEmailVerified && _isValidEmail(_emailController.text))
-                  ? TextButton(
-                    onPressed:
-                        isLoadingEmail ||
-                                (isEmailOtpSent && _secondsRemaining > 0)
-                            ? null
-                            : () {
-                              sendOtpOnEmail();
-                              _startCountdown();
-                            },
-                    child:
-                        isLoadingEmail
-                            ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                            : Text(
-                              isEmailOtpSent
-                                  ? (_secondsRemaining > 0
-                                      ? "Resend ($_secondsRemaining)"
-                                      : "Resend")
-                                  : "Send OTP",
-                            ),
-                  )
-                  : null,*/
-        ),
-        onChanged: (_) => setState(() {}),
-        //validator: (v) => _isValidEmail(v!) ? null : "Invalid email",
-      ),
-
-      /// OTP SECTION
-      if (isEmailOtpSent && !isEmailVerified) ...[
-        const SizedBox(height: 10),
-        _otpBoxes(emailOtpControllers),
-        const SizedBox(height: 10),
-        SizedBox(
-          width: double.infinity,
-          height: 55,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.secondarycolor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            onPressed: _verifyEmailOtp,
-            child:
-                isLoadingEmailOtp
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text(
-                      "Confirm Email OTP",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-          ),
-        ),
-      ],
-
-      /// VERIFIED SECTION WITH CHANGE OPTION
-      if (isEmailVerified)
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              "✔ Email Verified",
-              style: TextStyle(color: Colors.green),
-            ),
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  isEmailVerified = false;
-                  isEmailOtpSent = false;
-                  _secondsRemaining = 0;
-
-                  // optional: keep or clear email
-                  // _emailController.clear();
-
-                  for (var c in emailOtpControllers) {
-                    c.clear();
-                  }
-                });
-              },
-              child: const Text("Change"),
-            ),
-          ],
-        ),
-    ],
-  );
-
-  Widget _mobileSection() => Column(
-    children: [
-      TextFormField(
-        controller: _mobileController,
-        keyboardType: TextInputType.number,
-        // better than phone
-        enabled: !isMobileVerified,
-
-        inputFormatters: [
-          FilteringTextInputFormatter.digitsOnly, // only numbers
-          LengthLimitingTextInputFormatter(10), // max 10 digit
-        ],
-
-        decoration: _dec("Enter mobile").copyWith(
-          suffixIcon:
-              (!isMobileVerified && _mobileController.text.length == 10)
-                  ? TextButton(
-                    onPressed:
-                        isLoadingMobile ||
-                                (isMobileOtpSent && _secondsRemaining > 0)
-                            ? null
-                            : () {
-                              _sendMobileOtp();
-                              _startCountdown();
-                            },
-                    child:
-                        isLoadingMobile
-                            ? SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.primaryColor,
-                              ),
-                            )
-                            : Text(
-                              isMobileOtpSent
-                                  ? (_secondsRemaining > 0
-                                      ? "Resend ($_secondsRemaining)"
-                                      : "Resend")
-                                  : "Send OTP",
-                            ),
-                  )
-                  : null,
-        ),
-        onChanged: (_) => setState(() {}),
-      ),
-
-      /// OTP SECTION
-      if (isMobileOtpSent && !isMobileVerified) ...[
-        const SizedBox(height: 10),
-        _otpBoxes(mobileOtpControllers),
-        const SizedBox(height: 10),
-        SizedBox(
-          width: double.infinity,
-          height: 55,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.secondarycolor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            onPressed: _verifyMobileOtp,
-            child:
-                isLoadingMobileOtp
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text(
-                      "Confirm Mobile OTP",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-          ),
-        ),
-      ],
-
-      /// VERIFIED SECTION WITH CHANGE OPTION
-      if (isMobileVerified)
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              "✔ Mobile Verified",
-              style: TextStyle(color: Colors.green),
-            ),
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  isMobileVerified = false;
-                  isMobileOtpSent = false;
-                  _secondsRemaining = 0;
-
-                  // optional: clear or keep number
-                  // _mobileController.clear();
-
-                  for (var c in mobileOtpControllers) {
-                    c.clear();
-                  }
-                });
-              },
-              child: const Text("Change"),
-            ),
-          ],
-        ),
-    ],
-  );
 
   void _startCountdown() {
     _secondsRemaining = 60;

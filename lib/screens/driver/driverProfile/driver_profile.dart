@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:gocarriage_universal/provider_service/driver_update_profile_provider.dart';
 import 'package:gocarriage_universal/resource/Utils.dart';
 import 'package:image_picker/image_picker.dart';
@@ -14,9 +15,10 @@ import '../../../provider_service/file_upload_provider.dart';
 import '../../../provider_service/profile_provider.dart';
 import '../../../provider_service/vehicle_brands_provider.dart';
 import '../../../provider_service/vehicle_model_provider.dart';
-import '../../../resource/CurvedHeaderClipper.dart';
+import '../../widgets/CurvedHeaderClipper.dart';
 import '../../../resource/app_colors.dart';
 import '../../../resource/image_paths.dart';
+import '../../widgets/shared_widgets.dart';
 
 class DriverProfile extends StatefulWidget {
   String userId;
@@ -41,7 +43,6 @@ class _DriverProfileState extends State<DriverProfile> {
   final _houseNoController = TextEditingController();
   final _areaController = TextEditingController();
   final _cityController = TextEditingController();
-  final _stateController = TextEditingController();
   final _postalCodeController = TextEditingController();
 
   final aadhaarNumberController = TextEditingController();
@@ -81,6 +82,7 @@ class _DriverProfileState extends State<DriverProfile> {
   String?  model;
 
   String? service;
+  String _stateController = 'Uttar Pradesh';
 
   bool isLoading = false;
   bool isProfileLoading = false;
@@ -513,7 +515,7 @@ class _DriverProfileState extends State<DriverProfile> {
     _alternateNumberController.text = data["alternateNumber"] ?? "";
 
     _cityController.text = data["city"] ?? "";
-    _stateController.text = data["state"] ?? "";
+    _stateController = data["state"] ?? "";
     _postalCodeController.text = data["pinCode"] ?? data["postalCode"] ?? "";
 
     _addressController.text = data["completeAddress"] ?? "";
@@ -608,7 +610,7 @@ class _DriverProfileState extends State<DriverProfile> {
       street: _houseNoController.text,
       area: _areaController.text,
       city: _cityController.text,
-      state: _stateController.text,
+      state: _stateController,
       pinCode: _postalCodeController.text,
       completeAddress: _addressController.text,
       emergencyContactName: emergencyNameController.text,
@@ -699,8 +701,8 @@ class _DriverProfileState extends State<DriverProfile> {
               }else if(_cityController.text.isEmpty){
                 Utils.showErrorMessage(context, 'Please enter city');
                 return;
-              }else if(_stateController.text.isEmpty){
-                Utils.showErrorMessage(context, 'Please enter state');
+              }else if(_stateController.isEmpty){
+                Utils.showErrorMessage(context, 'Please select state');
                 return;
               }else if(_postalCodeController.text.isEmpty){
                 Utils.showErrorMessage(context, 'Please enter pin code');
@@ -955,19 +957,51 @@ class _DriverProfileState extends State<DriverProfile> {
               _alternateNumberController,
               Icons.phone,
             ),
-            text("Complete Address *"),
-            textField(
-              "Complete Address",
-              _addressController,
-              Icons.location_on,
+            SectionTitle(title: "Complete Address"),
+            const SizedBox(height: 10),
+
+            CommonTextField(
+              hint: 'Enter address line 1',
+              controller: _addressController,
+              icon: FontAwesomeIcons.locationDot,
+              isRequired: true,
+              label: 'Address Line 1',
+              onChanged: () => setState(() {}),
             ),
-            textField("Area / Locality", _areaController, Icons.map),
-            text("City *"),
-            textField("City", _cityController, Icons.location_city),
-            text("State *"),
-            textField("State", _stateController, Icons.location_city),
-            text("Pin Code *"),
-            textField("Pin Code", _postalCodeController, Icons.pin),
+            CommonTextField(
+              hint: 'Enter Area / Locality',
+              controller: _areaController,
+              icon: FontAwesomeIcons.locationDot,
+              label: 'Area / Locality',
+              onChanged: () => setState(() {}),
+            ),
+            CommonTextField(
+              hint: 'Enter pin code',
+              controller: _postalCodeController,
+              icon: Icons.pin_drop,
+              isRequired: true,
+              label: 'Pin Code',
+              onChanged: () => setState(() {}),
+            ),
+            CommonTextField(
+              hint: 'Enter city',
+              controller: _cityController,
+              icon: FontAwesomeIcons.city,
+              isRequired: true,
+              label: 'City',
+              onChanged: () => setState(() {}),
+            ),
+
+            CommonDropdown(
+              hint: 'Select State',
+              label: 'State',
+              value: _stateController.isEmpty ? null : _stateController,
+              items: Utils.indiaStates,
+              icon: Icons.location_on,
+              isRequired: true,
+              onChanged: (v) => setState(() => _stateController = v ?? ''),
+            ),
+
 
             textField(
               "Contact Person Name",

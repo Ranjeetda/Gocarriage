@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../provider_service/driver_booking_history_full_provider.dart';
 import '../../../provider_service/driver_booking_history_provider.dart';
 import '../../../resource/Utils.dart';
-import '../../../resource/ClickableDiagonalPill.dart';
+import '../../widgets/ClickableDiagonalPill.dart';
 import 'ride_details_screen.dart';
 
 class DriverBookingHistoryScreen extends StatefulWidget {

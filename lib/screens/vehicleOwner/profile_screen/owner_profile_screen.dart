@@ -26,7 +26,6 @@ class OwnerProfileScreen extends StatefulWidget {
 
 class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
   int _currentStep = 0;
-  final _formKey = GlobalKey<FormState>();
   final picker = ImagePicker();
 
   // ─── Controllers ───────────────────────────────────────────

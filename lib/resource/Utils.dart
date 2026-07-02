@@ -479,7 +479,27 @@ class Utils {
   static double _degToRad(double deg) {
     return deg * (pi / 180);
   }
-
+  static void showMessage(BuildContext context, String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            message,
+            style: const TextStyle(
+              fontFamily: 'Mukta',
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          backgroundColor: AppColors.primaryColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+  }
 
   static void showSuccessDialog(BuildContext context,String mBookingId) {
     showDialog(
@@ -707,7 +727,17 @@ class Utils {
 
     return [];
   }
-
+  static final List<String> licenseTypes = [
+    'LMV - Light Motor Vehicle (Car)',
+    'MCWG - Motorcycle with Gear',
+    'MCWOG - Motorcycle without Gear',
+    'HMV - Heavy Motor Vehicle (Truck/Bus)',
+    'LMV + MCWG',
+    'Transport Vehicle',
+    'PSV - Public Service Vehicle',
+    'Hazardous Goods',
+    'Other',
+  ];
   static List<String> indiaStates = [
     "Andaman and Nicobar Islands",
     "Andhra Pradesh",

@@ -7,6 +7,7 @@ import '../../resource/app_colors.dart';
 import '../../resource/image_paths.dart';
 import 'package:http/http.dart' as http;
 
+import '../widgets/shared_widgets.dart';
 import 'otp_screen.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -44,9 +45,9 @@ class _ForgotPasswordScreen extends State<ForgotPasswordScreen> {
 
       if (responseData['success'] == true) {
         _navigateTo(OtpScreen(phoneController.text));
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(responseData['message'])),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(responseData['message'])));
       } else {
         String errorMessage =
             responseData['message'] ?? 'Forgot password failed. Try again.';
@@ -54,12 +55,15 @@ class _ForgotPasswordScreen extends State<ForgotPasswordScreen> {
       }
     }
   }
+
   void _navigateTo(Widget screen) {
     Navigator.push(context, MaterialPageRoute(builder: (context) => screen));
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text(
           'Forgot Password',
@@ -83,102 +87,75 @@ class _ForgotPasswordScreen extends State<ForgotPasswordScreen> {
           ),
         ),
         child: SafeArea(
-          child: Center( // 👈 centers everything
+          child: Center(
+            // 👈 centers everything
             child: SingleChildScrollView(
               child: Form(
                 key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min, // 👈 vertical centering
-                  children: [
-                    const SizedBox(height: 20),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min, // 👈 vertical centering
+                    children: [
+                      const SizedBox(height: 20),
 
+                      const SizedBox(height: 10),
 
-                    const SizedBox(height: 10),
-
-                    Text(
-                      "Enter your email to receive OTP",
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppColors.textBox,
-                        fontFamily: 'Poppins',
+                      Text(
+                        "Enter your email to receive OTP",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textBox,
+                          fontFamily: 'Poppins',
+                        ),
                       ),
-                    ),
 
-                    const SizedBox(height: 30),
+                      const SizedBox(height: 30),
 
-                    // TextField (Centered)
-                    SizedBox(
-                      width: MediaQuery.of(context).size.width * 0.85,
-                      child: TextField(
+                      // TextField (Centered)
+                      CommonTextField(
+                        hint: 'Please enter your mobile / email',
                         controller: phoneController,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: InputDecoration(
-                          hintText: "Enter Your Email OR Phone",
-                          hintStyle: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 12,
-                            color: AppColors.primaryColor,
-                          ),
-                          prefixIcon: const Icon(
-                            Icons.email,
-                            color: AppColors.primaryColor,
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 15,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: AppColors.textBox,
-                              width: 1.5,
+                        icon: Icons.email,
+                        keyboard: TextInputType.emailAddress,
+                        isRequired: true,
+                        label: 'Mobile / Email',
+                      ),
+
+                      const SizedBox(height: 30),
+
+                      // Button
+                      SizedBox(
+                        width: MediaQuery.of(context).size.width * 0.85,
+                        height: 55,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.secondarycolor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: AppColors.secondarycolor,
-                              width: 2,
-                            ),
-                          ),
+                          onPressed: _sendOtpMail,
+                          child:
+                              isLoading
+                                  ? const CircularProgressIndicator(
+                                    color: Colors.white,
+                                  )
+                                  : const Text(
+                                    "Submit",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.white,
+                                      fontFamily: 'Poppins',
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
                         ),
                       ),
-                    ),
 
-                    const SizedBox(height: 30),
-
-                    // Button
-                    SizedBox(
-                      width: MediaQuery.of(context).size.width * 0.85,
-                      height: 55,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.secondarycolor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        onPressed: _sendOtpMail,
-                        child: isLoading
-                            ? const CircularProgressIndicator(
-                          color: Colors.white,
-                        )
-                            : const Text(
-                          "Submit",
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.white,
-                            fontFamily: 'Poppins',
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-                  ],
+                      const SizedBox(height: 20),
+                    ],
+                  ),
                 ),
               ),
             ),

@@ -10,12 +10,14 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import '../../../provider_service/add_driver_provider.dart';
+import '../../../provider_service/assign_driver_provider.dart';
 import '../../../provider_service/email_verify_otp_provider.dart';
 import '../../../provider_service/fetch_image_url_provider.dart';
 import '../../../provider_service/file_upload_provider.dart';
 import '../../../provider_service/send_otp_email_provider.dart';
 import '../../../provider_service/send_otp_provider.dart';
 import '../../../provider_service/signup_provider.dart';
+import '../../../provider_service/vechile_owner_driver_list.dart';
 import '../../../provider_service/vehicle_type_provider.dart';
 import '../../../provider_service/verify_otp_provider..dart';
 import '../../../resource/Utils.dart';
@@ -41,24 +43,17 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _experienceController = TextEditingController();
-  String? selectedLicense;
   final _referralCodeController = TextEditingController();
+  final drivingLicenseController = TextEditingController();
+  final fromDateController = TextEditingController();
+  final toDateController = TextEditingController();
 
+  String selectedLicense = 'LMV - Light Motor Vehicle (Car)';
   String? phoneVerificationToken;
   String? registered_time_lat;
   String? registered_time_long;
   String? location_accuracy;
-  final List<String> licenseTypes = [
-    'LMV - Light Motor Vehicle (Car)',
-    'MCWG - Motorcycle with Gear',
-    'MCWOG - Motorcycle without Gear',
-    'HMV - Heavy Motor Vehicle (Truck/Bus)',
-    'LMV + MCWG',
-    'Transport Vehicle',
-    'PSV - Public Service Vehicle',
-    'Hazardous Goods',
-    'Other',
-  ];
+
   final List<TextEditingController> mobileOtpControllers = List.generate(
     6,
     (_) => TextEditingController(),
@@ -110,9 +105,8 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
       'file': licenseFrontFile,
       'url': licenseFrontUrl,
       'loading': isLicenseLoading,
-    }
+    },
   ];
-
 
   @override
   void initState() {
@@ -240,10 +234,10 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
   }
 
   Future<void> _pickFromSource(
-      ImageSource source,
-      Function(File file) onPicked,
-      String fileType,
-      ) async {
+    ImageSource source,
+    Function(File file) onPicked,
+    String fileType,
+  ) async {
     final pickedFile = await picker.pickImage(source: source);
     if (pickedFile != null) {
       final file = File(pickedFile.path);
@@ -262,7 +256,6 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
   ) {
     final safeUrl =
         (url != null && url.isNotEmpty) ? Uri.encodeFull(url) : null;
-    print("RanjeetTest SAFE ===============>${safeUrl}");
 
     return GestureDetector(
       onTap: () => pickImage(callback, label),
@@ -541,10 +534,6 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
     );
   }
 
-  bool _isValidEmail(String email) {
-    return RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email);
-  }
-
   // ---------------------- UPDATE PROFILE ------------------------
   void addDriverService(String mDriverId) async {
     try {
@@ -552,12 +541,12 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
         fullName: _nameController.text,
         email: _emailController.text,
         mobileNo: _mobileController.text,
-        licenseNumber: selectedLicense ?? '',
+        licenseNumber: drivingLicenseController.text,
         license_expiry_date: license_to_date!,
         license_from_date: license_from_date!,
         experience_in_yrs: _experienceController.text,
         vehicle_type_preference: selected.toString(),
-        service_type: service=='Within City'?'in_city':'out_city',
+        service_type: service == 'Within City' ? 'in_city' : 'out_city',
         driversLicenseUpload: licenseFrontUrl!,
         profile_picture: profilePhotoUrl!,
         driverId: mDriverId,
@@ -568,9 +557,10 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
 
       final bool success = response?['success'] == true;
       final String message =
-          response?['message']?.toString() ?? (success ? 'Driver updated' : 'Update failed');
+          response?['message']?.toString() ??
+          (success ? 'Driver updated' : 'Update failed');
       final Map<String, dynamic>? driverData =
-      response?['data'] as Map<String, dynamic>?;
+          response?['data'] as Map<String, dynamic>?;
 
       ScaffoldMessenger.of(
         context,
@@ -579,8 +569,7 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
       if (success && driverData != null) {
         debugPrint("Updated driver id: ${driverData['id']}");
         debugPrint("Verification status: ${driverData['verificationStatus']}");
-        Navigator.pop(context);
-        // e.g. Navigator.pop(context, driverData);
+        _assignDriver(driverData['id'].toString());
       }
     } catch (e) {
       if (!mounted) return;
@@ -588,6 +577,38 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('An error occurred: $e')));
+    }
+  }
+
+  Future<void> _assignDriver(String? driverId) async {
+    if (driverId == null) {
+      Utils.showErrorMessage(context, "Please select Driver");
+      return;
+    }
+    setState(() {
+      isLoading = true;
+    });
+    http.Response response = await Provider.of<AssignDriverProvider>(
+      context,
+      listen: false,
+    ).assignDriver(driverId);
+    var responseData = json.decode(response.body);
+    setState(() {
+      isLoading = false;
+    });
+
+    if (responseData['success'] == true) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(responseData['message'])));
+      Navigator.pop(context);
+    } else {
+      setState(() {
+        isLoading = false;
+      });
+      String errorMessage =
+          responseData['message'] ?? 'Assign Driver failed. Please try again.';
+      Utils.showErrorMessage(context, errorMessage);
     }
   }
 
@@ -691,7 +712,7 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
 
     if (responseData['success'] == true) {
       setState(() {
-        phoneVerificationToken=responseData['data']['phoneVerificationToken'];
+        phoneVerificationToken = responseData['data']['phoneVerificationToken'];
         isLoadingMobileOtp = false;
         isMobileVerified = true;
         isMobileOtpSent = false;
@@ -719,10 +740,10 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
       return;
     }
 
-    /*if (!isMobileVerified) {
+    if (!isMobileVerified) {
       Utils.showErrorMessage(context, "Please verify Mobile number");
       return;
-    }*/
+    }
 
     if (_passwordController.text.isEmpty) {
       Utils.showErrorMessage(context, 'Please enter your password');
@@ -758,8 +779,9 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
         password: _passwordController.text.trim(),
 
         referralCode: _referralCodeController.text.trim(),
-        phoneVerificationToken: "", // ⚠️ replace if you have real token
+        phoneVerificationToken: "",
 
+        // ⚠️ replace if you have real token
         address: "",
         city: "",
         state: "",
@@ -853,65 +875,147 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
           padding: const EdgeInsets.only(bottom: 40),
           child: Container(
             margin: EdgeInsets.fromLTRB(20, 0, 20, 0),
+            color: Colors.white,
             child: Column(
               mainAxisSize: MainAxisSize.min, // Add this
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 20),
-
-                // Personal Information
-                sectionTitle("Personal Information"),
-                textField("Full Name", _nameController, Icons.person),
-                _label("Email Address (Optional)"),
-                _emailSection(),
-
-                _label("Mobile Number *"),
-                _mobileSection(),
-
-                _label("Password *"),
-                _passwordField(),
-
-                _label("Confirm Password *"),
-                _confirmPasswordField(),
-                const SizedBox(height: 10),
-                // Identity Verification
-                sectionTitle("Identity Verification"),
-                textField(
-                  "Enter experience",
-                  _experienceController,
-                  Icons.car_crash_rounded,
-                  formatters: [UpperCaseTextFormatter()],
+                SectionTitle(title: "Personal Information"),
+                SizedBox(height: 10),
+                CommonTextField(
+                  hint: 'Enter full name',
+                  controller: _nameController,
+                  icon: Icons.person,
+                  isRequired: true,
+                  label: 'Full Name',
+                ),
+                EmailSection(
+                  emailController: _emailController,
+                  otpControllers: emailOtpControllers,
+                  isEmailVerified: isEmailVerified,
+                  isEmailOtpSent: isEmailOtpSent,
+                  isLoadingEmail: isLoadingEmail,
+                  isLoadingEmailOtp: isLoadingEmailOtp,
+                  secondsRemaining: _secondsRemaining,
+                  isValidEmail: Utils.isEmail,
+                  onSendOtp: () {
+                    sendOtpOnEmail();
+                    _startCountdown();
+                  },
+                  onVerifyOtp: _verifyEmailOtp,
+                  onChanged: () => setState(() {}),
                 ),
                 SizedBox(height: 10),
-                DropdownButtonFormField<String>(
-                  value: selectedLicense,
-                  decoration: InputDecoration(
-                    labelText: 'Driving License Type',
-                    hintText: 'Select DL Category',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    prefixIcon: const Icon(Icons.directions_car),
-                  ),
-                  icon: const Icon(Icons.arrow_drop_down_circle),
-                  isExpanded: true,
-                  items:
-                  licenseTypes.map((String type) {
-                    return DropdownMenuItem<String>(
-                      value: type,
-                      child: Text(type),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      selectedLicense = newValue;
-                    });
-                    print('Selected Driving License: $newValue');
+                MobileSection(
+                  mobileController: _mobileController,
+                  otpControllers: mobileOtpControllers,
+                  isMobileVerified: isMobileVerified,
+                  isMobileOtpSent: isMobileOtpSent,
+                  isLoadingMobile: isLoadingMobile,
+                  isLoadingMobileOtp: isLoadingMobileOtp,
+                  secondsRemaining: _secondsRemaining,
+                  onSendOtp: () {
+                    _sendMobileOtp();
+                    _startCountdown();
                   },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please select driving license type';
+                  onVerifyOtp: _verifyMobileOtp,
+                  onChanged: () => setState(() {}),
+                  onChangeMobile: () {
+                    setState(() {
+                      isMobileVerified = false;
+                      isMobileOtpSent = false;
+                      _secondsRemaining = 0;
+
+                      for (var c in mobileOtpControllers) {
+                        c.clear();
+                      }
+                    });
+                  },
+                ),
+                SizedBox(height: 10),
+                CommonTextField(
+                  hint: 'Enter your password',
+                  controller: _passwordController,
+                  icon: Icons.lock,
+                  label: 'Password',
+                  isRequired: true,
+                  isObscure: true,
+                  keyboard: TextInputType.text,
+                  onChanged: () => setState(() {}),
+                  validator: (v) {
+                    if (v == null || v.isEmpty) {
+                      return 'Password is required';
                     }
+
+                    if (v.length < 8) {
+                      return 'Password must be at least 8 characters';
+                    }
+
+                    if (!RegExp(r'[A-Z]').hasMatch(v)) {
+                      return 'Must contain at least one uppercase letter';
+                    }
+
+                    if (!RegExp(r'[a-z]').hasMatch(v)) {
+                      return 'Must contain at least one lowercase letter';
+                    }
+
+                    if (!RegExp(r'\d').hasMatch(v)) {
+                      return 'Must contain at least one number';
+                    }
+
+                    if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(v)) {
+                      return 'Must contain at least one special character';
+                    }
+
+                    return null;
+                  },
+                ),
+                SizedBox(height: 10),
+                CommonTextField(
+                  hint: 'Enter your confirm password',
+                  controller: _confirmPasswordController,
+                  icon: Icons.lock,
+                  label: 'Confirm Password',
+                  isRequired: true,
+                  isObscure: true,
+                  keyboard: TextInputType.text,
+                  onChanged: () => setState(() {}),
+                  validator: (v) {
+                    if (v == null || v.isEmpty) {
+                      return 'Confirm Password is required';
+                    }
+
+                    if (v != _passwordController.text) {
+                      return 'Passwords do not match';
+                    }
+
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 10),
+
+                SectionTitle(title: "License Details"),
+
+                SizedBox(height: 10),
+
+                CommonTextField(
+                  hint: 'Enter Driving License Number',
+                  controller: drivingLicenseController,
+                  icon: Icons.card_membership,
+                  label: 'Driving License Number',
+                  isRequired: true,
+                  formatters: [
+                    UpperCaseTextFormatter(),
+                    LengthLimitingTextInputFormatter(16),
+                  ],
+                  onChanged: () => setState(() {}),
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return null; // optional
+                    if (!RegExp(
+                      r'^[A-Z]{2}[0-9]{2}[0-9]{4}[0-9]{7}$',
+                    ).hasMatch(v))
+                      return 'Enter a valid license (e.g. MH0120240001234)';
                     return null;
                   },
                 ),
@@ -919,24 +1023,76 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: date(
-                        "From",
-                        license_from_date,
-                        (v) => license_from_date = v,
+                      child: CommonTextField(
+                        hint: "Select From Date",
+                        label: "From",
+                        controller: fromDateController,
+                        icon: Icons.calendar_month,
+                        onTap: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime.now(),
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2100),
+                          );
+                          if (date != null) {
+                            fromDateController.text = DateFormat(
+                              'yyyy-MM-dd',
+                            ).format(date);
+                          }
+                        },
                       ),
                     ),
                     SizedBox(width: 10),
                     Expanded(
-                      child: date(
-                        "To",
-                        license_to_date,
-                        (v) => license_to_date = v,
+                      child: CommonTextField(
+                        hint: "Select To Date",
+                        label: "To",
+                        controller: toDateController,
+                        icon: Icons.calendar_month,
+                        onTap: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime.now(),
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2100),
+                          );
+                          if (date != null) {
+                            toDateController.text = DateFormat(
+                              'yyyy-MM-dd',
+                            ).format(date);
+                          }
+                        },
                       ),
                     ),
                   ],
                 ),
                 SizedBox(height: 10),
 
+                CommonDropdown(
+                  hint: 'Driving License Type',
+                  label: 'Select DL Category',
+                  value: selectedLicense.isEmpty ? null : selectedLicense,
+                  items: Utils.licenseTypes,
+                  icon: Icons.directions_car,
+                  isRequired: true,
+                  onChanged: (v) => setState(() => selectedLicense = v ?? ''),
+                ),
+
+                SizedBox(height: 10),
+
+                SectionTitle(title: "Work Details"),
+
+                SizedBox(height: 10),
+                CommonTextField(
+                  hint: 'Enter experience',
+                  controller: _experienceController,
+                  icon: Icons.car_crash_rounded,
+                  keyboard: TextInputType.phone,
+                  isRequired: true,
+                  label: 'Experience',
+                ),
+                SizedBox(height: 10),
                 radioRow(
                   "Service Type *",
                   ["Within City", "Outside City"],
@@ -944,7 +1100,6 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
                   (v) => setState(() => service = v),
                 ),
                 const SizedBox(height: 10),
-                sectionTitle("Vehicle Type Preference*"),
                 /*Consumer<VehicleTypeProvider>(
                   builder: (context, provider, _) {
                     if (provider.isLoading) {
@@ -1011,8 +1166,7 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
                 const SizedBox(height: 10),
 
                 // Document Uploads
-                sectionTitle("Document Uploads"),
-
+                SectionTitle(title: "Document Uploads"),
                 GridView.count(
                   crossAxisCount: 2,
                   shrinkWrap: true,
@@ -1056,105 +1210,23 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
                         ),
                       ),
                       child:
-                      isLoading
-                          ? const CircularProgressIndicator(
-                        color: Colors.white,
-                      )
-                          : const Text(
-                        "Add Driver",
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.white,
-                        ),
-                      ),
+                          isLoading
+                              ? const CircularProgressIndicator(
+                                color: Colors.white,
+                              )
+                              : const Text(
+                                "Add Driver",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.white,
+                                ),
+                              ),
                     ),
                   ),
                 ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget date(String label, String? value, Function(String) onPick) {
-    return TextFormField(
-      readOnly: true,
-      controller: TextEditingController(text: value ?? ""),
-      decoration: InputDecoration(
-        labelText: label,
-        suffixIcon: Icon(Icons.calendar_today),
-        border: OutlineInputBorder(),
-      ),
-      onTap: () async {
-        DateTime? d = await showDatePicker(
-          context: context,
-          firstDate: DateTime(2000),
-          lastDate: DateTime(2100),
-          initialDate: DateTime.now(),
-        );
-        setState(() {
-          if (d != null) onPick(DateFormat("yyyy-MM-dd").format(d));
-        });
-      },
-    );
-  }
-
-  // Header
-
-  Widget _label(String t) => Padding(
-    padding: const EdgeInsets.only(top: 16, bottom: 6),
-    child: Text(t),
-  );
-
-  Widget _passwordField() => TextFormField(
-    controller: _passwordController,
-    obscureText: true,
-    decoration: _dec("Password"),
-  );
-
-  Widget _confirmPasswordField() => TextFormField(
-    controller: _confirmPasswordController,
-    obscureText: true,
-    decoration: _dec("Confirm Password"),
-  );
-
-  Widget sectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-        color: Colors.black87,
-      ),
-    );
-  }
-
-  Widget textField(
-    String hint,
-    TextEditingController controller,
-    IconData icon, {
-    TextInputType keyboard = TextInputType.text,
-    List<TextInputFormatter>? formatters,
-    bool enabled = true,
-  }) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboard,
-      inputFormatters: formatters,
-      enabled: enabled,
-      decoration: InputDecoration(
-        prefixIcon: Icon(icon, color: AppColors.primaryColor),
-        hintText: hint,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade400),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.primaryColor, width: 2),
         ),
       ),
     );
@@ -1169,7 +1241,7 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        text(label),
+        SectionTitle(title: label),
         Row(
           children:
               options.map((e) {
@@ -1203,214 +1275,6 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
     );
   }
 
-  Widget text(String t) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Text(t, style: TextStyle(fontWeight: FontWeight.w600)),
-    );
-  }
-
-  Widget _otpBoxes(List<TextEditingController> controllers) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: List.generate(6, (i) {
-        return SizedBox(
-          width: 45,
-          child: TextField(
-            controller: controllers[i],
-            keyboardType: TextInputType.number,
-            maxLength: 1,
-            textAlign: TextAlign.center,
-            decoration: const InputDecoration(
-              counterText: "",
-              border: OutlineInputBorder(),
-            ),
-            onChanged: (v) {
-              if (v.isNotEmpty && i < 5) {
-                FocusScope.of(context).nextFocus();
-              }
-              if (v.isEmpty && i > 0) {
-                FocusScope.of(context).previousFocus();
-              }
-            },
-          ),
-        );
-      }),
-    );
-  }
-
-  InputDecoration _dec(String h) =>
-      InputDecoration(hintText: h, border: OutlineInputBorder());
-
-  Widget _emailSection() => Column(
-    children: [
-      TextFormField(
-        controller: _emailController,
-        enabled: !isEmailVerified,
-        decoration: _dec("Enter email").copyWith(
-          suffixIcon:
-              (!isEmailVerified && _isValidEmail(_emailController.text))
-                  ? TextButton(
-                    onPressed: isEmailOtpSent ? null : sendOtpOnEmail,
-                    child:
-                        isLoadingEmail
-                            ? CircularProgressIndicator(
-                              color: AppColors.primaryColor,
-                            )
-                            : Text(isEmailOtpSent ? "SENT" : "Send OTP"),
-                  )
-                  : null,
-        ),
-        onChanged: (_) => setState(() {}),
-        validator: (v) => _isValidEmail(v!) ? null : "Invalid email",
-      ),
-      if (isEmailOtpSent && !isEmailVerified) ...[
-        const SizedBox(height: 10),
-        _otpBoxes(emailOtpControllers),
-        const SizedBox(height: 10),
-        SizedBox(
-          width: double.infinity,
-          height: 55,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.secondarycolor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            onPressed: () {
-              _verifyEmailOtp();
-            },
-            child:
-                isLoadingEmailOtp
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text(
-                      "Confirm Email OTP",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-          ),
-        ),
-      ],
-      if (isEmailVerified)
-        const Text("✔ Email Verified", style: TextStyle(color: Colors.green)),
-    ],
-  );
-
-  Widget _mobileSection() => Column(
-    children: [
-      TextFormField(
-        controller: _mobileController,
-        keyboardType: TextInputType.number,
-        // better than phone
-        enabled: !isMobileVerified,
-
-        inputFormatters: [
-          FilteringTextInputFormatter.digitsOnly, // only numbers
-          LengthLimitingTextInputFormatter(10), // max 10 digit
-        ],
-
-        decoration: _dec("Enter mobile").copyWith(
-          suffixIcon:
-          (!isMobileVerified && _mobileController.text.length == 10)
-              ? TextButton(
-            onPressed:
-            isLoadingMobile ||
-                (isMobileOtpSent && _secondsRemaining > 0)
-                ? null
-                : () {
-              _sendMobileOtp();
-              _startCountdown();
-            },
-            child:
-            isLoadingMobile
-                ? SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: AppColors.primaryColor,
-              ),
-            )
-                : Text(
-              isMobileOtpSent
-                  ? (_secondsRemaining > 0
-                  ? "Resend ($_secondsRemaining)"
-                  : "Resend")
-                  : "Send OTP",
-            ),
-          )
-              : null,
-        ),
-        onChanged: (_) => setState(() {}),
-      ),
-
-      /// OTP SECTION
-      if (isMobileOtpSent && !isMobileVerified) ...[
-        const SizedBox(height: 10),
-        _otpBoxes(mobileOtpControllers),
-        const SizedBox(height: 10),
-        SizedBox(
-          width: double.infinity,
-          height: 55,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.secondarycolor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            onPressed: _verifyMobileOtp,
-            child:
-            isLoadingMobileOtp
-                ? const CircularProgressIndicator(color: Colors.white)
-                : const Text(
-              "Confirm Mobile OTP",
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.white,
-                fontFamily: 'Poppins',
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ),
-      ],
-
-      /// VERIFIED SECTION WITH CHANGE OPTION
-      if (isMobileVerified)
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              "✔ Mobile Verified",
-              style: TextStyle(color: Colors.green),
-            ),
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  isMobileVerified = false;
-                  isMobileOtpSent = false;
-                  _secondsRemaining = 0;
-
-                  // optional: clear or keep number
-                  // _mobileController.clear();
-
-                  for (var c in mobileOtpControllers) {
-                    c.clear();
-                  }
-                });
-              },
-              child: const Text("Change"),
-            ),
-          ],
-        ),
-    ],
-  );
   void _startCountdown() {
     _secondsRemaining = 60;
     _timer?.cancel();

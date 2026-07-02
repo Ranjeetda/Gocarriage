@@ -12,7 +12,7 @@ import '../../../provider_service/file_upload_provider.dart';
 import '../../../provider_service/profile_provider.dart';
 import '../../../provider_service/send_otp_email_provider.dart';
 import '../../../resource/Utils.dart';
-import '../../../resource/aadhaar_input_formatter.dart';
+import '../widgets/aadhaar_input_formatter.dart';
 import '../../../resource/app_colors.dart';
 import '../../../resource/pref_utils.dart';
 import '../../../resource/upper_case_text_formatter.dart';

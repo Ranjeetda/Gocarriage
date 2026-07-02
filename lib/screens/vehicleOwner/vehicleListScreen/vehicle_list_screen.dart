@@ -221,7 +221,6 @@ class _VehicleListScreen extends State<VehicleListScreen> {
                     child:
                         provider.isLoading
                             ? shimmerList()
-                            /// EMPTY STATE (with pull refresh)
                             : filteredList.isEmpty
                             ? ListView(
                               physics: const AlwaysScrollableScrollPhysics(),
@@ -282,7 +281,7 @@ class _VehicleListScreen extends State<VehicleListScreen> {
                                                   CrossAxisAlignment.start,
                                               children: [
                                                 Text(
-                                                  vehicle['vehicle_number'],
+                                                  vehicle['vehicle_number']??'--',
                                                   style: const TextStyle(
                                                     fontWeight: FontWeight.bold,
                                                   ),
@@ -290,19 +289,21 @@ class _VehicleListScreen extends State<VehicleListScreen> {
                                                 const SizedBox(height: 4),
                                                 Row(
                                                   children: [
-
                                                     Container(
                                                       padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 8,
-                                                        vertical: 2,
-                                                      ),
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 8,
+                                                            vertical: 2,
+                                                          ),
                                                       decoration: BoxDecoration(
-                                                        color: Colors.green.shade50,
+                                                        color:
+                                                            Colors
+                                                                .green
+                                                                .shade50,
                                                         borderRadius:
-                                                        BorderRadius.circular(
-                                                          6,
-                                                        ),
+                                                            BorderRadius.circular(
+                                                              6,
+                                                            ),
                                                       ),
                                                       child: Text(
                                                         vehicle['rto'] ?? '--',
@@ -314,19 +315,23 @@ class _VehicleListScreen extends State<VehicleListScreen> {
                                                     ),
                                                     Container(
                                                       padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 8,
-                                                        vertical: 2,
-                                                      ),
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 8,
+                                                            vertical: 2,
+                                                          ),
                                                       decoration: BoxDecoration(
-                                                        color: Colors.green.shade50,
+                                                        color:
+                                                            Colors
+                                                                .green
+                                                                .shade50,
                                                         borderRadius:
-                                                        BorderRadius.circular(
-                                                          6,
-                                                        ),
+                                                            BorderRadius.circular(
+                                                              6,
+                                                            ),
                                                       ),
                                                       child: Text(
-                                                        vehicle['verificationStatus'] ?? '--',
+                                                        vehicle['verificationStatus'] ??
+                                                            '--',
                                                         style: const TextStyle(
                                                           fontSize: 12,
                                                           color: Colors.red,
@@ -335,7 +340,6 @@ class _VehicleListScreen extends State<VehicleListScreen> {
                                                     ),
                                                   ],
                                                 ),
-
                                               ],
                                             ),
                                             Spacer(),
@@ -398,7 +402,9 @@ class _VehicleListScreen extends State<VehicleListScreen> {
                                           children: [
                                             const Text('Service : '),
                                             chip(
-                                              Utils.formatServiceType(vehicle['service_type']),
+                                              Utils.formatServiceType(
+                                                vehicle['service_type']??'No_Service',
+                                              ),
                                               Colors.blue,
                                             ),
                                             Spacer(),
@@ -406,7 +412,12 @@ class _VehicleListScreen extends State<VehicleListScreen> {
                                               children: [
                                                 const Text('Payload : '),
                                                 Text(
-                                                  int.parse(double.parse(vehicle['payload']).toStringAsFixed(0)).toString() ?? '--',
+                                                  int.parse(
+                                                        double.parse(
+                                                          vehicle['payload']??'0.00',
+                                                        ).toStringAsFixed(0),
+                                                      ).toString() ??
+                                                      '--',
                                                 ),
                                               ],
                                             ),
@@ -433,7 +444,7 @@ class _VehicleListScreen extends State<VehicleListScreen> {
                                           ],
                                         ),
 
-                                        SizedBox(height: 10,),
+                                        SizedBox(height: 10),
                                         Container(
                                           width: double.infinity,
                                           padding: const EdgeInsets.all(10),
@@ -466,18 +477,25 @@ class _VehicleListScreen extends State<VehicleListScreen> {
                                             ],
                                           ),
                                         ),
-                                        SizedBox(height: 10,),
+                                        SizedBox(height: 10),
                                         Container(
                                           decoration: BoxDecoration(
                                             color: Colors.grey.shade200,
-                                            borderRadius: BorderRadius.circular(8),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
                                           ),
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               // REWARD TAG
                                               Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 4,
+                                                    ),
                                                 color: Colors.teal.shade100,
                                                 child: const Text(
                                                   "REWARD",
@@ -488,19 +506,21 @@ class _VehicleListScreen extends State<VehicleListScreen> {
                                                   ),
                                                 ),
                                               ),
-
                                               const SizedBox(height: 16),
-
                                               // PRICE ROW
                                               Row(
                                                 children: [
-                                                  const Icon(Icons.star_border, color: Colors.orange),
+                                                  const Icon(
+                                                    Icons.star_border,
+                                                    color: Colors.orange,
+                                                  ),
                                                   const SizedBox(width: 6),
                                                   Text(
                                                     "₹${vehicle['reward_summary']['earned']}",
                                                     style: TextStyle(
                                                       fontSize: 20,
-                                                      fontWeight: FontWeight.bold,
+                                                      fontWeight:
+                                                          FontWeight.bold,
                                                       color: Colors.teal,
                                                     ),
                                                   ),
@@ -509,7 +529,8 @@ class _VehicleListScreen extends State<VehicleListScreen> {
                                                     "/₹${vehicle['reward_summary']['max_possible']}",
                                                     style: TextStyle(
                                                       color: Colors.grey,
-                                                      fontWeight: FontWeight.w600,
+                                                      fontWeight:
+                                                          FontWeight.w600,
                                                     ),
                                                   ),
                                                 ],
@@ -519,21 +540,35 @@ class _VehicleListScreen extends State<VehicleListScreen> {
 
                                               // GREEN BADGE
                                               Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 6,
+                                                    ),
                                                 decoration: BoxDecoration(
-                                                  borderRadius: BorderRadius.circular(20),
-                                                  border: Border.all(color: Colors.green),
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
+                                                  border: Border.all(
+                                                    color: Colors.green,
+                                                  ),
                                                 ),
                                                 child: Row(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children:  [
-                                                    Icon(Icons.check_circle_outline, color: Colors.green, size: 16),
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      Icons
+                                                          .check_circle_outline,
+                                                      color: Colors.green,
+                                                      size: 16,
+                                                    ),
                                                     SizedBox(width: 4),
                                                     Text(
                                                       "+₹${vehicle['reward_summary']['category_points']}",
                                                       style: TextStyle(
                                                         color: Colors.green,
-                                                        fontWeight: FontWeight.bold,
+                                                        fontWeight:
+                                                            FontWeight.bold,
                                                       ),
                                                     ),
                                                   ],
@@ -558,46 +593,8 @@ class _VehicleListScreen extends State<VehicleListScreen> {
     );
   }
 
-  Widget validityItem(String title, String? date) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text("$title - ${Utils.getValidity(date)}", style: TextStyle(fontSize: 12)),
-        const SizedBox(height: 4),
-        LinearProgressIndicator(
-          value: getValidityProgress(date),
-          minHeight: 6,
-          backgroundColor: Colors.grey.shade300,
-          valueColor: AlwaysStoppedAnimation(getValidityColor(date)),
-        ),
-        const SizedBox(height: 8),
-      ],
-    );
-  }
-  double getValidityProgress(String? expiryDateString) {
-    if (expiryDateString == null) return 0;
 
-    DateTime expiry = DateTime.parse(expiryDateString);
-    DateTime start = expiry.subtract(const Duration(days: 365)); // assumed
-    DateTime now = DateTime.now();
 
-    if (now.isAfter(expiry)) return 0;
-    if (now.isBefore(start)) return 1;
-
-    double totalDays = expiry.difference(start).inDays.toDouble();
-    double remainingDays = expiry.difference(now).inDays.toDouble();
-
-    return (remainingDays / totalDays).clamp(0.0, 1.0);
-  }
-  Color getValidityColor(String? date) {
-    if (date == null) return Colors.grey;
-
-    int diff = DateTime.parse(date).difference(DateTime.now()).inDays;
-
-    if (diff < 0) return Colors.red;
-    if (diff < 10) return Colors.orange;
-    return Colors.green;
-  }
 
   Widget chip(String text, Color color) {
     return Container(

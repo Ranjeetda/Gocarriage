@@ -478,6 +478,7 @@ class _BasicDetailsFormState extends State<BasicDetailsForm> {
       },
     );
   }
+
   Future<void> _pickFromSource(
       ImageSource source,
       Function(File file) onPicked,

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:gocarriage_universal/resource/app_colors.dart';
 import 'package:page_transition/page_transition.dart';
+import '../../resource/Utils.dart';
 import '../../resource/pref_utils.dart';
 import '../auth/login_screen.dart';
 import '../dashboardScreen/customer_bottom_navigation_bar.dart';
@@ -53,8 +54,7 @@ class _MenuScreen extends State<MenuScreen> {
               icon: Icons.person_outline,
               text: 'Edit Profile',
               onTap:
-                  () =>
-                  _navigateTo(
+                  () =>  PrefUtils.isLoggedIn()?_navigateTo(
                     PrefUtils.getRole() == "owner"
                         ? OwnerProfileScreen()
                         : PrefUtils.getRole() == "operator"
@@ -62,14 +62,13 @@ class _MenuScreen extends State<MenuScreen> {
                         : PrefUtils.getRole() == "driver"
                         ? DriverProfile('Menu', PrefUtils.getUserId())
                         : BasicDetailsForm(),
-                  ),
+                  ):Utils.showMessage(context,'Please login first'),
             ),
             _buildMenuItem(
               icon: Icons.support_agent,
               text: 'Refound Policy',
               onTap:
-                  () =>
-                  _navigateTo(
+                  () => _navigateTo(
                     CommonScreen(
                       'https://gocarriage.com/refund-policy',
                       'Refound Policy',
@@ -80,8 +79,7 @@ class _MenuScreen extends State<MenuScreen> {
               icon: Icons.privacy_tip_outlined,
               text: 'Privacy Policy',
               onTap:
-                  () =>
-                  _navigateTo(
+                  () => _navigateTo(
                     CommonScreen(
                       'https://gocarriage.com/privacy-policy',
                       'Privacy Policy',
@@ -92,8 +90,7 @@ class _MenuScreen extends State<MenuScreen> {
               icon: Icons.article_outlined,
               text: 'Terms & Conditions',
               onTap:
-                  () =>
-                  _navigateTo(
+                  () => _navigateTo(
                     CommonScreen(
                       'https://gocarriage.com/terms-condition',
                       'Terms & Conditions',
@@ -102,28 +99,28 @@ class _MenuScreen extends State<MenuScreen> {
             ),
             isLoading
                 ? const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: CircularProgressIndicator(),
-            )
+                  padding: EdgeInsets.all(16.0),
+                  child: CircularProgressIndicator(),
+                )
                 : _buildMenuItem(
-              icon: Icons.delete_forever_outlined,
-              text: 'Delete Profile',
-              onTap: () async {
-                bool? confirmed = await _showConfirmationDialog(
-                  "Delete Profile",
-                  "Are you sure you want to delete your profile?",
-                );
-                if (confirmed == true) {
-                  _navigateTo(
-                    CommonScreen(
-                      'https://gocarriage.com/delete-account',
-                      'Delete Profile',
-                    ),
-                  );
-                  // _deleteProfile();
-                }
-              },
-            ),
+                  icon: Icons.delete_forever_outlined,
+                  text: 'Delete Profile',
+                  onTap: () async {
+                    bool? confirmed = await _showConfirmationDialog(
+                      "Delete Profile",
+                      "Are you sure you want to delete your profile?",
+                    );
+                    if (confirmed == true) {
+                      _navigateTo(
+                        CommonScreen(
+                          'https://gocarriage.com/delete-account',
+                          'Delete Profile',
+                        ),
+                      );
+                      // _deleteProfile();
+                    }
+                  },
+                ),
             _buildMenuItem(
               icon: Icons.logout_rounded,
               text: PrefUtils.isLoggedIn() ? 'Logout' : "Login",
@@ -131,16 +128,7 @@ class _MenuScreen extends State<MenuScreen> {
                 print("==========>${PrefUtils.isLoggedIn()}");
                 if (PrefUtils.isLoggedIn() == false) {
                   PrefUtils.setRole('customer');
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    PageTransition(
-                      child: LoginPage(),
-                      type: PageTransitionType.fade,
-                      duration: const Duration(milliseconds: 900),
-                      reverseDuration: const Duration(milliseconds: 900),
-                    ),
-                        (Route<dynamic> route) => false,
-                  );
+                  _navigateTo(LoginPage());
                 } else {
                   bool? confirmed = await _showConfirmationDialog(
                     "Logout",
@@ -156,7 +144,7 @@ class _MenuScreen extends State<MenuScreen> {
                         duration: const Duration(milliseconds: 900),
                         reverseDuration: const Duration(milliseconds: 900),
                       ),
-                          (Route<dynamic> route) => false,
+                      (Route<dynamic> route) => false,
                     );
                   }
                 }
@@ -172,8 +160,7 @@ class _MenuScreen extends State<MenuScreen> {
     return showDialog<bool>(
       context: context,
       builder:
-          (context) =>
-          AlertDialog(
+          (context) => AlertDialog(
             title: Text(title),
             content: Text(message),
             actions: [

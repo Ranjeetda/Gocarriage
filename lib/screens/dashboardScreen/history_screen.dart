@@ -8,8 +8,8 @@ import '../../provider_service/URLS.dart';
 import '../../provider_service/myrides_provider.dart';
 import '../../resource/Utils.dart';
 import '../../resource/app_colors.dart';
-import '../../resource/common_btn.dart';
-import '../../resource/common_text.dart';
+import '../widgets/common_btn.dart';
+import '../widgets/common_text.dart';
 import '../../resource/sized_box.dart';
 import 'driver_tracking_screen.dart';
 
@@ -34,7 +34,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
   void initState() {
     super.initState();
     if(PrefUtils.isLoggedIn()) {
-      _bookingAllRideService(page: currentPage);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _bookingAllRideService(page: currentPage);
+      });
       _scrollController.addListener(_onScroll);
     }
   }

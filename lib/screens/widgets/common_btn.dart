@@ -1,7 +1,7 @@
 
 import 'package:flutter/material.dart';
 
-import 'app_colors.dart';
+import '../../resource/app_colors.dart';
 import 'common_text.dart';
 
 class CommonBtn extends StatelessWidget {

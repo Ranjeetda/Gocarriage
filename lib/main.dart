@@ -9,6 +9,7 @@ import 'package:gocarriage_universal/provider_service/add_driver_provider.dart';
 import 'package:gocarriage_universal/provider_service/assign_driver_provider.dart';
 import 'package:gocarriage_universal/provider_service/assign_vehicle_driver_provider.dart';
 import 'package:gocarriage_universal/provider_service/audio_provider.dart';
+import 'package:gocarriage_universal/provider_service/bottom_navigation_provider.dart';
 import 'package:gocarriage_universal/provider_service/delete_vehicle_provider.dart';
 import 'package:gocarriage_universal/provider_service/distance_provider.dart';
 import 'package:gocarriage_universal/provider_service/draft_vehicle_provider.dart';
@@ -100,6 +101,7 @@ Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => BottomNavigationProvider()),
         ChangeNotifierProvider(create: (_) => SendOtpProvider()),
         ChangeNotifierProvider(create: (_) => VerifyOtpProvider()),
         ChangeNotifierProvider(create: (_) => SignInProvider()),

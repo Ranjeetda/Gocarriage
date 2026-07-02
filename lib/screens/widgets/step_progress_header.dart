@@ -1,7 +1,7 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:gocarriage_universal/resource/step_item.dart';
+import 'package:gocarriage_universal/screens/widgets/step_item.dart';
 
 class StepProgressHeader extends StatelessWidget {
 

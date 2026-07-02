@@ -10,7 +10,7 @@ import 'package:gocarriage_universal/screens/auth/sign_up_screen.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:provider/provider.dart';
 import '../../provider_service/signIn_service.dart';
-import '../../resource/CurvedHeaderClipper.dart';
+import '../widgets/CurvedHeaderClipper.dart';
 import '../../resource/Utils.dart';
 import '../../resource/app_colors.dart';
 import '../../resource/image_paths.dart';
@@ -22,6 +22,8 @@ import '../dashboardScreen/customer_bottom_navigation_bar.dart';
 import '../driver/home_screen/driver_bottom_navigationBar.dart';
 import '../operatorScreen/operator_bottom_navigationbar.dart';
 import '../vehicleOwner/home_screen/dashboard_vehicle_owner_screen.dart';
+import '../widgets/shared_widgets.dart';
+import '../widgets/status_dialog.dart';
 import 'forgot_password_screen.dart';
 
 class LoginPage extends StatefulWidget {
@@ -38,13 +40,12 @@ class _LoginPageState extends State<LoginPage> {
 
   bool isChecked = false;
   bool isLoading = false;
-  bool _obscurePassword = true;
 
   @override
   void initState() {
     super.initState();
 
-    if(PrefUtils.getFcmToken().isEmpty){
+    if (PrefUtils.getFcmToken().isEmpty) {
       getToken();
     }
     SystemChrome.setSystemUIOverlayStyle(
@@ -63,19 +64,14 @@ class _LoginPageState extends State<LoginPage> {
 
     /// iOS Permission
     if (Platform.isIOS) {
-      await messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
+      await messaging.requestPermission(alert: true, badge: true, sound: true);
 
       /// Wait for APNS token
       await Future.delayed(const Duration(seconds: 1));
 
       String? apnsToken = await messaging.getAPNSToken();
       print("APNS TOKEN: $apnsToken");
-     // PrefUtils.setFcmToken(apnsToken!);
-
+      // PrefUtils.setFcmToken(apnsToken!);
     }
 
     /// Get FCM token (Android + iOS)
@@ -117,7 +113,7 @@ class _LoginPageState extends State<LoginPage> {
         ),
         (Route<dynamic> route) => false,
       );
-    }else if (PrefUtils.getRole() == "owner") {
+    } else if (PrefUtils.getRole() == "owner") {
       Navigator.pushAndRemoveUntil(
         context,
         PageTransition(
@@ -128,7 +124,7 @@ class _LoginPageState extends State<LoginPage> {
         ),
         (Route<dynamic> route) => false,
       );
-    }else if (PrefUtils.getRole() == "operator") {
+    } else if (PrefUtils.getRole() == "operator") {
       Navigator.pushAndRemoveUntil(
         context,
         PageTransition(
@@ -158,7 +154,12 @@ class _LoginPageState extends State<LoginPage> {
       http.Response response = await Provider.of<SignInProvider>(
         context,
         listen: false,
-      ).signIn(phoneController.text.trim(), passwordController.text.trim(), PrefUtils.getFcmToken(), PrefUtils.getDeviceType());
+      ).signIn(
+        phoneController.text.trim(),
+        passwordController.text.trim(),
+        PrefUtils.getFcmToken(),
+        PrefUtils.getDeviceType(),
+      );
       var responseData = json.decode(response.body);
       setState(() {
         isLoading = false;
@@ -169,7 +170,7 @@ class _LoginPageState extends State<LoginPage> {
         //PrefUtils.setUserId(responseData["user"]["id"].toString());
         PrefUtils.setName(responseData['data']["user"]["name"]);
         PrefUtils.setRole(responseData['data']["user"]["role"]);
-        PrefUtils.setEmail(responseData['data']["user"]["email"]??'');
+        PrefUtils.setEmail(responseData['data']["user"]["email"] ?? '');
         PrefUtils.setMobile(responseData['data']["user"]["mobile"]);
         if (responseData['data']['user']['role'] == 'driver') {
           PrefUtils.setUserId(
@@ -183,21 +184,24 @@ class _LoginPageState extends State<LoginPage> {
           PrefUtils.setUserId(
             responseData['data']["user"]["customer_id"].toString(),
           );
-        }else if (responseData['data']['user']['role'] == 'owner') {
+        } else if (responseData['data']['user']['role'] == 'owner') {
           PrefUtils.setUserId(
             responseData['data']["user"]["ownerId"].toString(),
           );
         }
         PrefUtils.setLoggedIn(true);
         PrefUtils.setFirstTime(true);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(responseData['message'])));
+        Utils.showMessage(context, responseData['message']);
         _sendOTP();
       } else {
-        String errorMessage =
-            responseData['message'] ?? 'Sign in failed. Please try again.';
-        Utils.showErrorMessage(context, errorMessage);
+        showStatusDialog(
+          context,
+          type: StatusType.error,
+          title: 'Something went wrong!',
+          message: responseData['message'],
+          primaryLabel: 'Login failed',
+          onPrimary: () => Navigator.of(context).pop(),
+        );
       }
     }
   }
@@ -267,6 +271,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       resizeToAvoidBottomInset: true,
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(300),
@@ -320,94 +325,64 @@ class _LoginPageState extends State<LoginPage> {
                 // FORM FIELDS
                 Form(
                   key: _formKey,
-                  child: Column(
-                    children: [
-                      // EMAIL
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: TextField(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      children: [
+                        // EMAIL
+                        CommonTextField(
+                          hint: 'Please enter your mobile / email',
                           controller: phoneController,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: InputDecoration(
-                            hintText: "Enter Your Mobile / Email",
-                            hintStyle: const TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 12,
-                              fontWeight: FontWeight.w400,
-                              color: AppColors.primaryColor,
-                            ),
-                            prefixIcon: const Icon(
-                              Icons.email,
-                              color: AppColors.primaryColor,
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: AppColors.textBox,
-                                width: 1.5,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: AppColors.secondarycolor,
-                                width: 2,
-                              ),
-                            ),
-                          ),
+                          icon: Icons.email,
+                          keyboard: TextInputType.emailAddress,
+                          isRequired: true,
+                          label: 'Mobile / Email',
                         ),
-                      ),
-                      const SizedBox(height: 12),
 
-                      // PASSWORD
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: TextField(
+                        const SizedBox(height: 12),
+
+                        CommonTextField(
+                          hint: 'Please enter your password',
                           controller: passwordController,
-                          obscureText: _obscurePassword,
-                          decoration: InputDecoration(
-                            hintText: "Enter your password",
-                            hintStyle: const TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 12,
-                              fontWeight: FontWeight.w400,
-                              color: AppColors.primaryColor,
-                            ),
-                            prefixIcon: const Icon(
-                              Icons.lock,
-                              color: AppColors.primaryColor,
-                            ),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_off
-                                    : Icons.visibility,
-                                color: AppColors.primaryColor,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscurePassword = !_obscurePassword;
-                                });
-                              },
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: AppColors.textBox,
-                                width: 1.5,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: AppColors.secondarycolor,
-                                width: 2,
-                              ),
-                            ),
-                          ),
+                          icon: Icons.lock,
+                          label: 'Password',
+                          isRequired: true,
+                          isObscure: true,
+                          keyboard: TextInputType.text,
+                          onChanged: () => setState(() {}),
+                          validator: (v) {
+                            if (v == null || v.isEmpty) {
+                              return 'Password is required';
+                            }
+
+                           /* if (v.length < 8) {
+                              return 'Password must be at least 8 characters';
+                            }
+
+                            if (!RegExp(r'[A-Z]').hasMatch(v)) {
+                              return 'Must contain at least one uppercase letter';
+                            }
+
+                            if (!RegExp(r'[a-z]').hasMatch(v)) {
+                              return 'Must contain at least one lowercase letter';
+                            }
+
+                            if (!RegExp(r'\d').hasMatch(v)) {
+                              return 'Must contain at least one number';
+                            }
+
+                            if (!RegExp(
+                              r'[!@#$%^&*(),.?":{}|<>]',
+                            ).hasMatch(v)) {
+                              return 'Must contain at least one special character';
+                            }
+*/
+                            return null;
+                          },
                         ),
-                      ),
-                    ],
+                        // PASSWORD
+                      ],
+                    ),
                   ),
                 ),
 
@@ -460,11 +435,17 @@ class _LoginPageState extends State<LoginPage> {
                                   color: AppColors.secondarycolor,
                                   fontWeight: FontWeight.w600,
                                 ),
-                                recognizer: TapGestureRecognizer()
-                                  ..onTap = () {
-                                    _navigateTo(CommonScreen('https://gocarriage.com/terms-condition','Terms & Conditions'));
-                                    print("Terms & Conditions clicked");
-                                  },
+                                recognizer:
+                                    TapGestureRecognizer()
+                                      ..onTap = () {
+                                        _navigateTo(
+                                          CommonScreen(
+                                            'https://gocarriage.com/terms-condition',
+                                            'Terms & Conditions',
+                                          ),
+                                        );
+                                        print("Terms & Conditions clicked");
+                                      },
                               ),
                               TextSpan(text: " and "),
                               TextSpan(
@@ -473,11 +454,17 @@ class _LoginPageState extends State<LoginPage> {
                                   color: AppColors.secondarycolor,
                                   fontWeight: FontWeight.w600,
                                 ),
-                                recognizer: TapGestureRecognizer()
-                                  ..onTap = () {
-                                    _navigateTo(CommonScreen('https://gocarriage.com/privacy-policy','Privacy Policy'));
-                                    print("Privacy clicked");
-                                  },
+                                recognizer:
+                                    TapGestureRecognizer()
+                                      ..onTap = () {
+                                        _navigateTo(
+                                          CommonScreen(
+                                            'https://gocarriage.com/privacy-policy',
+                                            'Privacy Policy',
+                                          ),
+                                        );
+                                        print("Privacy clicked");
+                                      },
                               ),
                             ],
                           ),
@@ -517,8 +504,9 @@ class _LoginPageState extends State<LoginPage> {
                                       MaterialPageRoute(
                                         builder:
                                             (context) => SignUpScreen(
-                                            PrefUtils.getRole(),"Individual"
-                                        ),
+                                              PrefUtils.getRole(),
+                                              "Individual",
+                                            ),
                                       ),
                                     );
                                   } else if (PrefUtils.getRole() == "driver") {
@@ -527,18 +515,19 @@ class _LoginPageState extends State<LoginPage> {
                                       MaterialPageRoute(
                                         builder:
                                             (context) => SignUpScreen(
-                                          PrefUtils.getRole(),"Individual"
-                                        ),
+                                              PrefUtils.getRole(),
+                                              "Individual",
+                                            ),
                                       ),
                                     );
-                                  }else{
+                                  } else {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
                                         builder:
                                             (context) => SelectionScreen(
-                                          PrefUtils.getRole(),
-                                        ),
+                                              PrefUtils.getRole(),
+                                            ),
                                       ),
                                     );
                                   }
@@ -591,6 +580,7 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
+
   void _navigateTo(Widget screen) {
     Navigator.push(context, MaterialPageRoute(builder: (context) => screen));
   }

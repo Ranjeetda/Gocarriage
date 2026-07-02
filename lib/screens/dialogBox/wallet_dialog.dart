@@ -49,18 +49,80 @@ class _WalletDialogState extends State<WalletDialog> {
             }
 
             /// EMPTY
+            /// EMPTY
             if (provider.subscriptionsmap.isEmpty) {
-              return Center(
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(18),
-                  margin: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF6E9D8),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.orange.shade200),
+              return SizedBox(
+                width: 360,
+                height: 300, // <-- Small dialog height
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Align(
+                        alignment: Alignment.topRight,
+                        child: InkWell(
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.close,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      const Icon(
+                        Icons.subscriptions_outlined,
+                        color: Colors.orange,
+                        size: 55,
+                      ),
+
+                      const SizedBox(height: 15),
+
+                      const Text(
+                        "No Subscription Available",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      const Text(
+                        "There is no active subscription for this vehicle.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.grey,
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0F7C6B),
+                          ),
+                          child: const Text(
+                            "OK",
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  child: const Text('No subscription available'),
                 ),
               );
             }
