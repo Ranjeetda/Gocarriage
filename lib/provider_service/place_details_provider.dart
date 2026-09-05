@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import '../resource/Utils.dart';
 import '../screens/model/place_details_model.dart';
 
 class PlaceDetailsProvider extends ChangeNotifier {
@@ -14,7 +15,7 @@ class PlaceDetailsProvider extends ChangeNotifier {
   String? get error => _error;
 
   Future<void> fetchPlaceDetails(String placeId) async {
-    const apiKey = "AIzaSyDpH5LUm09CEiJX4cSan8SDp0vxuVLwCCQ";
+    String apiKey = Utils.googleMapKey;
 
     _isLoading = true;
     _error = null;

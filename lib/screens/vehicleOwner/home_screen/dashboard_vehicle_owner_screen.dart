@@ -15,9 +15,11 @@ import '../../../resource/pref_utils.dart';
 
 import '../../commanScreen/menu_screen.dart';
 import '../../dashboardScreen/customer_bottom_navigation_bar.dart';
+import '../BulkShipmentScreen/bulk_shipment_tenders_screen.dart';
 import '../assignDriverScreen/assign_driver_list_screen.dart';
 import '../bookingRequestScreen/booking_request_screen.dart';
 import '../driver_list_screen/driver_list_screen.dart';
+import '../freightCalculatorScreen/freight_calculator_screen.dart';
 import '../my_rewards/my_rewards.dart';
 import '../profile_screen/owner_profile_screen.dart';
 import '../quotationScreen/price_quotations_screen.dart';
@@ -34,10 +36,12 @@ class DashboardVehicleOwnerScreen extends StatefulWidget {
 }
 
 class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {          // ← changed to TickerProviderStateMixin
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   late TabController _tabController;
+  late AnimationController _drawerAnimController;   // ← new
+
   bool isProfileUpdated = true;
   String profileImage = '';
 
@@ -45,6 +49,12 @@ class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    PrefUtils.setAdminToken('Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Mjk5LCJyb2xlIjoic3VwZXJhZG1pbiIsImVtYWlsIjoic3VwZXJhZG1pbkBnb2NhcnJpYWdlLmNvbSIsImN1c3RvbWVySWQiOm51bGwsImRyaXZlcklkIjpudWxsLCJvd25lcklkIjpudWxsLCJvcGVyYXRvcklkIjpudWxsLCJmdWVsU3RhdGlvbklkIjpudWxsLCJzZXJ2aWNlQ2VudGVySWQiOm51bGwsImRoYWJhSWQiOm51bGwsImlhdCI6MTc4NTkxMDg4MywiZXhwIjoxNzg2NTE1NjgzfQ.L4Cz6lEy5p760aR3qFAFgGzSHGS-y8tHAcXrYjT-zoU');
+    // Drawer animation controller
+    _drawerAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final provider = Provider.of<ProfileProvider>(context, listen: false);
@@ -52,7 +62,7 @@ class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen>
       if (provider.profileData.isNotEmpty) {
         setState(() {
           isProfileUpdated = provider.profileData['isProfileUpdated'];
-          _showImage(provider.profileData['profile_pic']??'');
+          _showImage(provider.profileData['profile_pic'] ?? '');
         });
       }
     });
@@ -61,11 +71,12 @@ class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _drawerAnimController.dispose();   // ← dispose it
     super.dispose();
   }
 
   Future<void> _showImage(String fileName) async {
-    if(fileName.isEmpty){
+    if (fileName.isEmpty) {
       return;
     }
     final response = await Provider.of<FetchImageUrlProvider>(
@@ -110,9 +121,19 @@ class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen>
       key: _scaffoldKey,
       backgroundColor: const Color(0xFFF7F9FC),
 
+      // Restart animation every time drawer opens
+      onDrawerChanged: (isOpened) {
+        if (isOpened) {
+          _drawerAnimController.forward(from: 0);
+        } else {
+          _drawerAnimController.reset();
+        }
+      },
+
       /// DRAWER
       drawer: Drawer(
         child: ListView(
+          padding: EdgeInsets.zero,
           children: [
             InkWell(
               onTap: () {
@@ -123,30 +144,36 @@ class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen>
                 );
               },
               child: UserAccountsDrawerHeader(
+                margin: EdgeInsets.zero,
                 accountName: Text(PrefUtils.getName()),
-                accountEmail: Text("Vehicle Owner"),
+                accountEmail: const Text("Vehicle Owner"),
                 currentAccountPicture: CircleAvatar(
                   backgroundColor: Colors.white,
-                  backgroundImage:
-                      (profileImage.isNotEmpty)
-                          ? NetworkImage(profileImage)
-                          : null,
-                  child:
-                      (profileImage.isEmpty)
-                          ? const Icon(Icons.person, color: Colors.black)
-                          : null,
+                  backgroundImage: profileImage.isNotEmpty
+                      ? NetworkImage(profileImage)
+                      : null,
+                  child: profileImage.isEmpty
+                      ? const Icon(Icons.person, color: Colors.black)
+                      : null,
                 ),
-                decoration: BoxDecoration(color: AppColors.primaryColor),
+                decoration: const BoxDecoration(
+                  color: AppColors.primaryColor,
+                ),
               ),
             ),
-            menuItem(Icons.directions_car, "Vehicles"),
-            menuItem(Icons.people, "Driver"),
-            menuItem(Icons.assignment_ind, "Assign Driver"),
-            menuItem(Icons.request_page, "Vehicle Request"),
-            menuItem(Icons.price_check, "Price Quotations"),
-            menuItem(Icons.book_online, "Booking Requests"),
-            menuItem(Icons.account_balance_wallet, "Subscriptions"),
-            menuItem(Icons.emoji_events, "My Rewards"),
+
+            // Animated menu items
+            _buildAnimatedMenuItem(0, Icons.directions_car, "Vehicles"),
+            _buildAnimatedMenuItem(1, Icons.people, "Driver"),
+            _buildAnimatedMenuItem(2, Icons.assignment_ind, "Assign Driver"),
+            _buildAnimatedMenuItem(3, Icons.request_page, "Vehicle Request"),
+            _buildAnimatedMenuItem(4, Icons.price_check, "Price Quotations"),
+            _buildAnimatedMenuItem(4, Icons.flash_on, "Instant Request"),
+            _buildAnimatedMenuItem(5, Icons.request_quote, "Bulk Tenders"),
+            _buildAnimatedMenuItem(5, Icons.calculate, "Vehicle Freight"),
+            _buildAnimatedMenuItem(6, Icons.book_online, "Booking Requests"),
+            _buildAnimatedMenuItem(7, Icons.account_balance_wallet, "Subscriptions"),
+            _buildAnimatedMenuItem(8, Icons.emoji_events, "My Rewards"),
           ],
         ),
       ),
@@ -154,7 +181,7 @@ class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen>
       /// FAB
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.primaryColor,
-        child: Icon(Icons.add, color: Colors.white),
+        child: const Icon(Icons.add, color: Colors.white),
         onPressed: () {
           if (_tabController.index == 0) {
             nextScreen(context);
@@ -178,31 +205,32 @@ class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen>
                 child: Row(
                   children: [
                     IconButton(
-                      icon: Icon(Icons.menu, color: Colors.white),
+                      icon: const Icon(Icons.menu, color: Colors.white),
                       onPressed: () {
                         _scaffoldKey.currentState!.openDrawer();
                       },
                     ),
                     Image.asset(ImagePaths.appLogoVertical, height: 40),
-                    SizedBox(width: 10),
+                    const SizedBox(width: 10),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("Welcome!", style: TextStyle(color: Colors.white)),
+                        const Text("Welcome!",
+                            style: TextStyle(color: Colors.white)),
                         Text(
                           PrefUtils.getName(),
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ],
                     ),
-                    Spacer(),
+                    const Spacer(),
                     Row(
                       children: [
                         IconButton(
-                          icon: Icon(Icons.house, color: Colors.white),
+                          icon: const Icon(Icons.house, color: Colors.white),
                           onPressed: () {
                             PrefUtils.clearPreferences();
                             Navigator.pushAndRemoveUntil(
@@ -211,14 +239,15 @@ class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen>
                                 child: CustomerBottomNavigationBar(),
                                 type: PageTransitionType.fade,
                                 duration: const Duration(milliseconds: 900),
-                                reverseDuration: const Duration(milliseconds: 900),
+                                reverseDuration:
+                                const Duration(milliseconds: 900),
                               ),
                                   (Route<dynamic> route) => false,
                             );
                           },
                         ),
-                        SizedBox(width: 10),
-                        Icon(Icons.notifications, color: Colors.white),
+                        const SizedBox(width: 10),
+                        const Icon(Icons.notifications, color: Colors.white),
                       ],
                     )
                   ],
@@ -227,7 +256,7 @@ class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen>
             ),
           ),
           isProfileUpdated
-              ? SizedBox()
+              ? const SizedBox()
               : profileStatusStrip(isComplete: isProfileUpdated),
 
           /// TAB BAR
@@ -248,7 +277,6 @@ class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen>
               unselectedLabelColor: Colors.black87,
               indicatorSize: TabBarIndicatorSize.tab,
               dividerColor: Colors.transparent,
-
               tabs: [
                 Tab(
                   child: Row(
@@ -279,9 +307,7 @@ class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen>
             child: TabBarView(
               controller: _tabController,
               children: [
-                /// VEHICLES TAB
                 VehicleListScreen(false),
-                /// DRIVERS TAB
                 DriverListScreen(false),
               ],
             ),
@@ -291,56 +317,87 @@ class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen>
     );
   }
 
-  /// MENU
-  Widget menuItem(IconData icon, String title) {
-    return ListTile(
-      leading: Icon(icon),
-      title: Text(title),
-      onTap: () {
-        Navigator.pop(context);
+  /// Animated menu item
+  Widget _buildAnimatedMenuItem(int index, IconData icon, String title) {
+    final Animation<double> animation = CurvedAnimation(
+      parent: _drawerAnimController,
+      curve: Interval(
+        (index * 0.07).clamp(0.0, 1.0),
+        1.0,
+        curve: Curves.easeOutCubic,
+      ),
+    );
 
-        if (title == 'Vehicles') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => VehicleListScreen(true)),
-          );
-        } else if (title == 'Driver') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => DriverListScreen(true)),
-          );
-        } else if (title == 'Assign Driver') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => AssignDriverListScreen()),
-          );
-        } else if (title == 'Vehicle Request') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => VehicleRequestScreen()),
-          );
-        } else if (title == 'Price Quotations') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => PriceQuotationsScreen()),
-          );
-        } else if (title == 'Booking Requests') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => BookingRequestScreen()),
-          );
-        } else if (title == 'Subscriptions') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => SubscriptionsScreen()),
-          );
-        }else if (title == 'My Rewards') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => RewardsScreen()),
-          );
-        }
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        return Opacity(
+          opacity: animation.value,
+          child: Transform.translate(
+            offset: Offset(40 * (1 - animation.value), 0), // slide from right
+            child: child,
+          ),
+        );
       },
+      child: ListTile(
+        leading: Icon(icon, color: AppColors.primaryColor),
+        title: Text(title),
+        onTap: () {
+          Navigator.pop(context);
+
+          if (title == 'Vehicles') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => VehicleListScreen(true)),
+            );
+          } else if (title == 'Driver') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => DriverListScreen(true)),
+            );
+          } else if (title == 'Assign Driver') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => AssignDriverListScreen()),
+            );
+          } else if (title == 'Vehicle Request') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => VehicleRequestScreen()),
+            );
+          } else if (title == 'Price Quotations') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => PriceQuotationsScreen()),
+            );
+          } else if (title == 'Bulk Tenders') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => BulkShipmentTendersScreen()),
+            );
+          } else if (title == 'Vehicle Freight') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => FreightCalculatorScreen()),
+            );
+          } else if (title == 'Booking Requests') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => BookingRequestScreen()),
+            );
+          } else if (title == 'Subscriptions') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => SubscriptionsScreen()),
+            );
+          } else if (title == 'My Rewards') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => RewardsScreen()),
+            );
+          }
+        },
+      ),
     );
   }
 
@@ -360,7 +417,6 @@ class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen>
             color: isComplete ? Colors.green : Colors.orange,
           ),
           const SizedBox(width: 10),
-
           Expanded(
             child: Text(
               isComplete
@@ -372,11 +428,9 @@ class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen>
               ),
             ),
           ),
-
           if (!isComplete)
             TextButton(
               onPressed: () {
-                // 👉 Navigate to profile / edit screen
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => OwnerProfileScreen()),

@@ -42,9 +42,8 @@ class _DriverBottomNavigationbarState
 
   Timer? locationTimer;
 
-  /// ✅ Removed MenuScreen from here
   final List<Widget> _screens = [
-    DriverHomeScreen(),
+    const DriverHomeScreen(),
     DriverBookingHistoryScreen(),
   ];
 
@@ -67,7 +66,6 @@ class _DriverBottomNavigationbarState
     });
   }
 
-  /// SOCKET LOCATION UPDATE
   void startSocketLocationUpdates(Position position) {
     DriverLocationUpdateSocketService()
         .connectSocket(PrefUtils.getToken());
@@ -89,15 +87,14 @@ class _DriverBottomNavigationbarState
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(90),
         child: header(),
       ),
-
-      body: _screens[_selectedIndex],
-
-      /// ✅ FIXED NAVIGATION
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _screens,
+      ),
       bottomNavigationBar: CurvedNavigationBar(
         index: _selectedIndex,
         height: 60,
@@ -113,7 +110,6 @@ class _DriverBottomNavigationbarState
         ],
         onTap: (index) {
           if (index == 2) {
-            /// 👉 OPEN MENU SCREEN
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => MenuScreen()),
@@ -128,7 +124,6 @@ class _DriverBottomNavigationbarState
     );
   }
 
-  /// HEADER
   Widget header() {
     return Container(
       width: double.infinity,
@@ -140,10 +135,8 @@ class _DriverBottomNavigationbarState
       color: AppColors.primaryColor,
       child: Row(
         children: [
-          Image.asset(ImagePaths.appLogoVertical,
-              height: 50, width: 50),
+          Image.asset(ImagePaths.appLogoVertical, height: 50, width: 50),
           const SizedBox(width: 10),
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -152,11 +145,8 @@ class _DriverBottomNavigationbarState
                   children: [
                     Row(
                       children: [
-                        Image.asset(ImagePaths.marker,
-                            height: 20, width: 20),
+                        Image.asset(ImagePaths.marker, height: 20, width: 20),
                         const SizedBox(width: 6),
-
-                        /// ✅ FIXED TITLE LOGIC
                         Text(
                           _selectedIndex == 0
                               ? (PrefUtils.getName().isNotEmpty
@@ -171,45 +161,50 @@ class _DriverBottomNavigationbarState
                         ),
                       ],
                     ),
-
                     const Spacer(),
-
-                    Switch(
-                      value: isSwitch,
-                      onChanged: (v) {
-                        setState(() => isSwitch = v);
-                        showStartDialog(context, isSwitch);
-                      },
-                      activeColor: Colors.green,
+                    // Material Design 3 Switch
+                    Transform.scale(
+                      scale: 0.85,
+                      child: Switch(
+                        value: isSwitch,
+                        onChanged: (v) {
+                          showStartDialog(context, v);
+                        },
+                        // Material 3 colors
+                        activeColor: Colors.white,
+                        activeTrackColor: const Color(0xFF00C853),
+                        inactiveThumbColor: Colors.white,
+                        inactiveTrackColor: Colors.white.withOpacity(0.30),
+                        trackOutlineColor: WidgetStateProperty.resolveWith((states) {
+                          return Colors.transparent; // removes the border
+                        }),
+                        thumbIcon: WidgetStateProperty.resolveWith((states) {
+                          if (states.contains(WidgetState.selected)) {
+                            return const Icon(Icons.check, size: 16, color: Color(0xFF00C853));
+                          }
+                          return const Icon(Icons.close, size: 16, color: Colors.grey);
+                        }),
+                      ),
                     ),
-
-                    const SizedBox(width: 5),
-
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: Icon(Icons.house, color: Colors.white),
-                          onPressed: () {
-                            PrefUtils.clearPreferences();
-                            Navigator.pushAndRemoveUntil(
-                              context,
-                              PageTransition(
-                                child: CustomerBottomNavigationBar(),
-                                type: PageTransitionType.fade,
-                                duration: const Duration(milliseconds: 900),
-                                reverseDuration: const Duration(milliseconds: 900),
-                              ),
-                                  (Route<dynamic> route) => false,
-                            );
-                          },
-                        ),
-                        SizedBox(width: 10),
-                        Icon(Icons.notifications, color: Colors.white),
-                      ],
-                    )
+                    IconButton(
+                      icon: const Icon(Icons.house, color: Colors.white),
+                      onPressed: () {
+                        PrefUtils.clearPreferences();
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          PageTransition(
+                            child: CustomerBottomNavigationBar(),
+                            type: PageTransitionType.fade,
+                            duration: const Duration(milliseconds: 900),
+                            reverseDuration:
+                            const Duration(milliseconds: 900),
+                          ),
+                              (Route<dynamic> route) => false,
+                        );
+                      },
+                    ),
                   ],
                 ),
-
                 Text(
                   mLocation,
                   style: const TextStyle(color: Colors.white70),
@@ -224,7 +219,6 @@ class _DriverBottomNavigationbarState
     );
   }
 
-  /// LOCATION
   Future<void> _setCurrentLocation() async {
     setState(() {
       isGettingLocation = true;
@@ -243,20 +237,23 @@ class _DriverBottomNavigationbarState
 
       final address = await _getAddressFromPosition(position);
 
-      setState(() {
-        mLocation = address;
-      });
+      if (mounted) {
+        setState(() {
+          mLocation = address;
+        });
+      }
     } catch (e) {
-      setState(() {
-        mLocation = "Unable to get location";
-      });
+      if (mounted) {
+        setState(() {
+          mLocation = "Unable to get location";
+        });
+      }
     }
   }
 
   Future<String> _getAddressFromPosition(Position position) async {
     try {
-      List<Placemark> placemarks =
-      await placemarkFromCoordinates(
+      List<Placemark> placemarks = await placemarkFromCoordinates(
         position.latitude,
         position.longitude,
       );
@@ -271,52 +268,290 @@ class _DriverBottomNavigationbarState
   }
 
   /// STATUS UPDATE API
-  Future<void> _statusUpdate(
-      bool isOnline,
-      String lat,
-      String lng) async {
-    http.Response response =
-    await Provider.of<StatusProvider>(context, listen: false)
-        .statusUpdate(isOnline, lat, lng);
+  Future<bool> _statusUpdate(bool isOnline, String lat, String lng) async {
+    try {
+      final response = await Provider.of<StatusProvider>(context, listen: false)
+          .statusUpdate(isOnline, lat, lng);
 
-    var data = json.decode(response.body);
+      final data = json.decode(response.body);
 
-    if (data['success'] == true) {
-      PrefUtils.setDriverOnline(isOnline);
+      if (data['success'] == true) {
+        PrefUtils.setDriverOnline(isOnline);
 
-      Navigator.of(context).pop();
+        if (mounted) {
+          setState(() {
+            isSwitch = isOnline;
+          });
+        }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(data['message'])),
-      );
-    } else {
-      Utils.showErrorMessage(context, data['message']);
+        if (Navigator.canPop(context)) {
+          Navigator.of(context).pop();
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(data['message'] ?? "Status updated successfully"),
+            backgroundColor: isOnline ? Colors.green : Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+
+        return true;
+      } else {
+        Utils.showErrorMessage(
+            context, data['message'] ?? "Failed to update status");
+        return false;
+      }
+    } catch (e) {
+      Utils.showErrorMessage(
+          context, "Something went wrong. Please try again.");
+      return false;
     }
   }
 
-  /// DIALOG
-  void showStartDialog(BuildContext context, bool isTrue) {
-    showDialog(
+  /// UNIQUE DIALOG WITH LOADING
+  void showStartDialog(BuildContext context, bool desiredOnline) {
+    final bool goingOnline = desiredOnline;
+    bool isDialogLoading = false;
+
+    showGeneralDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(isTrue ? "Go Online?" : "Go Offline?"),
-        content: Text(isTrue
-            ? "Start receiving bookings"
-            : "Stop receiving bookings"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
+      barrierDismissible: false,
+      barrierLabel: "Online Offline Dialog",
+      barrierColor: Colors.black.withOpacity(0.55),
+      transitionDuration: const Duration(milliseconds: 320),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return const SizedBox.shrink();
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutBack,
+        );
+
+        return ScaleTransition(
+          scale: curved,
+          child: FadeTransition(
+            opacity: animation,
+            child: Center(
+              child: Material(
+                color: Colors.transparent,
+                child: StatefulBuilder(
+                  builder: (context, setDialogState) {
+                    return Container(
+                      width: MediaQuery.of(context).size.width * 0.85,
+                      constraints: const BoxConstraints(maxWidth: 360),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(28),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.18),
+                            blurRadius: 30,
+                            offset: const Offset(0, 12),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Header
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 28),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: goingOnline
+                                    ? [
+                                  const Color(0xFF00C853),
+                                  const Color(0xFF00E676)
+                                ]
+                                    : [
+                                  const Color(0xFFFF5252),
+                                  const Color(0xFFFF1744)
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(28),
+                                topRight: Radius.circular(28),
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Container(
+                                  height: 72,
+                                  width: 72,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.22),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    goingOnline
+                                        ? Icons.wifi_tethering_rounded
+                                        : Icons.wifi_off_rounded,
+                                    size: 36,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                Text(
+                                  goingOnline ? "Go Online" : "Go Offline",
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Content
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(24, 26, 24, 10),
+                            child: Column(
+                              children: [
+                                Text(
+                                  goingOnline
+                                      ? "You will start receiving new booking requests."
+                                      : "You will stop receiving new booking requests.",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 15.5,
+                                    height: 1.45,
+                                    color: Colors.grey.shade700,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  goingOnline
+                                      ? "Make sure your location is accurate."
+                                      : "You can go online again anytime.",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 13.5,
+                                    color: Colors.grey.shade500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Buttons / Loading
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+                            child: isDialogLoading
+                                ? const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 14),
+                              child: SizedBox(
+                                height: 32,
+                                width: 32,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 3.2,
+                                  valueColor:
+                                  AlwaysStoppedAnimation<Color>(
+                                    Color(0xFF00C853),
+                                  ),
+                                ),
+                              ),
+                            )
+                                : Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 15),
+                                      side: BorderSide(
+                                        color: Colors.grey.shade300,
+                                        width: 1.4,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                        BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      "Cancel",
+                                      style: TextStyle(
+                                        fontSize: 15.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.grey.shade700,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () async {
+                                      setDialogState(() {
+                                        isDialogLoading = true;
+                                      });
+
+                                      final bool success =
+                                      await _statusUpdate(
+                                        desiredOnline,
+                                        latitude ?? "",
+                                        longitude ?? "",
+                                      );
+
+                                      if (!success && context.mounted) {
+                                        setDialogState(() {
+                                          isDialogLoading = false;
+                                        });
+                                      }
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: goingOnline
+                                          ? const Color(0xFF00C853)
+                                          : const Color(0xFFFF5252),
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 15),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                        BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      goingOnline
+                                          ? "Go Online"
+                                          : "Go Offline",
+                                      style: const TextStyle(
+                                        fontSize: 15.5,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              await _statusUpdate(
-                  isTrue, latitude ?? "", longitude ?? "");
-            },
-            child: const Text("Confirm"),
-          ),
-        ],
-      ),
+        );
+      },
     );
+  }
+
+  @override
+  void dispose() {
+    locationTimer?.cancel();
+    super.dispose();
   }
 }

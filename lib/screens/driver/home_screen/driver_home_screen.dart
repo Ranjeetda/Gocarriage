@@ -21,7 +21,7 @@ import '../../../resource/image_paths.dart';
 import '../../../resource/pref_utils.dart';
 import '../widgetScreen/ride_action_buttons.dart';
 
-const String GOOGLE_API_KEY = "AIzaSyDpH5LUm09CEiJX4cSan8SDp0vxuVLwCCQ";
+String GOOGLE_API_KEY = Utils.googleMapKey;
 
 class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
@@ -45,6 +45,9 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
   bool isLoading = false;
   bool isValidateLoading = false;
   String buttonName = "ARRIVED";
+
+  // Stable key prevents GoogleMap from being recreated → stops black screen
+  final GlobalKey _mapKey = GlobalKey();
 
   @override
   void initState() {
@@ -100,7 +103,7 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
     }
 
     try {
-      // 🔥 STEP 1: Get last known position (FAST)
+      // STEP 1: Get last known position (FAST)
       Position? lastPosition = await Geolocator.getLastKnownPosition();
 
       if (lastPosition != null) {
@@ -109,22 +112,20 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
         _showOnlyDriver();
       }
 
-      // 🔥 STEP 2: Get accurate position (SLOW but precise)
+      // STEP 2: Get accurate position
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.best,
-        timeLimit: const Duration(seconds: 8), // avoid freeze
+        timeLimit: const Duration(seconds: 8),
       );
 
       _currentLocation = LatLng(position.latitude, position.longitude);
       _showOnlyDriver();
 
-      // Move camera smoothly
       if (_mapController != null) {
         _mapController!.animateCamera(
           CameraUpdate.newLatLngZoom(_currentLocation!, 15),
         );
       }
-
     } catch (e) {
       debugPrint("Location error: $e");
     }
@@ -157,10 +158,9 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
 
     final points = await _fetchRoute(_currentLocation!, drop);
 
-    // ✅ CRITICAL FIX
     if (points.isEmpty) {
       debugPrint("Route points empty — skipping bounds");
-      setState(() {});
+      if (mounted) setState(() {});
       return;
     }
 
@@ -207,7 +207,6 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
 
       final data = json.decode(response.body);
 
-      // Google API–level errors (VERY important)
       if (data['status'] != 'OK') {
         debugPrint(
           "Directions API error: ${data['status']} | ${data['error_message']}",
@@ -258,8 +257,8 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
   LatLngBounds _bounds(List<LatLng> list) {
     if (list.isEmpty) {
       return LatLngBounds(
-        southwest: LatLng(20.5937, 78.9629),
-        northeast: LatLng(20.5937, 78.9629),
+        southwest: const LatLng(20.5937, 78.9629),
+        northeast: const LatLng(20.5937, 78.9629),
       );
     }
 
@@ -293,7 +292,7 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
       ),
     );
 
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   /// ================= ACCEPT / REJECT =================
@@ -317,9 +316,8 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
           listen: false,
         ).fetchBooking();
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(data['message'])));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(data['message'])));
     } else {
       Utils.showErrorMessage(context, data['message']);
     }
@@ -328,8 +326,7 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
   Future<void> _driverRide() async {
     setState(() => isLoading = true);
 
-    http.Response response =
-    await Provider.of<StartTripeProvider>(
+    http.Response response = await Provider.of<StartTripeProvider>(
       context,
       listen: false,
     ).startTrip();
@@ -366,18 +363,15 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
   Future<void> _handleTripCompletedOnlyDriver() async {
     if (_mapController == null) return;
 
-    // Get latest location
     final position = await Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );
 
     _currentLocation = LatLng(position.latitude, position.longitude);
 
-    // Clear old markers and polylines
     _markers.clear();
     _polylines.clear();
 
-    // Add only truck marker
     _markers.add(
       Marker(
         markerId: const MarkerId("driver"),
@@ -386,9 +380,8 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
       ),
     );
 
-    setState(() {});
+    if (mounted) setState(() {});
 
-    // Move camera to driver location
     _mapController!.animateCamera(
       CameraUpdate.newLatLngZoom(_currentLocation!, 15),
     );
@@ -405,7 +398,7 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
 
       if (response.statusCode == 200 && data['success'] == true) {
         print("VERIFY OTP ${data['message']}");
-        return true; // ✅ success
+        return true;
       } else {
         Utils.showCustomToast(context, data['message'] ?? "Invalid OTP");
         return false;
@@ -438,11 +431,8 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    /// 🔷 LOGO
                     Image.asset(ImagePaths.appLogo, height: 80),
-
                     const SizedBox(height: 12),
-
                     const Text(
                       "Verify OTP",
                       style: TextStyle(
@@ -451,10 +441,7 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
                         color: Colors.black,
                       ),
                     ),
-
                     const SizedBox(height: 20),
-
-                    /// 🔢 OTP FIELD (Responsive)
                     LayoutBuilder(
                       builder: (context, constraints) {
                         double availableWidth = constraints.maxWidth;
@@ -486,8 +473,6 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
                             activeColor: AppColors.secondarycolor,
                           ),
                           onChanged: (value) {},
-
-                          /// 🔥 AUTO SUBMIT
                           onCompleted: (value) async {
                             if (value.length == 6 && !isLoading) {
                               setDialogState(() => isLoading = true);
@@ -497,19 +482,14 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
                               setDialogState(() => isLoading = false);
 
                               if (isSuccess) {
-                                Navigator.of(
-                                  dialogContext,
-                                ).pop(); // ✅ close dialog
+                                Navigator.of(dialogContext).pop();
                               }
                             }
                           },
                         );
                       },
                     ),
-
                     const SizedBox(height: 24),
-
-                    /// 🔘 SUBMIT BUTTON
                     SizedBox(
                       width: double.infinity,
                       height: 48,
@@ -520,8 +500,7 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        onPressed:
-                        isLoading
+                        onPressed: isLoading
                             ? null
                             : () async {
                           if (otpController.text.trim().length != 6) {
@@ -531,7 +510,6 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
                             );
                             return;
                           }
-                          print("OTP ===========>${otpController.text.trim()}");
                           setDialogState(() => isLoading = true);
 
                           bool isSuccess = await _verifyOtp(
@@ -541,13 +519,10 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
                           setDialogState(() => isLoading = false);
 
                           if (isSuccess) {
-                            Navigator.of(
-                              dialogContext,
-                            ).pop(); // ✅ close dialog
+                            Navigator.of(dialogContext).pop();
                           }
                         },
-                        child:
-                        isLoading
+                        child: isLoading
                             ? const SizedBox(
                           height: 22,
                           width: 22,
@@ -592,7 +567,10 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
             right: 0,
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              children: [_upcomingCard(), _ongoingCard()],
+              children: [
+                _upcomingCard(),
+                _ongoingCard(),
+              ],
             ),
           ),
         ],
@@ -602,18 +580,22 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
 
   Widget _buildMap() {
     if (_currentLocation == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Center(child: CircularProgressIndicator());
     }
+
     return GoogleMap(
+      key: _mapKey, // ← Critical for preventing black screen
       initialCameraPosition: CameraPosition(
-        target: _currentLocation ?? const LatLng(20.5937, 78.9629),
-        zoom: 12,
+        target: _currentLocation!,
+        zoom: 15,
       ),
       myLocationEnabled: true,
       zoomControlsEnabled: false,
       markers: _markers,
       polylines: _polylines,
-      onMapCreated: (c) => _mapController = c,
+      onMapCreated: (controller) {
+        _mapController = controller;
+      },
     );
   }
 
@@ -647,7 +629,10 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 10,
+              ),
             ],
           ),
           child: Column(
@@ -665,7 +650,6 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-
               Text(
                 Utils.formatIsoDate(ride["createdAt"]),
                 style: const TextStyle(
@@ -673,12 +657,10 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
                   fontSize: 14,
                 ),
               ),
-
               const SizedBox(height: 12),
               Text("📍 ${ride['fromLocation']['address']}"),
               const SizedBox(height: 8),
               Text("🏁 ${ride['toLocation']['address']}"),
-
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -693,7 +675,6 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
                   ),
                 ],
               ),
-
               const SizedBox(height: 20),
               RideActionButtons(
                 isAccepted: true,
@@ -710,12 +691,12 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
   }
 
   /// ================= ONGOING =================
-
   Widget _ongoingCard() {
     return Consumer<DriverBookingOngoingProvider>(
       builder: (context, provider, _) {
         final ride = provider.bookingData;
         if (ride == null) return const SizedBox();
+
         final pickup = LatLng(
           ride['fromLocation']['lat'],
           ride['fromLocation']['lng'],
@@ -736,7 +717,10 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 10,
+              ),
             ],
           ),
           child: Column(
@@ -754,7 +738,6 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-
               Text(
                 Utils.formatIsoDate(ride["createdAt"]),
                 style: const TextStyle(
@@ -762,24 +745,11 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
                   fontSize: 14,
                 ),
               ),
-
               const SizedBox(height: 12),
               Text("📍 ${ride['fromLocation']['address']}"),
               const SizedBox(height: 8),
               Text("🏁 ${ride['toLocation']['address']}"),
               const SizedBox(height: 10),
-
-              /* Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Name : ${ride['customer']['name']??"--"}"),
-                  Text(
-                    "Phone: ${ride['customer']['phone']??"--"}",
-                    style: const TextStyle(
-                        fontSize: 16),
-                  ),
-                ],
-              ),*/
               const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -794,7 +764,6 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
                   ),
                 ],
               ),
-
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
@@ -813,12 +782,11 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
                       provider.clearBooking();
                     }
                   },
-                  child:
-                  isLoading
+                  child: isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
                       : Text(
                     buttonName,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 16,
                       color: Colors.white,
                       fontFamily: 'Poppins',

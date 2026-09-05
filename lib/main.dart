@@ -3,13 +3,22 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
+import 'package:gocarriage_universal/provider_service/FreightComponentViewProvider.dart';
+import 'package:gocarriage_universal/provider_service/FreightEmiPreviewProvider.dart';
 import 'package:gocarriage_universal/provider_service/accept_reject_price_provider.dart';
 import 'package:gocarriage_universal/provider_service/add_car_provider.dart';
 import 'package:gocarriage_universal/provider_service/add_driver_provider.dart';
+import 'package:gocarriage_universal/provider_service/add_fleet_freight_cost_provider.dart';
+import 'package:gocarriage_universal/provider_service/assign_bulk_vehicle_provider.dart';
 import 'package:gocarriage_universal/provider_service/assign_driver_provider.dart';
 import 'package:gocarriage_universal/provider_service/assign_vehicle_driver_provider.dart';
 import 'package:gocarriage_universal/provider_service/audio_provider.dart';
 import 'package:gocarriage_universal/provider_service/bottom_navigation_provider.dart';
+import 'package:gocarriage_universal/provider_service/corprote_booking_activity.dart';
+import 'package:gocarriage_universal/provider_service/corprote_booking_dashboard.dart';
+import 'package:gocarriage_universal/provider_service/corprote_me_service.dart';
+import 'package:gocarriage_universal/provider_service/corprote_offer.dart';
+import 'package:gocarriage_universal/provider_service/create_corporate_provider.dart';
 import 'package:gocarriage_universal/provider_service/delete_vehicle_provider.dart';
 import 'package:gocarriage_universal/provider_service/distance_provider.dart';
 import 'package:gocarriage_universal/provider_service/draft_vehicle_provider.dart';
@@ -19,8 +28,13 @@ import 'package:gocarriage_universal/provider_service/fare_calculate_provider.da
 import 'package:gocarriage_universal/provider_service/fetch_image_url_provider.dart';
 import 'package:gocarriage_universal/provider_service/file_upload_provider.dart';
 import 'package:gocarriage_universal/provider_service/fleet_subscriptions_provider.dart';
+import 'package:gocarriage_universal/provider_service/fleet_vehicle_list_provider.dart';
 import 'package:gocarriage_universal/provider_service/forgot_password_provider.dart';
 import 'package:gocarriage_universal/provider_service/forgot_verify_otp_provider.dart';
+import 'package:gocarriage_universal/provider_service/freight_componet_view_model_by_provider.dart';
+import 'package:gocarriage_universal/provider_service/freight_emi_default_provider.dart';
+import 'package:gocarriage_universal/provider_service/freight_vehicle_provider.dart';
+import 'package:gocarriage_universal/provider_service/master_freight_post_provider.dart';
 import 'package:gocarriage_universal/provider_service/near_by_vehicle_provider.dart';
 import 'package:gocarriage_universal/provider_service/operator_permission_list_provider.dart';
 import 'package:gocarriage_universal/provider_service/operator_profile_update_provider.dart';
@@ -40,10 +54,12 @@ import 'package:gocarriage_universal/provider_service/search_driver_provider.dar
 import 'package:gocarriage_universal/provider_service/send_otp_provider.dart';
 import 'package:gocarriage_universal/provider_service/state_provider.dart';
 import 'package:gocarriage_universal/provider_service/subscriptions_owner_list_provider.dart';
+import 'package:gocarriage_universal/provider_service/tender_booking_service.dart';
 import 'package:gocarriage_universal/provider_service/transactions_history_provider.dart';
 import 'package:gocarriage_universal/provider_service/upload_vehicle_documents_bulk_provider.dart';
 import 'package:gocarriage_universal/provider_service/vehicle_brands_provider.dart';
 import 'package:gocarriage_universal/provider_service/vehicle_category_by.dart';
+import 'package:gocarriage_universal/provider_service/vehicle_class_provider.dart';
 import 'package:gocarriage_universal/provider_service/vehicle_details_provider.dart';
 import 'package:gocarriage_universal/provider_service/vehicle_documents_bulk_provider.dart';
 import 'package:gocarriage_universal/provider_service/vehicle_model_provider.dart';
@@ -157,6 +173,9 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => VehicleDocumentsBulkProvider()),
         ChangeNotifierProvider(create: (_) => DriverBookingHistoryFullProvider()),
         ChangeNotifierProvider(create: (_) => OperatorProfileUpdateProvider()),
+        ChangeNotifierProvider(create: (_) => TenderBookingService()),
+        ChangeNotifierProvider(create: (_) => FleetVehicleListProvider()),
+        ChangeNotifierProvider(create: (_) => AssignBulkVehicleProvider()),
         ChangeNotifierProvider(
           create: (_) => OwnerBookingRequestListProvider(),
         ),
@@ -186,6 +205,21 @@ Future<void> main() async {
               ),
         ),
         ChangeNotifierProvider(create: (_) => AudioProvider()),
+
+        ChangeNotifierProvider(create: (_) => CorproteBookingDashboard()),
+        ChangeNotifierProvider(create: (_) => CorproteBookingActivity()),
+        ChangeNotifierProvider(create: (_) => CorproteMeService()),
+        ChangeNotifierProvider(create: (_) => CorproteOffer()),
+        ChangeNotifierProvider(create: (_) => CreateCorporateProvider()),
+        ChangeNotifierProvider(create: (_) => FreightVehicleProvider()),
+        ChangeNotifierProvider(create: (_) => FreightEmiDefaultProvider()),
+        ChangeNotifierProvider(create: (_) => FreightEmiPreviewProvider()),
+        ChangeNotifierProvider(create: (_) => MasterFreightPostProvider()),
+        ChangeNotifierProvider(create: (_) => Freightcomponentviewprovider()),
+        ChangeNotifierProvider(create: (_) => FreightComponetViewModelByProvider()),
+        ChangeNotifierProvider(create: (_) => AddFleetFreightCostProvider()),
+        ChangeNotifierProvider(create: (_) => VehicleClassProvider()),
+
       ],
       child: const MyApp(),
     ),

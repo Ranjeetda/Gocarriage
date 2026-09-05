@@ -9,7 +9,7 @@ import '../../resource/Utils.dart';
 import '../../resource/app_colors.dart';
 import '../../resource/image_paths.dart';
 import '../dialogBox/login_register_dialog.dart';
-import 'customer_home_screen.dart';
+import 'book_vehicle_screen.dart';
 import 'history_screen.dart';
 import '../commanScreen/menu_screen.dart';
 
@@ -33,7 +33,7 @@ class _DriverServiceScreen
   var _selectedValue;
 
   final List<Widget> _screens = [
-    CustomerHomeScreen(),
+    BookVehicleScreen(),
     HistoryScreen(),
     MenuScreen(),
   ];

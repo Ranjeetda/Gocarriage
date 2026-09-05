@@ -695,7 +695,7 @@ class _PersonalStep extends StatelessWidget {
           CommonTextField(
             hint: 'Enter WhatsApp number',
             controller: whatsappController,
-            icon: FontAwesomeIcons.whatsapp,
+            icon: FontAwesomeIcons.whatsapp.data,
             label: 'WhatsApp Number',
             onChanged: onChanged,
           ),
@@ -722,7 +722,7 @@ class _PersonalStep extends StatelessWidget {
         CommonTextField(
           hint: 'Enter address line 1',
           controller: addressController,
-          icon: FontAwesomeIcons.locationDot,
+          icon: FontAwesomeIcons.locationDot.data,
           isRequired: true,
           label: 'Address Line 1',
           onChanged: onChanged,
@@ -730,7 +730,7 @@ class _PersonalStep extends StatelessWidget {
         CommonTextField(
           hint: 'Enter address line 2',
           controller: addressLine2Controller,
-          icon: FontAwesomeIcons.locationDot,
+          icon: FontAwesomeIcons.locationDot.data,
           label: 'Address Line 2',
           onChanged: onChanged,
         ),
@@ -745,7 +745,7 @@ class _PersonalStep extends StatelessWidget {
         CommonTextField(
           hint: 'Enter city',
           controller: cityController,
-          icon: FontAwesomeIcons.city,
+          icon: FontAwesomeIcons.city.data,
           isRequired: true,
           label: 'City',
           onChanged: onChanged,

@@ -27,6 +27,7 @@ class AppColors extends MaterialColor {
   static const snackBarGreen = Color(0xff2dca73);
   static const darkBlue = Color(0xff171a37);
   static const darkkBlue = Color(0xff154c79);
+  static const offerCard = Color(0xfffff1f2);
 
 
 

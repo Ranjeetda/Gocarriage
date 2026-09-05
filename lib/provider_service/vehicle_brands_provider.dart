@@ -18,12 +18,12 @@ class VehicleBrandsProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchBrands() async {
+  Future<void> fetchBrands(String brand) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      final response = await http.get(Uri.parse(URLS.vehicleBrand));
+      final response = await http.get(Uri.parse(URLS.vehicleBrand+brand));
       final data = json.decode(response.body);
 
       if (response.statusCode == 200 && data['success'] == true) {

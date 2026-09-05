@@ -857,7 +857,7 @@ class _OperatorProfileScreen extends State<OperatorProfileScreen> {
                       textField(
                         "Whatsapp Number",
                         _whatsappController,
-                        FontAwesomeIcons.whatsapp,
+                        FontAwesomeIcons.whatsapp.data,
                       ),
                     ],
                     const SizedBox(height: 10),

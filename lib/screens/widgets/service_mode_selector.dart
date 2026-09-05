@@ -48,7 +48,7 @@ class _ServiceModeSelectorState extends State<ServiceModeSelector> {
           ),
         ),
         const SizedBox(width: 8),
-        // International tab (distinct outlined style)
+        // International tab
         _intlTab(),
       ],
     );
@@ -61,28 +61,39 @@ class _ServiceModeSelectorState extends State<ServiceModeSelector> {
         onTap: () => _select(mode),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 6),
+          padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
           decoration: BoxDecoration(
             color: active ? _blue : Colors.transparent,
             borderRadius: BorderRadius.circular(11),
             boxShadow: active
-                ? [BoxShadow(color: _blue.withOpacity(0.28), blurRadius: 10, offset: const Offset(0, 4))]
+                ? [
+              BoxShadow(
+                color: _blue.withOpacity(0.28),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              )
+            ]
                 : null,
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 16, color: active ? Colors.white : _idle),
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700,
-                  color: active ? Colors.white : _idle,
+          // FittedBox scales the whole content down so text stays fully visible
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 16, color: active ? Colors.white : _idle),
+                const SizedBox(width: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: active ? Colors.white : _idle,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -95,25 +106,29 @@ class _ServiceModeSelectorState extends State<ServiceModeSelector> {
       onTap: () => _select(ServiceMode.international),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 12),
+        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 10),
         decoration: BoxDecoration(
           color: active ? _navy : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: active ? _navy : _border, width: 1.5),
         ),
-        child: Row(
-          children: [
-            Icon(Icons.public_rounded, size: 17, color: active ? Colors.white : _idle),
-            const SizedBox(width: 5),
-            Text(
-              'International',
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-                color: active ? Colors.white : _idle,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.public_rounded, size: 16, color: active ? Colors.white : _idle),
+              const SizedBox(width: 4),
+              Text(
+                'International',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: active ? Colors.white : _idle,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

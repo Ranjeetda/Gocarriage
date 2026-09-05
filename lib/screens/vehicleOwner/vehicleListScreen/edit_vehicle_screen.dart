@@ -90,7 +90,7 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
         context,
         listen: false,
       );
-      await provider.fetchBrands();
+      await provider.fetchBrands('');
     });
     if (widget.mVehicleId != null) {
       isUpdate = true;

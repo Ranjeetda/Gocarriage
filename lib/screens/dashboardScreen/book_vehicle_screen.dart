@@ -31,14 +31,14 @@ import 'package:http/http.dart' as http;
 import '../widgets/service_mode_selector.dart';
 import '../widgets/status_dialog.dart';
 
-class CustomerHomeScreen extends StatefulWidget {
-  const CustomerHomeScreen({super.key});
+class BookVehicleScreen extends StatefulWidget {
+  const BookVehicleScreen({super.key});
 
   @override
-  State<CustomerHomeScreen> createState() => _CustomerHomeScreenState();
+  State<BookVehicleScreen> createState() => _BookVehicleScreenState();
 }
 
-class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
+class _BookVehicleScreenState extends State<BookVehicleScreen> {
   final fromController = TextEditingController();
   final toController = TextEditingController();
   final pickupDateController = TextEditingController();
@@ -56,6 +56,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   bool isShow = false;
   String? fromLatitude;
   String? fromLongitude;
+
   String? toLatitude;
   String? toLongitude;
 
@@ -1070,7 +1071,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               ),
               TextButton(
                 onPressed: () {
-                  context.read<BottomNavigationProvider>().changeIndex(1);
+                  context.read<BottomNavigationProvider>().changeIndex(2);
                 },
                 child: const Text(
                   'View All',
@@ -1085,18 +1086,18 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             child: ListView.builder(
               itemCount: rides.length,
               itemBuilder: (context, index) {
-                final result = Utils.convertMillisecondsToDateAndTime(
+              /*  final result = Utils.convertMillisecondsToDateAndTime(
                   int.parse(rides[index]['default_booking_hour'].toString()),
                 );
 
                 String mDate = result['date'].toString();
-                String mTime = result['time'].toString();
+                String mTime = result['time'].toString();*/
 
                 return _recentBookingTile(
                   from: rides[index]['fromLocation']['address'],
                   to: rides[index]['toLocation']['address'],
-                  date: mDate,
-                  time: mTime,
+                  date: '--',
+                  time: '--',
                   status: rides[index]['status'],
                   price: "₹${rides[index]['estimated_price'] ?? '--'}",
                 );
@@ -1353,7 +1354,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       child: GooglePlaceAutoCompleteTextField(
                         textEditingController: searchController,
                         focusNode: searchFocusNode,
-                        googleAPIKey: "AIzaSyDpH5LUm09CEiJX4cSan8SDp0vxuVLwCCQ",
+                        googleAPIKey: Utils.googleMapKey,
                         debounceTime: 600,
                         countries: const ["in"],
                         isLatLngRequired: false,

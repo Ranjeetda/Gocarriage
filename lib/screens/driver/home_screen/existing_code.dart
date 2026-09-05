@@ -22,7 +22,7 @@ import '../../../resource/image_paths.dart';
 import '../../../resource/pref_utils.dart';
 import '../widgetScreen/ride_action_buttons.dart';
 
-const String GOOGLE_API_KEY = "AIzaSyDpH5LUm09CEiJX4cSan8SDp0vxuVLwCCQ";
+ String GOOGLE_API_KEY = Utils.googleMapKey;
 
 class ExistingCode extends StatefulWidget {
   const ExistingCode({super.key});

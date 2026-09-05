@@ -48,7 +48,6 @@ class _PriceQuotationsScreen extends State<PriceQuotationsScreen> {
 
     List list = provider.listData ?? [];
 
-
     /// FILTER BY TAB
     if (selectedTab != "all") {
       list =
@@ -92,9 +91,6 @@ class _PriceQuotationsScreen extends State<PriceQuotationsScreen> {
 
     setState(() {
       selectedTab = status;
-      print("RanjeetTest ===========>${selectedTab}");
-      print("RanjeetTest ===========>${provider.listData.length}");
-
       if (status == "all") {
         filteredList = provider.listData ?? [];
       } else {
@@ -229,7 +225,7 @@ class _PriceQuotationsScreen extends State<PriceQuotationsScreen> {
             const SizedBox(height: 12),
 
             /// TABS
-           /* Row(
+            /* Row(
               children: [
                 buildTab("All", "all"),
                 const SizedBox(width: 8),
@@ -243,6 +239,7 @@ class _PriceQuotationsScreen extends State<PriceQuotationsScreen> {
 
             const SizedBox(height: 12),
 */
+
             /// LIST
             Consumer<VechileOwnerFleetsList>(
               builder: (context, provider, _) {
@@ -254,7 +251,9 @@ class _PriceQuotationsScreen extends State<PriceQuotationsScreen> {
 
                 if (filteredList.isEmpty) {
                   return const Expanded(
-                    child: Center(child: Text('No price quotations list available')),
+                    child: Center(
+                      child: Text('No price quotations list available'),
+                    ),
                   );
                 }
 
@@ -333,8 +332,11 @@ class _PriceQuotationsScreen extends State<PriceQuotationsScreen> {
                   ),
                   child: Text(
                     item['status'].toString().toUpperCase(),
-                    style:  TextStyle(
-                      color: item['status']=='pending'?Colors.orange:Colors.green,
+                    style: TextStyle(
+                      color:
+                          item['status'] == 'pending'
+                              ? Colors.orange
+                              : Colors.green,
                       fontWeight: FontWeight.w600,
                       fontSize: 12,
                     ),
@@ -478,13 +480,15 @@ class _PriceQuotationsScreen extends State<PriceQuotationsScreen> {
                 const Icon(Icons.timer_outlined, color: Colors.orange),
                 const SizedBox(width: 8),
 
-                item['status']=='pending'?Text(
-                  "Expires: ${quotation['expires_at']}",
-                  style: const TextStyle(color: Colors.orange),
-                ):Text(
-                  "You accepted this quotation}",
-                  style: const TextStyle(color: Colors.green),
-                ),
+                item['status'] == 'pending'
+                    ? Text(
+                      "Expires: ${quotation['expires_at']}",
+                      style: const TextStyle(color: Colors.orange),
+                    )
+                    : Text(
+                      "You accepted this quotation}",
+                      style: const TextStyle(color: Colors.green),
+                    ),
               ],
             ),
           ),
@@ -492,34 +496,42 @@ class _PriceQuotationsScreen extends State<PriceQuotationsScreen> {
           const SizedBox(height: 14),
 
           /// BUTTONS
-           item['status']=='pending'?Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      _action(item['response_id'].toString(),'reject');
-                    },
-                    child:  isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text("Reject"),
-                  ),
+          item['status'] == 'pending'
+              ? Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          _action(item['response_id'].toString(), 'reject');
+                        },
+                        child:
+                            isLoading
+                                ? const CircularProgressIndicator(
+                                  color: Colors.white,
+                                )
+                                : const Text("Reject"),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          _action(item['response_id'].toString(), 'accept');
+                        },
+                        child:
+                            isLoading
+                                ? const CircularProgressIndicator(
+                                  color: Colors.white,
+                                )
+                                : const Text("Accept"),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      _action(item['response_id'].toString(),'accept');
-                    },
-                    child:  isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text("Accept"),
-                  ),
-                ),
-              ],
-            ),
-          ):SizedBox(),
+              )
+              : SizedBox(),
 
           const SizedBox(height: 14),
         ],

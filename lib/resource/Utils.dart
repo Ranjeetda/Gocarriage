@@ -13,6 +13,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'app_colors.dart';
 
 
@@ -23,7 +24,7 @@ class Utils {
   static bool _isLoadingDialogShowing = false;
   static late Timer toastTimer;
 
-
+  static String googleMapKey ="AIzaSyDpH5LUm09CEiJX4cSan8SDp0vxuVLwCCQ";
 
 //  Checks
   static bool isNotEmpty(String s) {
@@ -147,6 +148,17 @@ class Utils {
     }
   }
 
+  static String format(dynamic value) {
+    if (value == null) return '0.00';
+    final num? n = num.tryParse(value.toString());
+    if (n == null) return value.toString();
+    return n
+        .toStringAsFixed(2)
+        .replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]},',
+    );
+  }
 
   static void hideLoadingDialog() {
     if (_isLoadingDialogShowing) {
@@ -701,6 +713,17 @@ class Utils {
     DateTime parsedDate = DateTime.parse(date);
     return "${parsedDate.year}-${parsedDate.month.toString().padLeft(2, '0')}-${parsedDate.day.toString().padLeft(2, '0')}";
   }
+  static  Future<void> openRechargeUrl(String mUrl) async {
+    final uri = Uri.parse(mUrl);
+    print("openRechargeUrl ============${uri}");
+
+    if (!await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    )) {
+      throw Exception('Could not launch $mUrl');
+    }
+  }
 
   static List<String> getPermitStates(dynamic data) {
     if (data == null) return [];
@@ -727,6 +750,41 @@ class Utils {
 
     return [];
   }
+  static String formatNumber(double value) {
+    if (value >= 100000) {
+      return '${(value / 100000).toStringAsFixed(value % 100000 == 0 ? 0 : 1)}L';
+    }
+    // Simple thousand separator
+    return value
+        .toStringAsFixed(0)
+        .replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]},',
+    );
+  }
+  static String formatRate(dynamic value) {
+    if (value == null) return '0';
+    final num? n = num.tryParse(value.toString());
+    if (n == null) return value.toString();
+
+    if (n % 1 == 0) {
+      return n.toInt().toString();
+    }
+    return n.toStringAsFixed(2);
+  }
+  static final List<String> status = [
+    'Draft',
+    'Pending operator',
+    'Finalized',
+  ];
+  static final List<String> companyTypes = [
+    'Private Limited',
+    'Public Limited',
+    'LLP',
+    'Partnership',
+    'Proprietorship',
+    'Other',
+  ];
   static final List<String> licenseTypes = [
     'LMV - Light Motor Vehicle (Car)',
     'MCWG - Motorcycle with Gear',

@@ -9,6 +9,25 @@ class URLS {
   static const String imageUrlGet = 'https://api.gocarriage.com/api/upload/signed-url?key=';
   static const String versionControl = '$baseUrl/app-version/check?platform=android&build=';
 
+  //////////////////////Corporate Dashboard Api /////////////////////
+  static const String normalCustomerDashboard = '$bookingBaseUrl/booking/dashboard';
+  static const String normalCustomerBookingActivity = '$bookingBaseUrl/booking/activity?limit=';
+  static const String normalCustomerWalletBalance = '$bookingBaseUrl/wallet/balance';
+  static const String normalCustomerTransactionLimit = '$bookingBaseUrl/wallet/transactions?limit=';
+  static const String normalCustomerOfferMe = '$baseUrl/offers/me';
+  static const String normalCustomerCorporateOverview = '$bookingBaseUrl/corporate/overview';
+  static const String normalCustomerCorporateMe = '$baseUrl/corporate/me';
+  static const String normalCustomerCorporate = '$bookingBaseUrl/corporate';
+
+  ////////////////////////Freight Calculator////////////////////////
+ static const String freightVehicleModels ='$baseUrl/freight/owner/models';
+ static const String freightVehicle ='$baseUrl/freight/owner/vehicle';
+ static const String freightFleetModel ='$baseUrl/freight/fleet/model-freight?vehicle_model_id=';
+ static const String freightEmiDefault ='https://management.api.gocarriage.com/api/freight/meta/emi-defaults';
+ static const String freightEmiPreview ='https://management.api.gocarriage.com/api/freight/emi/preview';
+ static const String vehicleModelClass ='$baseUrl/vehicle-models/classes';
+
+
   static const String login = '$baseUrl/auth/login';
   static const String sendOtp = '$baseUrl/phone-otp/send-registration';
   static const String verifyOtp = '$baseUrl/phone-otp/verify-registration';
@@ -64,6 +83,9 @@ class URLS {
   static const String draftVehicle = '$baseUrl/fleets/get-by-id/';
   static const String subscriptionsList = '$baseUrl/fleets/owner-summary/';
   static const String rewardsWallet = '$baseUrl/rewards/me';
+  static const String freightFleetCostsUpload = '$baseUrl/freight/fleet/';
+  static const String tenderBooking = '$bookingBaseUrl/booking/tenders';
+  static const String fleetVehicleList = '$bookingBaseUrl/booking/owners/me/available-fleets?vehicle_type_id=';
 
 
   /////////////Driver/////////////////////

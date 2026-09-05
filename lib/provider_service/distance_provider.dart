@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:gocarriage_universal/resource/Utils.dart';
 import 'package:gocarriage_universal/resource/pref_utils.dart';
 import 'package:http/http.dart' as http;
 
@@ -9,7 +10,7 @@ class DistanceProvider with ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
-  final String apiKey = "AIzaSyDpH5LUm09CEiJX4cSan8SDp0vxuVLwCCQ";
+  final String apiKey = Utils.googleMapKey;
 
   Future<Map<String, String>> fetchDistance(
       String origin, String destination) async {

@@ -3,9 +3,13 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:gocarriage_universal/resource/app_colors.dart';
 import 'package:page_transition/page_transition.dart';
+import 'package:provider/provider.dart';
+import '../../provider_service/profile_provider.dart';
 import '../../resource/Utils.dart';
 import '../../resource/pref_utils.dart';
 import '../auth/login_screen.dart';
+import '../dashboardScreen/corporateScreen/widget/corporate_account_active_card.dart';
+import '../dashboardScreen/corporateScreen/widget/corporate_services_card.dart';
 import '../dashboardScreen/customer_bottom_navigation_bar.dart';
 import '../operatorScreen/operator_profile_screen.dart';
 import '../vehicleOwner/profile_screen/owner_profile_screen.dart';
@@ -22,7 +26,16 @@ class MenuScreen extends StatefulWidget {
 
 class _MenuScreen extends State<MenuScreen> {
   bool isLoading = false;
-
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<ProfileProvider>(
+        context,
+        listen: false,
+      ).fetchProfile('customer', "customer", PrefUtils.getUserId());
+    });
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -148,6 +161,15 @@ class _MenuScreen extends State<MenuScreen> {
                     );
                   }
                 }
+              },
+            ),
+            SizedBox(height: 20,),
+            Consumer<ProfileProvider>(
+              builder: (context, profileProvider, child) {
+                final data = profileProvider.profileData;
+
+                return data['customerType']=='corporate'?
+                CorporateAccountActiveCard(data):CorporateServicesCard();
               },
             ),
           ],

@@ -64,6 +64,18 @@ class PrefUtils {
     return value ?? '';
   }
 
+  static String? setAdminToken(String token) {
+    Prefs.prefs!.setString("admin_token", token);
+    return null;
+  }
+
+  static String getAdminToken() {
+    final String? value = Prefs.prefs!.getString("admin_token");
+    return value ?? '';
+  }
+
+
+
   static String? setProfileImage(String profileImage) {
     Prefs.prefs!.setString("profileImage", profileImage);
     return null;

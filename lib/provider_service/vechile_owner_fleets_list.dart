@@ -63,14 +63,15 @@ class VechileOwnerFleetsList with ChangeNotifier {
           final List fleets = responseData['data']?['fleets'] ?? [];
 
           /// ✅ STRICT SERVICE TYPE FILTER
-          _listData =
-              fleets.where((fleet) {
+          _listData = responseData['data']?['fleets'] ?? [];
+              /*fleets.where((fleet) {
                 final apiType =
                 fleet['service_type']?.toString().trim().toLowerCase();
                 final selectedType = serviceType.trim().toLowerCase();
 
                 return apiType == selectedType;
-              }).toList();
+              }).toList();*/
+
         } else {
           _listData = [];
         }

@@ -571,7 +571,7 @@ class _DriverProfileState extends State<DriverProfile> {
         context,
         listen: false,
       );
-      await provider.fetchBrands();
+      await provider.fetchBrands('');
     });
   }
 
@@ -963,7 +963,7 @@ class _DriverProfileState extends State<DriverProfile> {
             CommonTextField(
               hint: 'Enter address line 1',
               controller: _addressController,
-              icon: FontAwesomeIcons.locationDot,
+              icon: FontAwesomeIcons.locationDot.data,
               isRequired: true,
               label: 'Address Line 1',
               onChanged: () => setState(() {}),
@@ -971,7 +971,7 @@ class _DriverProfileState extends State<DriverProfile> {
             CommonTextField(
               hint: 'Enter Area / Locality',
               controller: _areaController,
-              icon: FontAwesomeIcons.locationDot,
+              icon: FontAwesomeIcons.locationDot.data,
               label: 'Area / Locality',
               onChanged: () => setState(() {}),
             ),
@@ -986,7 +986,7 @@ class _DriverProfileState extends State<DriverProfile> {
             CommonTextField(
               hint: 'Enter city',
               controller: _cityController,
-              icon: FontAwesomeIcons.city,
+              icon: FontAwesomeIcons.city.data,
               isRequired: true,
               label: 'City',
               onChanged: () => setState(() {}),

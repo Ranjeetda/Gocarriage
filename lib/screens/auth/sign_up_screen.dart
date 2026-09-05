@@ -104,8 +104,6 @@ class _SignUpScreen extends State<SignUpScreen> {
   @override
   void initState() {
     super.initState();
-    print("RanjeetTest ============>${PrefUtils.getRole()}");
-    print("RanjeetTest ============>${widget.mMode}");
     if (PrefUtils.getFcmToken().isEmpty) {
       getToken();
     }

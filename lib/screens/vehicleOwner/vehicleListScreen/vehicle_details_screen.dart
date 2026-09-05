@@ -108,6 +108,8 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                 child: Center(child: Text('No vehicle details available')),
               );
             }
+            final documents =
+                provider.vehicleDetailsData?['documents'] as List?;
 
             return Column(
               children: [
@@ -354,6 +356,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                                 );
                               },
                             ),
+
                             const SizedBox(height: 16),
                             _buildComplianceAndSummary(
                               provider.vehicleDetailsData,
@@ -365,13 +368,13 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _buildDocumentsSection(
-                    provider.vehicleDetailsData!['documents'],
-                    isTablet,
-                  ),
-                ),
+
+                documents != null && documents.isNotEmpty
+                    ? Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _buildDocumentsSection(documents, isTablet),
+                    )
+                    : SizedBox(),
                 const SizedBox(height: 32),
               ],
             );
@@ -672,7 +675,11 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
               data['road_tax_paid_period'] ?? '',
               Colors.orange,
             ),
-            _complianceItem("Permit Type", data['permit_type']??'', Colors.orange),
+            _complianceItem(
+              "Permit Type",
+              data['permit_type'] ?? '',
+              Colors.orange,
+            ),
             _complianceItem(
               "Permit From",
               data['permit_from_date'] ?? '',
@@ -690,12 +697,15 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
             ),
             Utils.getPermitStates(data['permit_states']).isNotEmpty
                 ? Wrap(
-              spacing: 8,
-              children: Utils.getPermitStates(data['permit_states']).map<Widget>((state) {
-                return Chip(label: Text(state));
-              }).toList(),
-            )
-                : const SizedBox()
+                  spacing: 8,
+                  children:
+                      Utils.getPermitStates(data['permit_states']).map<Widget>((
+                        state,
+                      ) {
+                        return Chip(label: Text(state));
+                      }).toList(),
+                )
+                : const SizedBox(),
           ],
         ),
       ),
@@ -788,7 +798,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
             ),
             _complianceItem(
               "Weight Category",
-              data['SubscriptionPlan']['weight_category']??"",
+              data['SubscriptionPlan']['weight_category'] ?? "",
               Colors.orange,
             ),
             _complianceItem("Duration", data['duration_type'], Colors.orange),
@@ -835,11 +845,13 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            data['SubscriptionPlan']==null?_complianceItem(
-              "Plan",
-              data['SubscriptionPlan']['name']??'',
-              Colors.orange,
-            ):SizedBox(),
+            data['SubscriptionPlan'] == null
+                ? _complianceItem(
+                  "Plan",
+                  data['SubscriptionPlan']['name'] ?? '',
+                  Colors.orange,
+                )
+                : SizedBox(),
             _complianceItem("Duration", data['duration_type'], Colors.orange),
             _complianceItem("Start Date", data['start_date'], Colors.orange),
             _complianceItem("End Date", data['end_date'], Colors.orange),
@@ -923,12 +935,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
 
       /// 🔹 Prefer ACTIVE document
       final activeDoc = list.firstWhere(
-            (d) =>
-        (d['status'] ?? '')
-            .toString()
-            .toLowerCase()
-            .trim() ==
-            'active',
+        (d) => (d['status'] ?? '').toString().toLowerCase().trim() == 'active',
         orElse: () => list.first,
       );
 

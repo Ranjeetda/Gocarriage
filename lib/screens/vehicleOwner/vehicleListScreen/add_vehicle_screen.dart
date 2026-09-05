@@ -7,17 +7,20 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../provider_service/add_car_provider.dart';
+import '../../../provider_service/add_fleet_freight_cost_provider.dart';
 import '../../../provider_service/draft_vehicle_provider.dart';
 import '../../../provider_service/file_upload_provider.dart';
+import '../../../provider_service/freight_componet_view_model_by_provider.dart';
 import '../../../provider_service/vehicle_brands_provider.dart';
 import '../../../provider_service/vehicle_documents_bulk_provider.dart';
 import '../../../provider_service/vehicle_model_provider.dart';
 import '../../../provider_service/vehicle_type_provider.dart';
 import '../../../resource/app_colors.dart';
 import '../../../resource/pref_utils.dart';
+import '../../widgets/card.dart';
+import '../../widgets/rate_card.dart';
 
 class AddVehicleScreen extends StatefulWidget {
-
   AddVehicleScreen();
 
   @override
@@ -26,7 +29,9 @@ class AddVehicleScreen extends StatefulWidget {
 
 class _AddVehicleScreenState extends State<AddVehicleScreen> {
   int step = 0;
-
+  final Map<String, TextEditingController> _rateControllers = {};
+  final Map<String, bool> _componentEditable = {};
+  String? vehicleFreightId;
   /// CONTROLLERS
   final regNo = TextEditingController();
   final regDate = TextEditingController();
@@ -57,7 +62,9 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       taxFrom,
       taxTo,
       lastPaidDate,
-      fleetId,vehicleTypeId,vehicle_model_id;
+      fleetId,
+      vehicleTypeId,
+      vehicle_model_id;
   List<String> selectedPermitStates = [];
   String? selectedVehicleId;
 
@@ -84,20 +91,31 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   void initState() {
     super.initState();
 
-/*    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final provider = Provider.of<VehicleTypeProvider>(context, listen: false);
-      await provider.fetchVehicleType();
-    });*/
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final provider = Provider.of<VehicleBrandsProvider>(
         context,
         listen: false,
       );
-      await provider.fetchBrands();
+      await provider.fetchBrands('');
     });
   }
 
-
+  @override
+  void dispose() {
+    for (final controller in _rateControllers.values) {
+      controller.dispose();
+    }
+    regNo.dispose();
+    regDate.dispose();
+    vehicleCategoryController.dispose();
+    city.dispose();
+    payload.dispose();
+    chassis.dispose();
+    engine.dispose();
+    insuranceCompany.dispose();
+    policyNo.dispose();
+    super.dispose();
+  }
   /// ================= FUNCTIONS =================
 
   Future<void> pickFile(Function(File) onPicked, int position) async {
@@ -292,7 +310,6 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
   Widget stepItem(String title, int index) {
     bool active = step == index;
-
     return Expanded(
       child: GestureDetector(
         onTap:
@@ -338,293 +355,459 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     }
   }
 
-  /// White Background Card (for Basic Info)
-  Widget cardWhite({required Widget child}) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 16),
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white, // Pure White Background
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.grey.shade300,
-        ), // Optional light border
-      ),
-      child: child,
-    );
-  }
-
   /// ================= BASIC =================
   Widget basicUI() {
     final vehicleModelProvider = Provider.of<VehicleModelProvider>(
       context,
       listen: false,
     );
-    return cardWhite(
+    return Cards(
       child: Column(
         children: [
-          card(
-            child: Column(
-              children: [
-                vehicleField(regNo),
-                gap(),
-                dateField1("Registration Date", regDate),
-                gap(),
-                // Brand Dropdown
-                Consumer<VehicleBrandsProvider>(
-                  builder: (context, provider, _) {
-                    if (provider.isLoading) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
+          vehicleField(regNo),
+          gap(),
+          dateField1("Registration Date", regDate),
+          gap(),
+          // Brand Dropdown
+          Consumer<VehicleBrandsProvider>(
+            builder: (context, provider, _) {
+              if (provider.isLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-                    return Column(
-                      children: [
-                        DropdownButtonFormField<String>(
-                          value: provider.selectedBrand,
-                          decoration: const InputDecoration(
-                            labelText: "Vehicle Brand *",
-                            border: OutlineInputBorder(),
-                          ),
-                          isExpanded: true,
-                          items:
-                              provider.vehicleBrands.map((brand) {
-                                return DropdownMenuItem<String>(
-                                  value: brand,
-                                  child: Text(brand),
-                                );
-                              }).toList(),
-                          onChanged: (value) {
-                            if (value != null) {
-                              provider.setSelectedBrand(value);
-                              brand=value;
-                              vehicleModelProvider.fetchVehicleModel(value);
-                            }
-                          },
+              return Column(
+                children: [
+                  DropdownButtonFormField<String>(
+                    value: provider.selectedBrand,
+                    decoration: const InputDecoration(
+                      labelText: "Vehicle Brand *",
+                      border: OutlineInputBorder(),
+                    ),
+                    isExpanded: true,
+                    items:
+                        provider.vehicleBrands.map((brand) {
+                          return DropdownMenuItem<String>(
+                            value: brand,
+                            child: Text(brand),
+                          );
+                        }).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        provider.setSelectedBrand(value);
+                        brand = value;
+                        vehicleModelProvider.fetchVehicleModel(value);
+                      }
+                    },
+                  ),
+                  SizedBox(height: 16),
+                  Consumer<VehicleModelProvider>(
+                    builder: (context, provider, _) {
+                      if (provider.isLoading) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      return DropdownButtonFormField<Map<String, dynamic>>(
+                        value: provider.selectedModel,
+                        decoration: const InputDecoration(
+                          labelText: "Select Model *",
+                          border: OutlineInputBorder(),
                         ),
-                        SizedBox(height: 10),
-                        Consumer<VehicleModelProvider>(
-                          builder: (context, provider, _) {
-                            if (provider.isLoading) {
-                              return const Center(
-                                child: CircularProgressIndicator(),
-                              );
-                            }
+                        hint: const Text("Select Model"),
+                        isExpanded: true,
 
-                            return DropdownButtonFormField<
-                              Map<String, dynamic>
-                            >(
-                              value: provider.selectedModel,
-                              decoration: const InputDecoration(
-                                labelText: "Select Model *",
-                                border: OutlineInputBorder(),
-                              ),
-                              hint: const Text("Select Model"),
-                              isExpanded: true,
-
-                              items:
-                                  provider.models.map((item) {
-                                    return DropdownMenuItem<
-                                      Map<String, dynamic>
-                                    >(
-                                      value: item, // ✅ FULL OBJECT
-                                      child: Text(item['model']),
-                                    );
-                                  }).toList(),
-
-                              onChanged: (value) {
-                                provider.setSelectedModel(value);
-                                print(
-                                  provider.selectedModel?['model'],
-                                ); // 1217C
-                                vehicle_model_id=provider.selectedModel?['id'].toString();
-                                vehicleTypeId=provider.selectedModel?['category_id'].toString();
-                                model= provider.selectedModel?['model'];
-                                vehicleCategoryController.text=provider.selectedModel?['v_cat'];
-                                payload.text=provider.selectedModel!['payload_capacity_kg'].toString();
-                              },
-                            );
-                          },
-                        ),
-                      ],
-                    );
-                  },
-                ),
-                gap(),
-                text('Vehicle Category *'),
-                field(vehicleCategoryController),
-                text('Payload *'),
-                field(payload),
-
-                /*  Consumer<VehicleTypeProvider>(
-                  builder: (context, provider, _) {
-                    if (provider.isLoading) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    return Column(
-                      children: [
-                        /// 🔹 GROUP DROPDOWN
-                        DropdownButtonFormField<String>(
-                          value: provider.selectedGroup,
-                          decoration: const InputDecoration(
-                            labelText: "Vehicle Category *",
-                            border: OutlineInputBorder(),
-                          ),
-                          isExpanded: true,
-                          items:
-                              provider.vehicleTypes.map((group) {
-                                return DropdownMenuItem<String>(
-                                  value: group.group,
-                                  child: Text(group.group),
-                                );
-                              }).toList(),
-                          onChanged: (value) {
-                            if (value != null) {
-                              provider.setSelectedGroup(value);
-                            }
-                          },
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        /// 🔹 VEHICLE DROPDOWN
-                        DropdownButtonFormField<int>(
-                          value: provider.selectedVehicleId,
-                          decoration: const InputDecoration(
-                            labelText: "Select Name *",
-                            border: OutlineInputBorder(),
-                          ),
-                          hint: Text("Select Name"),
-
-                          isExpanded: true,
-                          items:
-                              provider.selectedVehicleGroup?.options.map((
-                                item,
-                              ) {
-                                return DropdownMenuItem<int>(
-                                  value: item.id,
-                                  child: Text(item.name),
-                                );
-                              }).toList(),
-                          onChanged: (value) async {
-                            provider.setSelectedVehicle(value);
-
-                            if (value != null) {
-                              final selectedItem = provider
-                                  .selectedVehicleGroup
-                                  ?.options
-                                  .firstWhere((e) => e.id == value);
-
-                              payload.text = selectedItem?.name ?? "";
-                              widget.mVehicleId = selectedItem?.id.toString();
-
-                              await Provider.of<VehicleCategoryBy>(
-                                context,
-                                listen: false,
-                              ).fetchVehicleCategryBy(value.toString());
-                            }
-                          },
-                        ),
-                      ],
-                    );
-                  },
-                ),
-                gap(),
-                Consumer<VehicleCategoryBy>(
-                  builder: (context, provider, _) {
-                    if (provider.isLoading) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    return Column(
-                      children: [
-                        /// 🔹 BRAND DROPDOWN
-                        DropdownButtonFormField<String?>(
-                          value: provider.selectedBrand,
-                          decoration: const InputDecoration(
-                            labelText: "Select Brand *",
-                            border: OutlineInputBorder(),
-                          ),
-                          hint: Text("Select Brand *"),
-
-                          isExpanded: true,
-                          items: [
-                            const DropdownMenuItem<String?>(
-                              value: null,
-                              child: Text("Select Brand"),
-                            ),
-                            ...provider.brands.map((brand) {
-                              return DropdownMenuItem<String?>(
-                                value: brand,
-                                child: Text(brand),
-                              );
-                            }),
-                          ],
-                          onChanged: (value) {
-                            provider.setSelectedBrand(value);
-                            brand = value;
-                          },
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        /// 🔹 MODEL DROPDOWN
-                        DropdownButtonFormField<String?>(
-                          value: provider.selectedModel,
-                          decoration: const InputDecoration(
-                            labelText: "Select Model *",
-                            border: OutlineInputBorder(),
-                          ),
-                          hint: Text("Select Model *"),
-                          isExpanded: true,
-                          items: [
-                            const DropdownMenuItem<String?>(
-                              value: null,
-                              child: Text("Select Model"),
-                            ),
-                            ...provider.filteredModels.map((item) {
-                              return DropdownMenuItem<String?>(
-                                value: item['model'],
-                                // 🔁 change if key differs
+                        items:
+                            provider.models.map((item) {
+                              return DropdownMenuItem<Map<String, dynamic>>(
+                                value: item, // ✅ FULL OBJECT
                                 child: Text(item['model']),
                               );
-                            }),
+                            }).toList(),
+
+                        onChanged: (value) {
+                          provider.setSelectedModel(value);
+                          print(provider.selectedModel?['model']); // 1217C
+                          vehicle_model_id =
+                              provider.selectedModel?['id'].toString();
+                          vehicleTypeId =
+                              provider.selectedModel?['category_id'].toString();
+                          model = provider.selectedModel?['model'];
+                          vehicleCategoryController.text =
+                              provider.selectedModel?['v_cat'];
+                          payload.text =
+                              provider.selectedModel!['payload_capacity_kg']
+                                  .toString();
+
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            context
+                                .read<FreightComponetViewModelByProvider>()
+                                .fetchFreightComponent(
+                                  modelId:
+                                      provider.selectedModel!['id'].toString(),
+                                  modelName: provider.selectedModel?['model'],
+                                );
+                          });
+                        },
+                      );
+                    },
+                  ),
+                ],
+              );
+            },
+          ),
+          gap(),
+          text('Vehicle Category *'),
+          field(vehicleCategoryController),
+          text('Payload *'),
+          field(payload),
+          gap(),
+          text("Service City *"),
+          field(city),
+          gap(),
+          text("Status"),
+          dropdown(
+            "Status",
+            ["Active", "Under Maintenance"],
+            status,
+            (v) => setState(() {
+              status = v;
+              mStatus = v;
+            }),
+          ),
+          gap(),
+          radioRow(
+            "Service Type *",
+            ["Within City", "Outside City"],
+            service,
+            (v) => setState(() => service = v),
+          ),
+          gap(),
+
+          Consumer<FreightComponetViewModelByProvider>(
+            builder: (context, provider, _) {
+              if (provider.isLoading) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              if (provider.freightData.isEmpty) {
+                return const SizedBox();
+              }
+
+              // ---------------------------------------------------------
+              // GET VEHICLE FREIGHT ID
+              // ---------------------------------------------------------
+              final Map<String, dynamic>? vehicleFreight =
+                  provider.freightData['vehicle_freight']
+                      as Map<String, dynamic>?;
+
+              vehicleFreightId = vehicleFreight?['id']?.toString() ?? '';
+
+              // ---------------------------------------------------------
+              // COMPONENTS
+              // ---------------------------------------------------------
+              final List<dynamic> components =
+                  provider.freightData['components'] ?? [];
+
+              return Column(
+                children: [
+                  Card(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              '🧮 Freight / Costs for this vehicle',
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            const Text(
+                              'Adjust the editable cost rows for this truck. Saved when you add the vehicle.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF6B7280),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: RateCard(
+                                    title: 'FIXED / DAY',
+                                    value:
+                                        '₹${Utils.format(provider.freightData['vehicle_freight']['base_fixed_per_day'])}',
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: RateCard(
+                                    title: 'PER KM',
+                                    value:
+                                        '₹${Utils.format(provider.freightData['vehicle_freight']['base_per_km'])}',
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: RateCard(
+                                    title: 'PER TON',
+                                    value:
+                                        '₹${Utils.format(provider.freightData['vehicle_freight']['base_per_ton'])}',
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: RateCard(
+                                    title: 'FLAT / TRIP',
+                                    value:
+                                        '₹${Utils.format(provider.freightData['vehicle_freight']['base_flat_per_trip'])}',
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
-                          onChanged:
-                              provider.selectedBrand == null
-                                  ? null // disable if no brand
-                                  : (value) {
-                                    provider.setSelectedModel(value);
-                                    model = value;
-                                  },
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Header
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 4,
+                          ),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF9FAFB),
+                            border: Border(
+                              bottom: BorderSide(color: Color(0xFFE5E7EB)),
+                            ),
+                          ),
+                          child: const Row(
+                            children: [
+                              Expanded(
+                                flex: 4,
+                                child: Text('COMPONENT', style: _headerStyle),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Text('UNIT', style: _headerStyle),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Text('ADMIN RATE', style: _headerStyle),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  'YOUR RATE',
+                                  style: _headerStyle,
+                                  textAlign: TextAlign.right,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
-                    );
-                  },
-                ),*/
-                gap(),
-                text("Service City *"),
-                field(city),
-                gap(),
-                text("Status"),
-                dropdown(
-                  "Status",
-                  ["Active", "Under Maintenance"],
-                  status,
-                  (v) => setState(() {
-                    status = v;
-                    mStatus = v;
-                  }),
-                ),
-                gap(),
-                radioRow(
-                  "Service Type *",
-                  ["Within City", "Outside City"],
-                  service,
-                  (v) => setState(() => service = v),
-                ),
-              ],
-            ),
+                    ),
+                  ),
+
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: components.length,
+                    separatorBuilder:
+                        (_, __) =>
+                            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                    itemBuilder: (context, index) {
+                      final item = components[index];
+                      final String id =
+                          item['id']?.toString() ??
+                          item['component_master_id']?.toString() ??
+                          '';
+                      final String name = item['name']?.toString() ?? '';
+                      final String unit = item['rate_unit']?.toString() ?? '';
+                      _componentEditable[id] =
+                          (item['is_operator_editable'] == 1 ||
+                              item['is_operator_editable'] == true);
+
+                      final bool isEditable = _componentEditable[id] ?? false;
+
+                      String adminRate = item['admin_rate']?.toString() ?? '0';
+                      if (index == 0 &&
+                          provider.freightData['vehicle_freight']['emi_per_day'] != null) {
+                        adminRate = provider
+                            .freightData['vehicle_freight']['emi_per_day']
+                            ?.toString() ??
+                            adminRate;
+                      }
+
+                      // Controller already exists from _ensureRateControllers
+                      final controller = _rateControllers[id];
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 4,
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // COMPONENT
+                            Expanded(
+                              flex: 4,
+                              child: Text(
+                                name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 14,
+                                  color: Color(0xFF1F2937),
+                                ),
+                              ),
+                            ),
+
+                            // UNIT
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                unit.replaceAll('_', ' '),
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF6B7280),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+
+                            // ADMIN RATE
+                            Expanded(
+                              flex: 2,
+                              child: Align(
+                                alignment: Alignment.center,
+                                child:
+                                    index == 0
+                                        ? Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(
+                                              Icons.calculate_outlined,
+                                              size: 16,
+                                              color: Color(0xFF6B7280),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Flexible(
+                                              child: Text(
+                                                'EMI ₹${Utils.formatRate(adminRate)}',
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                  color: Color(0xFF6B7280),
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        )
+                                        : Text(
+                                          '₹${Utils.formatRate(adminRate)}',
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            color: Color(0xFF6B7280),
+                                          ),
+                                          textAlign: TextAlign.right,
+                                        ),
+                              ),
+                            ),
+                            // YOUR RATE
+                            Expanded(
+                              flex: 2,
+                              child: Align(
+                                alignment: Alignment.centerRight,
+                                child:
+                                    isEditable
+                                        ? SizedBox(
+                                          width: 90,
+                                          child: TextFormField(
+                                            controller: _rateControllers[id],
+                                            keyboardType:
+                                                const TextInputType.numberWithOptions(
+                                                  decimal: true,
+                                                ),
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                            decoration: InputDecoration(
+                                              isDense: true,
+                                              contentPadding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 10,
+                                                    vertical: 8,
+                                                  ),
+                                              border: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                borderSide: const BorderSide(
+                                                  color: Color(0xFFE5E7EB),
+                                                ),
+                                              ),
+                                              enabledBorder: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                borderSide: const BorderSide(
+                                                  color: Color(0xFFE5E7EB),
+                                                ),
+                                              ),
+                                              focusedBorder: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                borderSide: const BorderSide(
+                                                  color: Color(0xFF2563EB),
+                                                  width: 1.5,
+                                                ),
+                                              ),
+                                            ),
+                                            // ❌ NO onChanged that creates a new controller
+                                            onEditingComplete: () {
+                                              final formatted =
+                                              Utils.formatRate(controller?.text);
+                                              controller?.text = formatted;
+                                              controller?.selection = TextSelection.collapsed(
+                                                  offset: formatted.length);
+                                            },
+                                          ),
+                                        )
+                                        : Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(
+                                              Icons.lock_outline,
+                                              size: 14,
+                                              color: Color(0xFF9CA3AF),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              'fixed',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: Colors.grey.shade500,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -739,184 +922,173 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   }
 
   Widget vehicleUI() {
-    return cardWhite(
+    return Cards(
       child: Column(
         children: [
-          card(
-            child: Column(
-              children: [
-                dropdown(
-                  "Permit Type *",
-                  ["National permit", "State permit", "No permit"],
-                  permit,
-                  (v) {
-                    setState(() {
-                      permit = v;
-                      if (v != "State permit") {
-                        selectedPermitStates.clear();
-                      }
-                    });
-                  },
+          dropdown(
+            "Permit Type *",
+            ["National permit", "State permit", "No permit"],
+            permit,
+            (v) {
+              setState(() {
+                permit = v;
+                if (v != "State permit") {
+                  selectedPermitStates.clear();
+                }
+              });
+            },
+          ),
+          gap(),
+          // === MULTI-SELECT SEARCHABLE STATES ===
+          if (permit == "State permit") ...[
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                "Select States *",
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () => _showMultiSelectStateBottomSheet(),
+              child: Container(
+                padding: EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                gap(),
-                // === MULTI-SELECT SEARCHABLE STATES ===
-                if (permit == "State permit") ...[
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      "Select States *",
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  GestureDetector(
-                    onTap: () => _showMultiSelectStateBottomSheet(),
-                    child: Container(
-                      padding: EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        selectedPermitStates.isEmpty
+                            ? "Select States"
+                            : selectedPermitStates.join(", "),
+                        style: TextStyle(
+                          color:
                               selectedPermitStates.isEmpty
-                                  ? "Select States"
-                                  : selectedPermitStates.join(", "),
+                                  ? Colors.grey
+                                  : Colors.black,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Icon(Icons.arrow_drop_down, color: Colors.grey),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          gap(),
+          dropdown(
+            "Fuel Type *",
+            ["Diesel", "Petrol", "CNG", "Electric"],
+            fuel,
+            (v) => setState(() => fuel = v),
+          ),
+          gap(),
+          text("Payload (kg) *"),
+          field(payload),
+          gap(),
+          text("RTO / Registered State"),
+          field(city),
+          gap(),
+          text("Chassis Number"),
+          field(chassis),
+          gap(),
+          text("Engine Number"),
+          field(engine),
+          gap(),
+          radioRow(
+            "Is Price Negotiable?",
+            ["Yes", "No"],
+            isNegotiable,
+            (v) => setState(() {
+              isNegotiable = v;
+            }),
+          ),
+          gap(),
+
+          radioRow(
+            "Road Tax Paid?",
+            ["Yes", "No"],
+            roadTax,
+            (v) => setState(() {
+              roadTax = v;
+              // selectedTaxPeriod = null;
+            }),
+          ),
+          gap(),
+          if (roadTax == 'Yes') ...[
+            const SizedBox(height: 12),
+
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                "Tax Period",
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            Row(
+              children:
+                  ["Monthly", "Half-Yearly", "Yearly", "Custom"].map((e) {
+                    selected = selectedTaxPeriod == e;
+
+                    return Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            selectedTaxPeriod = e;
+                          });
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.fromLTRB(4, 0, 0, 0),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color:
+                                selected! ? Colors.teal.shade100 : Colors.white,
+                            border: Border.all(
+                              color: selected! ? Colors.teal : Colors.grey,
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Center(
+                            child: Text(
+                              e,
                               style: TextStyle(
-                                color:
-                                    selectedPermitStates.isEmpty
-                                        ? Colors.grey
-                                        : Colors.black,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
                               ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          Icon(Icons.arrow_drop_down, color: Colors.grey),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
-                ],
-                gap(),
-                dropdown(
-                  "Fuel Type *",
-                  ["Diesel", "Petrol", "CNG", "Electric"],
-                  fuel,
-                  (v) => setState(() => fuel = v),
-                ),
-                gap(),
-                text("Payload (kg) *"),
-                field(payload),
-                gap(),
-                text("RTO / Registered State"),
-                field(city),
-                gap(),
-                text("Chassis Number"),
-                field(chassis),
-                gap(),
-                text("Engine Number"),
-                field(engine),
-                gap(),
-                radioRow(
-                  "Is Price Negotiable?",
-                  ["Yes", "No"],
-                  isNegotiable,
-                  (v) => setState(() {
-                    isNegotiable = v;
-                  }),
-                ),
-                gap(),
+                    );
+                  }).toList(),
+            ),
+          ],
 
-                radioRow(
-                  "Road Tax Paid?",
-                  ["Yes", "No"],
-                  roadTax,
-                  (v) => setState(() {
-                    roadTax = v;
-                    // selectedTaxPeriod = null;
-                  }),
-                ),
-                gap(),
-                if (roadTax == 'Yes') ...[
-                  const SizedBox(height: 12),
-
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      "Tax Period",
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  Row(
-                    children:
-                        ["Monthly", "Half-Yearly", "Yearly", "Custom"].map((e) {
-                          selected = selectedTaxPeriod == e;
-
-                          return Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  selectedTaxPeriod = e;
-                                });
-                              },
-                              child: Container(
-                                margin: const EdgeInsets.fromLTRB(4, 0, 0, 0),
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color:
-                                      selected!
-                                          ? Colors.teal.shade100
-                                          : Colors.white,
-                                  border: Border.all(
-                                    color:
-                                        selected! ? Colors.teal : Colors.grey,
-                                  ),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    e,
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                  ),
-                ],
-
-                if (roadTax == 'Yes' && selectedTaxPeriod == "Custom") ...[
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: date("From", taxFrom, (v) => taxFrom = v),
-                      ),
-                      gapW(),
-                      Expanded(child: date("To", taxTo, (v) => taxTo = v)),
-                    ],
-                  ),
-                ],
-                if (roadTax == 'Yes' &&
-                    selectedTaxPeriod != null &&
-                    selectedTaxPeriod != "Custom") ...[
-                  const SizedBox(height: 12),
-                  date("Last Paid Date", lastPaidDate, (v) => lastPaidDate = v),
-                ],
-                buildColorPicker(),
+          if (roadTax == 'Yes' && selectedTaxPeriod == "Custom") ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(child: date("From", taxFrom, (v) => taxFrom = v)),
+                gapW(),
+                Expanded(child: date("To", taxTo, (v) => taxTo = v)),
               ],
             ),
-          ),
+          ],
+          if (roadTax == 'Yes' &&
+              selectedTaxPeriod != null &&
+              selectedTaxPeriod != "Custom") ...[
+            const SizedBox(height: 12),
+            date("Last Paid Date", lastPaidDate, (v) => lastPaidDate = v),
+          ],
+          buildColorPicker(),
         ],
       ),
     );
@@ -925,7 +1097,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   /// ================= Documents =================
 
   Widget documentUI() {
-    return cardWhite(
+    return Cards(
       child: Column(
         children: [
           doc(
@@ -952,7 +1124,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
             (v) => permitFrom = v,
             (v) => permitTo = v,
           ),
-          card(
+          Card(
             child: Column(
               children: [
                 text("Insurance Company"),
@@ -985,16 +1157,6 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   }
 
   /// ================= COMMON UI =================
-  Widget card({required Widget child}) {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: child,
-    );
-  }
 
   Widget field(TextEditingController c) {
     return TextField(
@@ -1108,7 +1270,6 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
           File pickedFile = File(r.files.single.path!);
           onPick(pickedFile); // ✅ update UI
           _fileUpload('vehicle-documents', pickedFile, fileType, 0);
-          print("RanjeetTest============> IFFFFFFFFFF Undar ${fileType}");
         }
       },
       child: Container(
@@ -1156,10 +1317,8 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     int position,
   ) async {
     if (fileName == null) return;
-    print("RanjeetTest============> callll uper _fileUpload ${"_fileUpload"}");
 
     showUploadingDialog(context);
-    print("RanjeetTest============> callll _fileUpload ${"_fileUpload"}");
 
     final response = await Provider.of<FileUploadProvider>(
       context,
@@ -1301,7 +1460,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     Function(String) setFrom,
     Function(String) setTo,
   ) {
-    return card(
+    return Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1393,6 +1552,10 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                             CircleAvatar(
                               radius: 22,
                               backgroundColor: item.color,
+                              foregroundColor:
+                                  item.color == Colors.white
+                                      ? Colors.black
+                                      : Colors.white,
                               child:
                                   isSelected
                                       ? const Icon(
@@ -1401,10 +1564,6 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                                         size: 18,
                                       )
                                       : null,
-                              foregroundColor:
-                                  item.color == Colors.white
-                                      ? Colors.black
-                                      : Colors.white,
                             ),
                             const SizedBox(height: 4),
                             Text(
@@ -1514,6 +1673,52 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
   /// ================= SUBMIT & PRINT ALL DATA =================
 
+  Future<void> uploadFleetCost(String fleetId) async {
+    final List<Map<String, dynamic>> components = [];
+
+    _rateControllers.entries.toList().asMap().forEach((index, entry) {
+      if (index == 0) return;
+
+      final id = entry.key;
+      final controller = entry.value;
+      final rate = double.tryParse(controller.text) ?? 0.0;
+
+      components.add({"component_id": id, "operator_rate": rate});
+    });
+
+    final Map<String, dynamic> body = {
+      "vehicle_freight_id": vehicleFreightId,
+      "components": components,
+    };
+
+    debugPrint("========================================");
+    debugPrint("📤 FULL SAVE BODY:");
+    debugPrint(const JsonEncoder.withIndent('  ').convert(body));
+    debugPrint("========================================");
+
+    /*final result = await Provider.of<AddFleetFreightCostProvider>(
+      context,
+      listen: false,
+    ).uploadFreightVehicleData(
+      body: body,
+      fleetId: fleetId.toString(),
+    );
+
+    if (!mounted) return;
+
+    final bool success = result?['success'] == true;
+    final message = result?['message']?.toString() ??
+        (success ? "Saved successfully" : "Something went wrong");
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: success ? Colors.green : Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );*/
+  }
+
   Future<void> submit() async {
     final provider = Provider.of<AddCarProvider>(context, listen: false);
 
@@ -1559,7 +1764,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                 : null,
         brand: brand,
         model: model,
-        vehicle_model_id:vehicle_model_id,
+        vehicle_model_id: vehicle_model_id,
         pollution_certificates: jsonEncode(
           pollutionList
               .map(
@@ -1596,6 +1801,9 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
           isUpdate = true;
           vehicleTypeId = response?['data']?['VehicleType']['id']?.toString();
           fleetId = response?['data']?['id']?.toString();
+          if(step==0) {
+            uploadFleetCost(fleetId!);
+          }
         });
       } else {
         isUpdate = false;
@@ -1742,12 +1950,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       body: Column(
         children: [
           stepHeader(),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(10, 0, 10, 0),
-              child: body(),
-            ),
-          ),
+          Expanded(child: SingleChildScrollView(child: body())),
           Padding(padding: EdgeInsets.all(16), child: bottom()),
         ],
       ),
@@ -1769,3 +1972,10 @@ class VehicleColor {
 
   VehicleColor(this.name, this.color);
 }
+
+const _headerStyle = TextStyle(
+  fontSize: 11,
+  fontWeight: FontWeight.w600,
+  color: Color(0xFF6B7280),
+  letterSpacing: 0.3,
+);

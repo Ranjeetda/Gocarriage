@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gocarriage_universal/resource/Utils.dart';
 import 'package:gocarriage_universal/screens/vehicleOwner/subscriptionsScreen/subscription_details_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -160,7 +161,7 @@ class _SubscriptionsScreen extends State<SubscriptionsScreen> {
                         "https://vehicleowner.gocarriage.com/plans?"
                         "fleet_id=${PrefUtils.getUserId()}"
                         "&vnum=${data['vehicle_number']}";
-                    openRechargeUrl(url);
+                    Utils.openRechargeUrl(url);
                   },
                   child: const Text(
                     "Upgrade",
@@ -458,7 +459,7 @@ class _SubscriptionsScreen extends State<SubscriptionsScreen> {
                                   "https://gocarriage.com/wallet/recharge?"
                                       "fleet_id=${PrefUtils.getUserId()}"
                                       "&vnum=${vechilNumber}";
-                                  openRechargeUrl(url);
+                                  Utils.openRechargeUrl(url);
                                 },
                                 icon: const Icon(
                                   Icons.bolt,
@@ -517,15 +518,4 @@ class _SubscriptionsScreen extends State<SubscriptionsScreen> {
     Navigator.push(context, MaterialPageRoute(builder: (context) => screen));
   }
 
-  Future<void> openRechargeUrl(String mUrl) async {
-    final uri = Uri.parse(mUrl);
-    print("openRechargeUrl ============${uri}");
-
-    if (!await launchUrl(
-      uri,
-      mode: LaunchMode.externalApplication,
-    )) {
-      throw Exception('Could not launch $mUrl');
-    }
-  }
 }

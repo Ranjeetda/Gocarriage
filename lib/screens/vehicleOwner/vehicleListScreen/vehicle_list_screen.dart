@@ -6,7 +6,9 @@ import '../../../provider_service/delete_vehicle_provider.dart';
 import '../../../provider_service/vechile_owner_fleets_list.dart';
 import '../../../resource/Utils.dart';
 import '../../../resource/image_paths.dart';
+import '../../../resource/pref_utils.dart';
 import '../../dialogBox/wallet_dialog.dart';
+import '../freightCalculatorScreen/trip_cost_preview_screen.dart';
 import 'add_vehicle_screen.dart';
 import 'edit_vehicle_screen.dart';
 import 'vehicle_details_screen.dart';
@@ -238,341 +240,668 @@ class _VehicleListScreen extends State<VehicleListScreen> {
                               itemCount: filteredList.length,
                               itemBuilder: (context, index) {
                                 final vehicle = filteredList[index];
+                                final reward = vehicle['reward_summary'] ?? {};
+
+                                String payload = (double.tryParse(
+                                          vehicle['payload']?.toString() ?? "0",
+                                        ) ??
+                                        0)
+                                    .toStringAsFixed(0);
+
+                                bool docsPending =
+                                    vehicle['rc_validity_date'] == null ||
+                                    vehicle['fitness_validity_date'] == null ||
+                                    vehicle['insurance_upto'] == null ||
+                                    vehicle['pollution_validity_date'] == null;
+
+                                Widget docChip(String title, String? date) {
+                                  if (date == null) return const SizedBox();
+
+                                  final validity = Utils.getValidity(date);
+                                  final days =
+                                      int.tryParse(
+                                        validity.replaceAll(
+                                          RegExp(r'[^0-9]'),
+                                          '',
+                                        ),
+                                      ) ??
+                                      0;
+                                  final warning = days < 30;
+
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          warning
+                                              ? const Color(0xFFFFF7ED)
+                                              : const Color(0xFFF0FDF4),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.circle,
+                                          size: 8,
+                                          color:
+                                              warning
+                                                  ? Colors.orange
+                                                  : Colors.green,
+                                        ),
+                                        const SizedBox(width: 5),
+                                        Text(
+                                          "$title $validity",
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color:
+                                                warning
+                                                    ? Colors.orange.shade800
+                                                    : Colors.green.shade700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }
 
                                 return InkWell(
+                                  borderRadius: BorderRadius.circular(18),
                                   onTap: () {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
                                         builder:
-                                            (context) => VehicleDetailsScreen(
+                                            (_) => VehicleDetailsScreen(
                                               vehicle['id'].toString(),
                                             ),
                                       ),
                                     );
                                   },
                                   child: Container(
-                                    margin: const EdgeInsets.only(bottom: 12),
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.all(14),
+                                    margin: const EdgeInsets.only(bottom: 16),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFE6F3F1),
-                                      borderRadius: BorderRadius.circular(12),
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(18),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(.05),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
                                     ),
-
-                                    /// ✅ EVERYTHING BELOW IS YOUR ORIGINAL UI (UNCHANGED)
                                     child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
                                       children: [
-                                        Row(
-                                          children: [
-                                            const CircleAvatar(
-                                              backgroundColor: Colors.white,
-                                              child: Icon(
-                                                Icons.local_shipping,
-                                                color: Colors.teal,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 10),
-
-                                            Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  vehicle['vehicle_number']??'--',
-                                                  style: const TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Row(
-                                                  children: [
-                                                    Container(
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                            horizontal: 8,
-                                                            vertical: 2,
-                                                          ),
-                                                      decoration: BoxDecoration(
-                                                        color:
-                                                            Colors
-                                                                .green
-                                                                .shade50,
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              6,
-                                                            ),
-                                                      ),
-                                                      child: Text(
-                                                        vehicle['rto'] ?? '--',
-                                                        style: const TextStyle(
-                                                          fontSize: 12,
-                                                          color: Colors.green,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    Container(
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                            horizontal: 8,
-                                                            vertical: 2,
-                                                          ),
-                                                      decoration: BoxDecoration(
-                                                        color:
-                                                            Colors
-                                                                .green
-                                                                .shade50,
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              6,
-                                                            ),
-                                                      ),
-                                                      child: Text(
-                                                        vehicle['verificationStatus'] ??
-                                                            '--',
-                                                        style: const TextStyle(
-                                                          fontSize: 12,
-                                                          color: Colors.red,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
-                                            Spacer(),
-
-                                            chip(
-                                              vehicle['status'] == "active"
-                                                  ? "Active"
-                                                  : "Inactive",
-                                              vehicle['status'] == "active"
-                                                  ? Colors.green
-                                                  : Colors.red,
-                                            ),
-
-                                            PopupMenuButton<String>(
-                                              onSelected: (value) {
-                                                if (value == "edit") {
-                                                  nextScreenEdit(
-                                                    context,
-                                                    vehicle,
-                                                  );
-                                                } else if (value ==
-                                                    "Plan & Wallet") {
-                                                  showDialog(
-                                                    context: context,
-                                                    builder:
-                                                        (_) => WalletDialog(
-                                                          vehicle['id']
-                                                              .toString(),
-                                                          vehicle['vehicle_number'],
-                                                        ),
-                                                  );
-                                                } else if (value == "delete") {
-                                                  deleteVehicle(
-                                                    vehicle['id'].toString(),
-                                                  );
-                                                }
-                                              },
-                                              itemBuilder:
-                                                  (context) => const [
-                                                    PopupMenuItem(
-                                                      value: "edit",
-                                                      child: Text("Edit"),
-                                                    ),
-                                                    PopupMenuItem(
-                                                      value: "Plan & Wallet",
-                                                      child: Text(
-                                                        "Plan & Wallet",
-                                                      ),
-                                                    ),
-                                                    PopupMenuItem(
-                                                      value: "delete",
-                                                      child: Text("Delete"),
-                                                    ),
-                                                  ],
-                                            ),
-                                          ],
-                                        ),
-
-                                        Row(
-                                          children: [
-                                            const Text('Service : '),
-                                            chip(
-                                              Utils.formatServiceType(
-                                                vehicle['service_type']??'No_Service',
-                                              ),
-                                              Colors.blue,
-                                            ),
-                                            Spacer(),
-                                            Row(
-                                              children: [
-                                                const Text('Payload : '),
-                                                Text(
-                                                  int.parse(
-                                                        double.parse(
-                                                          vehicle['payload']??'0.00',
-                                                        ).toStringAsFixed(0),
-                                                      ).toString() ??
-                                                      '--',
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-
-                                        Row(
-                                          children: [
-                                            const Text('Fuel Type : '),
-                                            chip(
-                                              vehicle['fuel_type'] ?? '--',
-                                              Colors.orange,
-                                            ),
-                                            Spacer(),
-                                            Row(
-                                              children: [
-                                                const Text('Color : '),
-                                                chip(
-                                                  vehicle['color'] ?? '--',
-                                                  Colors.grey,
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-
-                                        SizedBox(height: 10),
-                                        Container(
-                                          width: double.infinity,
-                                          padding: const EdgeInsets.all(10),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(
-                                              10,
-                                            ),
-                                          ),
-                                          child: Column(
+                                        /// HEADER
+                                        Padding(
+                                          padding: const EdgeInsets.all(16),
+                                          child: Row(
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              Text(
-                                                "RC - ${vehicle['rc_validity_date'] != null ? Utils.getValidity(vehicle['rc_validity_date']) : ''}",
-                                                style: TextStyle(fontSize: 12),
-                                              ),
-                                              Text(
-                                                "Fitness - ${vehicle['fitness_validity_date'] != null ? Utils.getValidity(vehicle['fitness_validity_date']) : ''}",
-                                                style: TextStyle(fontSize: 12),
-                                              ),
-                                              Text(
-                                                "Insurance - ${vehicle['insurance_upto'] != null ? Utils.getValidity(vehicle['insurance_upto']) : ''}",
-                                                style: TextStyle(fontSize: 12),
-                                              ),
-                                              Text(
-                                                "Pollution - ${vehicle['pollution_validity_date'] != null ? Utils.getValidity(vehicle['pollution_validity_date']) : ''}",
-                                                style: TextStyle(fontSize: 12),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        SizedBox(height: 10),
-                                        Container(
-                                          decoration: BoxDecoration(
-                                            color: Colors.grey.shade200,
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              // REWARD TAG
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 4,
-                                                    ),
-                                                color: Colors.teal.shade100,
-                                                child: const Text(
-                                                  "REWARD",
-                                                  style: TextStyle(
-                                                    color: Colors.teal,
-                                                    fontWeight: FontWeight.bold,
-                                                    letterSpacing: 1,
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(height: 16),
-                                              // PRICE ROW
-                                              Row(
+                                              /// Truck Icon
+                                              Column(
                                                 children: [
-                                                  const Icon(
-                                                    Icons.star_border,
-                                                    color: Colors.orange,
-                                                  ),
-                                                  const SizedBox(width: 6),
-                                                  Text(
-                                                    "₹${vehicle['reward_summary']['earned']}",
-                                                    style: TextStyle(
-                                                      fontSize: 20,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color: Colors.teal,
+                                                  Container(
+                                                    height: 50,
+                                                    width: 50,
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(
+                                                        0xFFE0F2FE,
+                                                      ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            12,
+                                                          ),
+                                                    ),
+                                                    child: const Icon(
+                                                      Icons
+                                                          .local_shipping_rounded,
+                                                      color: Color(0xFF0284C7),
+                                                      size: 28,
                                                     ),
                                                   ),
-                                                  const SizedBox(width: 6),
-                                                  Text(
-                                                    "/₹${vehicle['reward_summary']['max_possible']}",
-                                                    style: TextStyle(
-                                                      color: Colors.grey,
-                                                      fontWeight:
-                                                          FontWeight.w600,
+                                                  const SizedBox(height: 6),
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 6,
+                                                          vertical: 3,
+                                                        ),
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(
+                                                        0xFFDCFCE7,
+                                                      ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            6,
+                                                          ),
+                                                    ),
+                                                    child: const Row(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        Icon(
+                                                          Icons.verified,
+                                                          color: Colors.green,
+                                                          size: 12,
+                                                        ),
+                                                        SizedBox(width: 3),
+                                                        Text(
+                                                          "Verified",
+                                                          style: TextStyle(
+                                                            color: Colors.green,
+                                                            fontSize: 10,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                          ),
+                                                        ),
+                                                      ],
                                                     ),
                                                   ),
                                                 ],
                                               ),
 
-                                              const SizedBox(height: 16),
+                                              const SizedBox(width: 14),
 
-                                              // GREEN BADGE
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 12,
-                                                      vertical: 6,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  borderRadius:
-                                                      BorderRadius.circular(20),
-                                                  border: Border.all(
-                                                    color: Colors.green,
-                                                  ),
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
+                                              /// Vehicle Details
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
                                                   children: [
-                                                    Icon(
-                                                      Icons
-                                                          .check_circle_outline,
-                                                      color: Colors.green,
-                                                      size: 16,
-                                                    ),
-                                                    SizedBox(width: 4),
                                                     Text(
-                                                      "+₹${vehicle['reward_summary']['category_points']}",
-                                                      style: TextStyle(
-                                                        color: Colors.green,
+                                                      vehicle['vehicle_number'] ??
+                                                          "--",
+                                                      style: const TextStyle(
+                                                        fontSize: 18,
                                                         fontWeight:
                                                             FontWeight.bold,
                                                       ),
                                                     ),
+
+                                                    const SizedBox(height: 4),
+
+                                                    Text(
+                                                      "${vehicle['rto'] ?? "--"}, ${vehicle['fuel_type'] ?? "--"}",
+                                                      style: TextStyle(
+                                                        color:
+                                                            Colors
+                                                                .grey
+                                                                .shade600,
+                                                        fontSize: 13,
+                                                      ),
+                                                    ),
+
+                                                    const SizedBox(height: 10),
+
+                                                    Row(
+                                                      children: [
+                                                        Container(
+                                                          padding:
+                                                              const EdgeInsets.symmetric(
+                                                                horizontal: 10,
+                                                                vertical: 5,
+                                                              ),
+                                                          decoration: BoxDecoration(
+                                                            color:
+                                                                vehicle['service_type'] ==
+                                                                        "outside_city"
+                                                                    ? const Color(
+                                                                      0xFFFFF7ED,
+                                                                    )
+                                                                    : const Color(
+                                                                      0xFFEFF6FF,
+                                                                    ),
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  20,
+                                                                ),
+                                                          ),
+                                                          child: Text(
+                                                            Utils.formatServiceType(
+                                                              vehicle['service_type'] ??
+                                                                  "",
+                                                            ),
+                                                            style: TextStyle(
+                                                              color:
+                                                                  vehicle['service_type'] ==
+                                                                          "outside_city"
+                                                                      ? Colors
+                                                                          .deepOrange
+                                                                      : Colors
+                                                                          .blue,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                              fontSize: 12,
+                                                            ),
+                                                          ),
+                                                        ),
+
+                                                        const SizedBox(
+                                                          width: 8,
+                                                        ),
+
+                                                        Container(
+                                                          padding:
+                                                              const EdgeInsets.symmetric(
+                                                                horizontal: 10,
+                                                                vertical: 5,
+                                                              ),
+                                                          decoration: BoxDecoration(
+                                                            color:
+                                                                vehicle['status'] ==
+                                                                        "active"
+                                                                    ? const Color(
+                                                                      0xFFF0FDF4,
+                                                                    )
+                                                                    : const Color(
+                                                                      0xFFFFF1F2,
+                                                                    ),
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  20,
+                                                                ),
+                                                          ),
+                                                          child: Text(
+                                                            vehicle['status'] ==
+                                                                    "active"
+                                                                ? "● Active"
+                                                                : "● Inactive",
+                                                            style: TextStyle(
+                                                              color:
+                                                                  vehicle['status'] ==
+                                                                          "active"
+                                                                      ? Colors
+                                                                          .green
+                                                                      : Colors
+                                                                          .red,
+                                                              fontSize: 12,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
                                                   ],
                                                 ),
+                                              ),
+
+                                              PopupMenuButton<String>(
+                                                onSelected: (value) {
+                                                  if (value == "edit") {
+                                                    nextScreenEdit(
+                                                      context,
+                                                      vehicle,
+                                                    );
+                                                  } else if (value ==
+                                                      "Plan & Wallet") {
+                                                    showDialog(
+                                                      context: context,
+                                                      builder:
+                                                          (_) => WalletDialog(
+                                                            vehicle['id']
+                                                                .toString(),
+                                                            vehicle['vehicle_number'],
+                                                          ),
+                                                    );
+                                                  } else if (value ==
+                                                      "delete") {
+                                                    deleteVehicle(
+                                                      vehicle['id'].toString(),
+                                                    );
+                                                  }
+                                                },
+                                                itemBuilder:
+                                                    (context) => const [
+                                                      PopupMenuItem(
+                                                        value: "edit",
+                                                        child: Text("Edit"),
+                                                      ),
+                                                      PopupMenuItem(
+                                                        value: "Plan & Wallet",
+                                                        child: Text(
+                                                          "Plan & Wallet",
+                                                        ),
+                                                      ),
+                                                      PopupMenuItem(
+                                                        value: "delete",
+                                                        child: Text("Delete"),
+                                                      ),
+                                                    ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+
+                                        const Divider(height: 1),
+
+                                        /// PAYLOAD & PLAN
+                                        Padding(
+                                          padding: const EdgeInsets.all(16),
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(
+                                                    12,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(
+                                                      0xFFF8FAFC,
+                                                    ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          12,
+                                                        ),
+                                                  ),
+                                                  child: Column(
+                                                    children: [
+                                                      const Icon(
+                                                        Icons.scale,
+                                                        color: Colors.blue,
+                                                      ),
+                                                      const SizedBox(height: 6),
+                                                      const Text(
+                                                        "Payload",
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 3),
+                                                      Text(
+                                                        "$payload kg",
+                                                        style: const TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+
+                                              const SizedBox(width: 12),
+
+                                              Expanded(
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(
+                                                    12,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(
+                                                      0xFFF8FAFC,
+                                                    ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          12,
+                                                        ),
+                                                  ),
+                                                  child: Column(
+                                                    children: const [
+                                                      Icon(
+                                                        Icons.workspace_premium,
+                                                        color: Colors.amber,
+                                                      ),
+                                                      SizedBox(height: 6),
+                                                      Text(
+                                                        "Plan",
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                      SizedBox(height: 3),
+                                                      Text(
+                                                        "Normal",
+                                                        style: TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+
+                                        /// DOCUMENTS
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                          ),
+                                          child: Align(
+                                            alignment: Alignment.centerLeft,
+                                            child: Text(
+                                              "Document Validity",
+                                              style: TextStyle(
+                                                color: Colors.grey.shade700,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+
+                                        const SizedBox(height: 10),
+
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                          ),
+                                          child:
+                                              docsPending
+                                                  ? Container(
+                                                    width: double.infinity,
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                          12,
+                                                        ),
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(
+                                                        0xFFFFF7ED,
+                                                      ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            10,
+                                                          ),
+                                                    ),
+                                                    child: const Row(
+                                                      children: [
+                                                        Icon(
+                                                          Icons
+                                                              .description_outlined,
+                                                          color:
+                                                              Colors.deepOrange,
+                                                        ),
+                                                        SizedBox(width: 8),
+                                                        Text(
+                                                          "Documents Pending",
+                                                          style: TextStyle(
+                                                            color:
+                                                                Colors
+                                                                    .deepOrange,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  )
+                                                  : Wrap(
+                                                    spacing: 8,
+                                                    runSpacing: 8,
+                                                    children: [
+                                                      docChip(
+                                                        "RC",
+                                                        vehicle['rc_validity_date'],
+                                                      ),
+                                                      docChip(
+                                                        "Fitness",
+                                                        vehicle['fitness_validity_date'],
+                                                      ),
+                                                      docChip(
+                                                        "Insurance",
+                                                        vehicle['insurance_upto'],
+                                                      ),
+                                                      docChip(
+                                                        "PUC",
+                                                        vehicle['pollution_validity_date'],
+                                                      ),
+                                                    ],
+                                                  ),
+                                        ),
+
+                                        const SizedBox(height: 18),
+
+                                        /// BOTTOM SECTION
+                                        Container(
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFFF8FAFC),
+                                            borderRadius: BorderRadius.vertical(
+                                              bottom: Radius.circular(18),
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              /// Trip Cost
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      vehicle['base_price_per_day'] !=
+                                                              null
+                                                          ? "₹${vehicle['base_price_per_day']}/day"
+                                                          : "--",
+                                                      style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    InkWell(
+                                                      onTap: () {
+                                                        Navigator.push(
+                                                          context,
+                                                          MaterialPageRoute(
+                                                            builder:
+                                                                (
+                                                                  _,
+                                                                ) => TripCostPreviewScreen(
+                                                                  vehicle['id']
+                                                                      .toString(),
+                                                                  'list',
+                                                                ),
+                                                          ),
+                                                        );
+                                                      },
+                                                      child: Container(
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 8,
+                                                              vertical: 3,
+                                                            ),
+                                                        decoration: BoxDecoration(
+                                                          color:
+                                                              Colors
+                                                                  .blue
+                                                                  .shade50,
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                6,
+                                                              ),
+                                                        ),
+                                                        child: const Text(
+                                                          "Trip Cost",
+                                                          style: TextStyle(
+                                                            color: Colors.blue,
+                                                            fontSize: 11,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+
+                                              /// Reward
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Row(
+                                                      children: [
+                                                        const Icon(
+                                                          Icons.star_rounded,
+                                                          color: Colors.orange,
+                                                          size: 18,
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 4,
+                                                        ),
+                                                        Text(
+                                                          "₹${reward['earned'] ?? 0}",
+                                                          style:
+                                                              const TextStyle(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    Text(
+                                                      "up to ₹${reward['max_possible'] ?? 0}",
+                                                      style: TextStyle(
+                                                        fontSize: 11,
+                                                        color:
+                                                            Colors
+                                                                .grey
+                                                                .shade600,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+
+                                              ElevatedButton.icon(
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: const Color(
+                                                    0xFF0F766E,
+                                                  ),
+                                                  foregroundColor: Colors.white,
+                                                  elevation: 0,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          10,
+                                                        ),
+                                                  ),
+                                                ),
+                                                onPressed: () {
+                                                  String  url =
+                                                      "https://vehicleowner.gocarriage.com/plans?"
+                                                      "fleet_id=${PrefUtils.getUserId()}"
+                                                      "&vnum=${vehicle['vehicle_number']}";
+                                                  Utils.openRechargeUrl(url);
+                                                },
+                                                icon: const Icon(
+                                                  Icons.upgrade_rounded,
+                                                ),
+                                                label: const Text("Upgrade"),
                                               ),
                                             ],
                                           ),
@@ -592,9 +921,6 @@ class _VehicleListScreen extends State<VehicleListScreen> {
       ),
     );
   }
-
-
-
 
   Widget chip(String text, Color color) {
     return Container(
