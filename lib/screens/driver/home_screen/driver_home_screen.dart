@@ -7,8 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:provider/provider.dart';
-
-import '../../../SocketService/driver_know_book_socket_service.dart';
+import '../../../SocketService/driver_socket_service.dart';
 import '../../../provider_service/accept_reject_trip_provider.dart';
 import '../../../provider_service/booking_provider.dart';
 import '../../../provider_service/driver_booing_request_provider.dart';
@@ -61,11 +60,7 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
         context,
         listen: false,
       );
-
-      DriverKnowBookSocketService()
-        ..attachProvider(bookingProvider)
-        ..connectDriverSocket(int.parse(PrefUtils.getUserId()));
-
+      DriverSocketService().attachProvider(bookingProvider);
       context.read<DriverBookingOngoingProvider>().fetchBooking();
     });
   }
@@ -608,12 +603,12 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
         if (ride == null) return const SizedBox();
 
         final pickup = LatLng(
-          ride['fromLocation']['lat'],
-          ride['fromLocation']['lng'],
+          ride['pickup']['lat'],
+          ride['pickup']['lng'],
         );
         final drop = LatLng(
-          ride['toLocation']['lat'],
-          ride['toLocation']['lng'],
+          ride['drop']['lat'],
+          ride['drop']['lng'],
         );
 
         mBookingId = ride['bookingId'];
@@ -651,16 +646,16 @@ class _DriverHomeScreen extends State<DriverHomeScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                Utils.formatIsoDate(ride["createdAt"]),
+                Utils.formatIsoDate(ride["pickupDate"]),
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
                 ),
               ),
               const SizedBox(height: 12),
-              Text("📍 ${ride['fromLocation']['address']}"),
+              Text("📍 ${ride['pickup']['address']}"),
               const SizedBox(height: 8),
-              Text("🏁 ${ride['toLocation']['address']}"),
+              Text("🏁 ${ride['drop']['address']}"),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

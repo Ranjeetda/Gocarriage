@@ -7,7 +7,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:provider/provider.dart';
-import '../../../SocketService/driver_location_update_socket_service.dart';
+import '../../../SocketService/driver_socket_service.dart';
 import '../../../eventModel/notification_event.dart';
 import '../../../provider_service/status_provider.dart';
 import '../../../resource/Utils.dart';
@@ -18,7 +18,6 @@ import '../../commanScreen/menu_screen.dart';
 import '../../dashboardScreen/customer_bottom_navigation_bar.dart';
 import '../my_rides_screen/driver_booking_history_screen.dart';
 import 'driver_home_screen.dart';
-import 'package:http/http.dart' as http;
 
 class DriverBottomNavigationbar extends StatefulWidget {
   @override
@@ -26,14 +25,9 @@ class DriverBottomNavigationbar extends StatefulWidget {
       _DriverBottomNavigationbarState();
 }
 
-class _DriverBottomNavigationbarState
-    extends State<DriverBottomNavigationbar> {
-  final TextEditingController searchClusterController =
-  TextEditingController();
-
+class _DriverBottomNavigationbarState extends State<DriverBottomNavigationbar> {
   int _selectedIndex = 0;
   bool isGettingLocation = false;
-  bool isLoading = false;
   bool isSwitch = false;
 
   String mLocation = "";
@@ -51,36 +45,31 @@ class _DriverBottomNavigationbarState
   void initState() {
     super.initState();
 
+    isSwitch = PrefUtils.isDriverOnline();
+
     Future.delayed(const Duration(milliseconds: 300), () {
       _setCurrentLocation();
     });
 
-    isSwitch = PrefUtils.isDriverOnline();
-
     eventBus.on<NotificationEvent>().listen((event) {
       if (event.message.data['type'] == 'TRIP_COMPLETED') {
         if (!mounted) return;
-        Utils.showSuccessDialog(
-            context, event.message.data['bookingId']);
+        Utils.showSuccessDialog(context, event.message.data['bookingId']);
       }
     });
   }
 
   void startSocketLocationUpdates(Position position) {
-    DriverLocationUpdateSocketService()
-        .connectSocket(PrefUtils.getToken());
-
     locationTimer?.cancel();
 
-    locationTimer = Timer.periodic(
-      const Duration(seconds: 30),
-          (timer) {
-        DriverLocationUpdateSocketService().updateLocation(
+    locationTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (DriverSocketService().isConnected) {
+        DriverSocketService().updateLocation(
           lat: position.latitude,
           lng: position.longitude,
         );
-      },
-    );
+      }
+    });
   }
 
   @override
@@ -162,7 +151,6 @@ class _DriverBottomNavigationbarState
                       ],
                     ),
                     const Spacer(),
-                    // Material Design 3 Switch
                     Transform.scale(
                       scale: 0.85,
                       child: Switch(
@@ -170,19 +158,21 @@ class _DriverBottomNavigationbarState
                         onChanged: (v) {
                           showStartDialog(context, v);
                         },
-                        // Material 3 colors
                         activeColor: Colors.white,
                         activeTrackColor: const Color(0xFF00C853),
                         inactiveThumbColor: Colors.white,
                         inactiveTrackColor: Colors.white.withOpacity(0.30),
-                        trackOutlineColor: WidgetStateProperty.resolveWith((states) {
-                          return Colors.transparent; // removes the border
+                        trackOutlineColor:
+                        WidgetStateProperty.resolveWith((states) {
+                          return Colors.transparent;
                         }),
                         thumbIcon: WidgetStateProperty.resolveWith((states) {
                           if (states.contains(WidgetState.selected)) {
-                            return const Icon(Icons.check, size: 16, color: Color(0xFF00C853));
+                            return const Icon(Icons.check,
+                                size: 16, color: Color(0xFF00C853));
                           }
-                          return const Icon(Icons.close, size: 16, color: Colors.grey);
+                          return const Icon(Icons.close,
+                              size: 16, color: Colors.grey);
                         }),
                       ),
                     ),
@@ -267,7 +257,7 @@ class _DriverBottomNavigationbarState
     return "Unknown location";
   }
 
-  /// STATUS UPDATE API
+  /// STATUS UPDATE API (NO Navigator.pop here!)
   Future<bool> _statusUpdate(bool isOnline, String lat, String lng) async {
     try {
       final response = await Provider.of<StatusProvider>(context, listen: false)
@@ -282,10 +272,6 @@ class _DriverBottomNavigationbarState
           setState(() {
             isSwitch = isOnline;
           });
-        }
-
-        if (Navigator.canPop(context)) {
-          Navigator.of(context).pop();
         }
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -309,7 +295,7 @@ class _DriverBottomNavigationbarState
     }
   }
 
-  /// UNIQUE DIALOG WITH LOADING
+  /// DIALOG
   void showStartDialog(BuildContext context, bool desiredOnline) {
     final bool goingOnline = desiredOnline;
     bool isDialogLoading = false;
@@ -461,10 +447,12 @@ class _DriverBottomNavigationbarState
                             )
                                 : Row(
                               children: [
+                                // Cancel
                                 Expanded(
                                   child: OutlinedButton(
-                                    onPressed: () =>
-                                        Navigator.pop(context),
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                    },
                                     style: OutlinedButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(
                                           vertical: 15),
@@ -488,6 +476,8 @@ class _DriverBottomNavigationbarState
                                   ),
                                 ),
                                 const SizedBox(width: 14),
+
+                                // Confirm
                                 Expanded(
                                   child: ElevatedButton(
                                     onPressed: () async {
@@ -502,7 +492,28 @@ class _DriverBottomNavigationbarState
                                         longitude ?? "",
                                       );
 
-                                      if (!success && context.mounted) {
+                                      if (!context.mounted) return;
+
+                                      if (success) {
+                                        // ===== SOCKET HANDLING =====
+                                        if (desiredOnline) {
+                                          final int driverId = int.parse(
+                                              PrefUtils.getUserId());
+
+                                          DriverSocketService().connect(
+                                              driverId: driverId);
+                                          debugPrint(
+                                              '🟢 Socket connected after going Online');
+                                        } else {
+                                          DriverSocketService()
+                                              .disconnect();
+                                          debugPrint(
+                                              '🔴 Socket disconnected after going Offline');
+                                        }
+
+                                        // Close dialog ONLY here
+                                        Navigator.pop(context);
+                                      } else {
                                         setDialogState(() {
                                           isDialogLoading = false;
                                         });

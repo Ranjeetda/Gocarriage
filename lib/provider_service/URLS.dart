@@ -86,7 +86,8 @@ class URLS {
   static const String freightFleetCostsUpload = '$baseUrl/freight/fleet/';
   static const String tenderBooking = '$bookingBaseUrl/booking/tenders';
   static const String fleetVehicleList = '$bookingBaseUrl/booking/owners/me/available-fleets?vehicle_type_id=';
-
+  static const String negotiationsBookingList = '$bookingBaseUrl/booking/negotiations?scope=won';
+  static const String instantTripList = '$bookingBaseUrl/booking/instant-requests';
 
   /////////////Driver/////////////////////
   static const String registerDriver = '$baseUrl/drivers/register';

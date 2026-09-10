@@ -20,7 +20,9 @@ import '../assignDriverScreen/assign_driver_list_screen.dart';
 import '../bookingRequestScreen/booking_request_screen.dart';
 import '../driver_list_screen/driver_list_screen.dart';
 import '../freightCalculatorScreen/freight_calculator_screen.dart';
+import '../instantTripRequestsScreen/instant_trip_requests_screen.dart';
 import '../my_rewards/my_rewards.dart';
+import '../negotiationsScreen/negotiations_screen.dart';
 import '../profile_screen/owner_profile_screen.dart';
 import '../quotationScreen/price_quotations_screen.dart';
 import '../subscriptionsScreen/subscriptions_screen.dart';
@@ -170,6 +172,7 @@ class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen>
             _buildAnimatedMenuItem(4, Icons.price_check, "Price Quotations"),
             _buildAnimatedMenuItem(4, Icons.flash_on, "Instant Request"),
             _buildAnimatedMenuItem(5, Icons.request_quote, "Bulk Tenders"),
+            _buildAnimatedMenuItem(5, Icons.handshake, "Negotiations"),
             _buildAnimatedMenuItem(5, Icons.calculate, "Vehicle Freight"),
             _buildAnimatedMenuItem(6, Icons.book_online, "Booking Requests"),
             _buildAnimatedMenuItem(7, Icons.account_balance_wallet, "Subscriptions"),
@@ -375,7 +378,17 @@ class _DashboardVehicleOwnerScreen extends State<DashboardVehicleOwnerScreen>
               context,
               MaterialPageRoute(builder: (_) => BulkShipmentTendersScreen()),
             );
-          } else if (title == 'Vehicle Freight') {
+          } else if (title == 'Negotiations') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => NegotiationsScreen()),
+            );
+          }else if (title == 'Instant Request') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => InstantTripRequestsScreen()),
+            );
+          }else if (title == 'Vehicle Freight') {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => FreightCalculatorScreen()),

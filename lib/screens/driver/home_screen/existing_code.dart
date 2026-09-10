@@ -2,14 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:provider/provider.dart';
-
-import '../../../SocketService/driver_know_book_socket_service.dart';
+import '../../../SocketService/driver_socket_service.dart';
 import '../../../provider_service/accept_reject_trip_provider.dart';
 import '../../../provider_service/booking_provider.dart';
 import '../../../provider_service/driver_booing_request_provider.dart';
@@ -59,11 +57,10 @@ class _ExistingCode extends State<ExistingCode> {
         context,
         listen: false,
       );
-
-      DriverKnowBookSocketService()
-        ..attachProvider(bookingProvider)
-        ..connectDriverSocket(int.parse(PrefUtils.getUserId()));
-
+      DriverSocketService().attachProvider(bookingProvider);
+      DriverSocketService().connect(driverId: int.parse(PrefUtils.getUserId()));
+      // 4. Disconnect when needed (logout / app close)
+      //DriverSocketService().disconnect();
       context.read<DriverBookingOngoingProvider>().fetchBooking();
     });
   }

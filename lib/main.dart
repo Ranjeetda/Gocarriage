@@ -34,8 +34,10 @@ import 'package:gocarriage_universal/provider_service/forgot_verify_otp_provider
 import 'package:gocarriage_universal/provider_service/freight_componet_view_model_by_provider.dart';
 import 'package:gocarriage_universal/provider_service/freight_emi_default_provider.dart';
 import 'package:gocarriage_universal/provider_service/freight_vehicle_provider.dart';
+import 'package:gocarriage_universal/provider_service/instant_trip_request_list_provider.dart';
 import 'package:gocarriage_universal/provider_service/master_freight_post_provider.dart';
 import 'package:gocarriage_universal/provider_service/near_by_vehicle_provider.dart';
+import 'package:gocarriage_universal/provider_service/negotiations_list_provider.dart';
 import 'package:gocarriage_universal/provider_service/operator_permission_list_provider.dart';
 import 'package:gocarriage_universal/provider_service/operator_profile_update_provider.dart';
 import 'package:gocarriage_universal/provider_service/operator_vechile_booking.dart';
@@ -176,6 +178,8 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => TenderBookingService()),
         ChangeNotifierProvider(create: (_) => FleetVehicleListProvider()),
         ChangeNotifierProvider(create: (_) => AssignBulkVehicleProvider()),
+        ChangeNotifierProvider(create: (_) => NegotiationsListProvider()),
+        ChangeNotifierProvider(create: (_) => InstantTripRequestListProvider()),
         ChangeNotifierProvider(
           create: (_) => OwnerBookingRequestListProvider(),
         ),
