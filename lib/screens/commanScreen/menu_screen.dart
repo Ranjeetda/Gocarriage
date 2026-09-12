@@ -164,14 +164,14 @@ class _MenuScreen extends State<MenuScreen> {
               },
             ),
             SizedBox(height: 20,),
-            Consumer<ProfileProvider>(
+            PrefUtils.getRole() == "customer"?Consumer<ProfileProvider>(
               builder: (context, profileProvider, child) {
                 final data = profileProvider.profileData;
 
                 return data['customerType']=='corporate'?
                 CorporateAccountActiveCard(data):CorporateServicesCard();
               },
-            ),
+            ):SizedBox(),
           ],
         ),
       ),

@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
-import '../provider_service/booking_provider.dart';
-import '../provider_service/URLS.dart';
-import '../resource/pref_utils.dart';
+
+import '../../../provider_service/URLS.dart';
+import '../../../provider_service/booking_provider.dart';
+import '../../../resource/pref_utils.dart';
+
 
 class DriverSocketService {
   /// ---------------- SINGLETON ----------------

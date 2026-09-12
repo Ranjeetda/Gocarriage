@@ -528,7 +528,7 @@ class _BulkBookingScreenState extends State<BulkBookingScreen> {
                       context: context,
                       isScrollControlled: true,
                       backgroundColor: Colors.transparent,
-                      builder: (context) => const PickupLocationDialog(),
+                      builder: (context) =>  PickupLocationDialog('Pickup Location'),
                     );
 
                     if (result != null) {
@@ -563,7 +563,7 @@ class _BulkBookingScreenState extends State<BulkBookingScreen> {
                       backgroundColor: Colors.transparent,
                       builder:
                           (context) =>
-                      const PickupLocationDialog(), // same dialog
+                       PickupLocationDialog('Drop Location'), // same dialog
                     );
 
                     if (result != null) {

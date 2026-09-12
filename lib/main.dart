@@ -51,6 +51,7 @@ import 'package:gocarriage_universal/provider_service/owner_reqest_provider.dart
 import 'package:gocarriage_universal/provider_service/owner_request_approve_provider.dart';
 import 'package:gocarriage_universal/provider_service/owner_un_assign_driver_provider.dart';
 import 'package:gocarriage_universal/provider_service/owner_unassign_driver_vehicle.dart';
+import 'package:gocarriage_universal/provider_service/pincode_city_provider.dart';
 import 'package:gocarriage_universal/provider_service/reward_wallet_provider.dart';
 import 'package:gocarriage_universal/provider_service/search_driver_provider.dart';
 import 'package:gocarriage_universal/provider_service/send_otp_provider.dart';
@@ -180,9 +181,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => AssignBulkVehicleProvider()),
         ChangeNotifierProvider(create: (_) => NegotiationsListProvider()),
         ChangeNotifierProvider(create: (_) => InstantTripRequestListProvider()),
-        ChangeNotifierProvider(
-          create: (_) => OwnerBookingRequestListProvider(),
-        ),
+        ChangeNotifierProvider(create: (_) => OwnerBookingRequestListProvider(),),
         ChangeNotifierProvider(create: (_) => SubscriptionsOwnerListProvider()),
         ChangeNotifierProvider(create: (_) => DriverOtpProvider()),
         ChangeNotifierProvider(create: (_) => PlaceDetailsProvider()),
@@ -194,22 +193,12 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => OwnerUnassignDriverVehicle()),
         ChangeNotifierProvider(create: (_) => AssignDriverProvider()),
         ChangeNotifierProvider(create: (_) => OperatorVechileRequest()),
-        ChangeNotifierProvider(
-          create: (_) => OpratorSearchRegistrationNumber(),
-        ),
+        ChangeNotifierProvider(create: (_) => PincodeCityProvider()),
+        ChangeNotifierProvider(create: (_) => OpratorSearchRegistrationNumber(),),
         ChangeNotifierProvider(create: (_) => OperatorVechileBooking()),
         ChangeNotifierProvider(create: (_) => OperatorPermissionListProvider()),
-        ChangeNotifierProvider(
-          create: (_) => OperatorVehiclePostRequestProvider(),
-        ),
-        ChangeNotifierProvider(
-          create:
-              (context) => DriverBooingRequestProvider(
-                Provider.of<BookingProvider>(context, listen: false),
-              ),
-        ),
+        ChangeNotifierProvider(create: (_) => OperatorVehiclePostRequestProvider(),),
         ChangeNotifierProvider(create: (_) => AudioProvider()),
-
         ChangeNotifierProvider(create: (_) => CorproteBookingDashboard()),
         ChangeNotifierProvider(create: (_) => CorproteBookingActivity()),
         ChangeNotifierProvider(create: (_) => CorproteMeService()),
@@ -223,6 +212,12 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => FreightComponetViewModelByProvider()),
         ChangeNotifierProvider(create: (_) => AddFleetFreightCostProvider()),
         ChangeNotifierProvider(create: (_) => VehicleClassProvider()),
+        ChangeNotifierProvider(
+          create:
+              (context) => DriverBooingRequestProvider(
+            Provider.of<BookingProvider>(context, listen: false),
+          ),
+        ),
 
       ],
       child: const MyApp(),

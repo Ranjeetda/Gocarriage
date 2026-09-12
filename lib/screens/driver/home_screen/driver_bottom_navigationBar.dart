@@ -7,7 +7,6 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:provider/provider.dart';
-import '../../../SocketService/driver_socket_service.dart';
 import '../../../eventModel/notification_event.dart';
 import '../../../provider_service/status_provider.dart';
 import '../../../resource/Utils.dart';
@@ -16,6 +15,7 @@ import '../../../resource/image_paths.dart';
 import '../../../resource/pref_utils.dart';
 import '../../commanScreen/menu_screen.dart';
 import '../../dashboardScreen/customer_bottom_navigation_bar.dart';
+import '../SocketService/driver_socket_service.dart';
 import '../my_rides_screen/driver_booking_history_screen.dart';
 import 'driver_home_screen.dart';
 

@@ -8,7 +8,9 @@ import 'package:http/http.dart' as http;
 import '../../resource/Utils.dart';
 
 class PickupLocationDialog extends StatefulWidget {
-  const PickupLocationDialog({super.key});
+  String title;
+
+  PickupLocationDialog(this.title);
 
   @override
   State<PickupLocationDialog> createState() => _PickupLocationDialogState();
@@ -274,9 +276,9 @@ class _PickupLocationDialogState extends State<PickupLocationDialog> {
             padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
             child: Row(
               children: [
-                const Expanded(
+                 Expanded(
                   child: Text(
-                    'Pickup Location',
+                    widget.title,
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
@@ -550,8 +552,8 @@ class _PickupLocationDialogState extends State<PickupLocationDialog> {
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: const Text(
-                      'Confirm Pickup Location',
+                    child:  Text(
+                      'Confirm ${widget.title}',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,

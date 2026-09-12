@@ -50,7 +50,6 @@ class _RespondToBookingSheetState extends State<RespondToBookingSheet> {
     });
   }
 
-
   @override
   void dispose() {
     _counterController.dispose();
@@ -126,310 +125,302 @@ class _RespondToBookingSheetState extends State<RespondToBookingSheet> {
 
           const Divider(height: 1),
 
-          Flexible(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Customer Wants It
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5F6F8),
-                      borderRadius: BorderRadius.circular(12),
+          // ── Top fixed info (Customer wants + Offer) ─────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Customer Wants It
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F6F8),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.access_time, size: 18, color: Colors.grey.shade600),
+                      const SizedBox(width: 10),
+                      Text(
+                        'CUSTOMER WANTS IT',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade600,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      const Spacer(),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            widget.customerWantedDate,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            widget.reachByTime,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Customer's Offer
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F8F0),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'CUSTOMER\'S OFFER',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade700,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '₹${_formatCurrency(widget.customerOffer)}',
+                        style: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF00A651),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Fixed price — first owner to accept gets the trip.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.green.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Vehicle Title
+                const Text(
+                  'VEHICLE',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
+
+          // ── Vehicle List – takes remaining space (no fixed height) ──────
+          Expanded(
+            child: Consumer<FleetVehicleListProvider>(
+              builder: (context, service, _) {
+                if (service.isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (service.listData.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      "No vehicles available",
+                      style: TextStyle(color: Colors.grey),
                     ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.access_time, size: 18, color: Colors.grey.shade600),
-                        const SizedBox(width: 10),
-                        Text(
-                          'CUSTOMER WANTS IT',
+                  );
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                  itemCount: service.listData.length,
+                  itemBuilder: (context, index) {
+                    final vehicle = service.listData[index];
+                    final isSelected = selectedIndex == index;
+
+                    final plate = vehicle["vehicle_number"] ?? "N/A";
+                    final type = vehicle["vehicleType"] ??
+                        vehicle["type"] ??
+                        widget.vehiclesId;
+
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          selectedIndex = index;
+                          selectedVehicle = plate.toString();
+                        });
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 14,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? const Color(0xFFE8F7F2)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isSelected
+                                ? const Color(0xFF0D7A5F)
+                                : const Color(0xFFE0E5EF),
+                            width: isSelected ? 1.8 : 1.2,
+                          ),
+                          boxShadow: isSelected
+                              ? [
+                            BoxShadow(
+                              color: const Color(0xFF0D7A5F)
+                                  .withOpacity(0.12),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ]
+                              : [],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? const Color(0xFF0D7A5F).withOpacity(0.12)
+                                    : const Color(0xFFF4F6F9),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Icons.local_shipping_outlined,
+                                color: isSelected
+                                    ? const Color(0xFF0D7A5F)
+                                    : Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    plate.toString().toUpperCase(),
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: isSelected
+                                          ? const Color(0xFF0D7A5F)
+                                          : Colors.black87,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    type.toString(),
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (isSelected)
+                              const Icon(
+                                Icons.check_circle,
+                                color: Color(0xFF0D7A5F),
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+
+          // ── Accept + Counter section (always at bottom) ─────────────────
+          if (hasSelection)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Accept Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        widget.onAccept(selectedVehicle!);
+                        Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF7CB9A8),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      child: Text(
+                        '✓  Accept  ·  ₹${_formatCurrency(widget.customerOffer)}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // OR COUNTER
+                  Row(
+                    children: [
+                      Expanded(child: Divider(color: Colors.grey.shade300)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          'OR COUNTER',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade600,
-                            letterSpacing: 0.3,
+                            color: Colors.grey.shade500,
+                            letterSpacing: 0.5,
                           ),
                         ),
-                        const Spacer(),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              widget.customerWantedDate,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            Text(
-                              widget.reachByTime,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                      ),
+                      Expanded(child: Divider(color: Colors.grey.shade300)),
+                    ],
                   ),
 
                   const SizedBox(height: 16),
 
-                  // Customer's Offer
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE8F8F0),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'CUSTOMER\'S OFFER',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade700,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          '₹${_formatCurrency(widget.customerOffer)}',
-                          style: const TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF00A651),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Fixed price — first owner to accept gets the trip.',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.green.shade700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Vehicle Title
-                  const Text(
-                    'VEHICLE',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Vehicle List
-                  Expanded(
-                    child: Consumer<FleetVehicleListProvider>(
-                      builder: (context, service, _) {
-                        // Loading
-                        if (service.isLoading) {
-                          return const Center(child: CircularProgressIndicator());
-                        }
-
-                        // Empty
-                        if (service.listData.isEmpty) {
-                          return const Center(
-                            child: Text(
-                              "No vehicles available",
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          );
-                        }
-
-                        // List
-                        return ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                          itemCount: service.listData.length,
-                          itemBuilder: (context, index) {
-                            final vehicle = service.listData[index];
-                            final isSelected = selectedIndex == index;
-
-                            final plate = vehicle["vehicle_number"] ?? "N/A";
-
-                            final type =
-                                vehicle["vehicleType"] ??
-                                    vehicle["type"] ??
-                                    widget.vehiclesId;
-
-                            return GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  selectedIndex = index;
-                                });
-                              },
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 180),
-                                margin: const EdgeInsets.only(bottom: 10),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 14,
-                                ),
-                                decoration: BoxDecoration(
-                                  color:
-                                  isSelected
-                                      ? const Color(0xFFE8F7F2)
-                                      : Colors.white,
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(
-                                    color:
-                                    isSelected
-                                        ? const Color(0xFF0D7A5F)
-                                        : const Color(0xFFE0E5EF),
-                                    width: isSelected ? 1.8 : 1.2,
-                                  ),
-                                  boxShadow:
-                                  isSelected
-                                      ? [
-                                    BoxShadow(
-                                      color: const Color(
-                                        0xFF0D7A5F,
-                                      ).withOpacity(0.12),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 3),
-                                    ),
-                                  ]
-                                      : [],
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 42,
-                                      height: 42,
-                                      decoration: BoxDecoration(
-                                        color:
-                                        isSelected
-                                            ? const Color(
-                                          0xFF0D7A5F,
-                                        ).withOpacity(0.12)
-                                            : const Color(0xFFF4F6F9),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Icon(
-                                        Icons.local_shipping_outlined,
-                                        color:
-                                        isSelected
-                                            ? const Color(0xFF0D7A5F)
-                                            : Colors.grey,
-                                      ),
-                                    ),
-
-                                    const SizedBox(width: 12),
-
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            plate.toString().toUpperCase(),
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w700,
-                                              color:
-                                              isSelected
-                                                  ? const Color(0xFF0D7A5F)
-                                                  : Colors.black87,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 3),
-                                          Text(
-                                            type.toString(),
-                                            style: TextStyle(
-                                              fontSize: 12.5,
-                                              color: Colors.grey.shade600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-
-                                    if (isSelected)
-                                      const Icon(
-                                        Icons.check_circle,
-                                        color: Color(0xFF0D7A5F),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ),
-
-                  // ========== ACCEPT + COUNTER SECTION (only after vehicle selected) ==========
-                  if (hasSelection) ...[
-                    const SizedBox(height: 8),
-
-                    // Accept Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          widget.onAccept(selectedVehicle!);
-                          Navigator.pop(context);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF7CB9A8), // soft green like screenshot
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                        child: Text(
-                          '✓  Accept  ·  ₹${_formatCurrency(widget.customerOffer)}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // OR COUNTER
-                    Row(
-                      children: [
-                        Expanded(child: Divider(color: Colors.grey.shade300)),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text(
-                            'OR COUNTER',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade500,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                        Expanded(child: Divider(color: Colors.grey.shade300)),
-                      ],
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // YOUR COUNTER PRICE
-                    Text(
+                  // YOUR COUNTER PRICE
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
                       'YOUR COUNTER PRICE',
                       style: TextStyle(
                         fontSize: 12,
@@ -438,120 +429,126 @@ class _RespondToBookingSheetState extends State<RespondToBookingSheet> {
                         letterSpacing: 0.3,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                  ),
+                  const SizedBox(height: 8),
 
-                    // Counter Input
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF00A651), width: 1.5),
+                  // Counter Input
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFF00A651),
+                        width: 1.5,
                       ),
-                      child: Row(
-                        children: [
-                          const Padding(
-                            padding: EdgeInsets.only(left: 14),
-                            child: Text(
-                              '₹',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF1A1A1A),
-                              ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.only(left: 14),
+                          child: Text(
+                            '₹',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1A1A1A),
                             ),
                           ),
-                          Expanded(
-                            child: TextField(
-                              controller: _counterController,
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                              ],
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              decoration: const InputDecoration(
-                                border: InputBorder.none,
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 14,
-                                ),
-                              ),
-                              onChanged: (value) {
-                                setState(() {
-                                  counterPrice = int.tryParse(value);
-                                });
-                              },
-                            ),
-                          ),
-                          // Up/Down buttons (optional)
-                          Column(
-                            children: [
-                              InkWell(
-                                onTap: () {
-                                  final current = int.tryParse(_counterController.text) ?? 0;
-                                  _counterController.text = (current + 1000).toString();
-                                  setState(() => counterPrice = current + 1000);
-                                },
-                                child: const Icon(Icons.keyboard_arrow_up, size: 20),
-                              ),
-                              InkWell(
-                                onTap: () {
-                                  final current = int.tryParse(_counterController.text) ?? 0;
-                                  if (current > 1000) {
-                                    _counterController.text = (current - 1000).toString();
-                                    setState(() => counterPrice = current - 1000);
-                                  }
-                                },
-                                child: const Icon(Icons.keyboard_arrow_down, size: 20),
-                              ),
+                        ),
+                        Expanded(
+                          child: TextField(
+                            controller: _counterController,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
                             ],
-                          ),
-                          const SizedBox(width: 8),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Counter Offer Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: counterPrice == null || counterPrice! <= 0
-                            ? null
-                            : () {
-                          widget.onCounterOffer(selectedVehicle!, counterPrice!);
-                          Navigator.pop(context);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF7CB9A8),
-                          disabledBackgroundColor: Colors.grey.shade300,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 14,
+                              ),
+                            ),
+                            onChanged: (value) {
+                              setState(() {
+                                counterPrice = int.tryParse(value);
+                              });
+                            },
                           ),
                         ),
-                        child: Text(
-                          counterPrice != null
-                              ? '₹  Counter Offer  ·  ₹${_formatCurrency(counterPrice.toString())}'
-                              : '₹  Counter Offer',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        Column(
+                          children: [
+                            InkWell(
+                              onTap: () {
+                                final current =
+                                    int.tryParse(_counterController.text) ?? 0;
+                                _counterController.text =
+                                    (current + 1000).toString();
+                                setState(() => counterPrice = current + 1000);
+                              },
+                              child: const Icon(Icons.keyboard_arrow_up, size: 20),
+                            ),
+                            InkWell(
+                              onTap: () {
+                                final current =
+                                    int.tryParse(_counterController.text) ?? 0;
+                                if (current > 1000) {
+                                  _counterController.text =
+                                      (current - 1000).toString();
+                                  setState(() => counterPrice = current - 1000);
+                                }
+                              },
+                              child: const Icon(Icons.keyboard_arrow_down, size: 20),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Counter Offer Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: counterPrice == null || counterPrice! <= 0
+                          ? null
+                          : () {
+                        widget.onCounterOffer(
+                          selectedVehicle!,
+                          counterPrice!,
+                        );
+                        Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF7CB9A8),
+                        disabledBackgroundColor: Colors.grey.shade300,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      child: Text(
+                        counterPrice != null
+                            ? '₹  Counter Offer  ·  ₹${_formatCurrency(counterPrice.toString())}'
+                            : '₹  Counter Offer',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
-                  ],
+                  ),
                 ],
               ),
             ),
-          ),
-
-          const SizedBox(height: 12),
         ],
       ),
     );

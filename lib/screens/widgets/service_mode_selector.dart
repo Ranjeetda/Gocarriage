@@ -3,15 +3,35 @@ import 'package:flutter/material.dart';
 enum ServiceMode { incity, outcity, rental, international }
 
 class ServiceModeSelector extends StatefulWidget {
-  const ServiceModeSelector({super.key, this.onChanged});
+  const ServiceModeSelector({
+    super.key,
+    this.onChanged,
+    this.selectedMode,
+  });
+
   final ValueChanged<ServiceMode>? onChanged;
+  final ServiceMode? selectedMode;
 
   @override
   State<ServiceModeSelector> createState() => _ServiceModeSelectorState();
 }
 
 class _ServiceModeSelectorState extends State<ServiceModeSelector> {
-  ServiceMode _selected = ServiceMode.incity;
+  ServiceMode? _selected; // ← nullable, no default
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = widget.selectedMode; // can be null
+  }
+
+  @override
+  void didUpdateWidget(covariant ServiceModeSelector oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selectedMode != _selected) {
+      setState(() => _selected = widget.selectedMode);
+    }
+  }
 
   static const _blue = Color(0xFF2D5BE8);
   static const _navy = Color(0xFF16235F);
@@ -28,7 +48,6 @@ class _ServiceModeSelectorState extends State<ServiceModeSelector> {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        // Segmented control: Incity / Outcity / Rental
         Expanded(
           child: Container(
             padding: const EdgeInsets.all(4),
@@ -48,7 +67,6 @@ class _ServiceModeSelectorState extends State<ServiceModeSelector> {
           ),
         ),
         const SizedBox(width: 8),
-        // International tab
         _intlTab(),
       ],
     );
@@ -56,6 +74,7 @@ class _ServiceModeSelectorState extends State<ServiceModeSelector> {
 
   Widget _segment(ServiceMode mode, String label, IconData icon) {
     final active = _selected == mode;
+
     return Expanded(
       child: GestureDetector(
         onTap: () => _select(mode),
@@ -75,14 +94,17 @@ class _ServiceModeSelectorState extends State<ServiceModeSelector> {
             ]
                 : null,
           ),
-          // FittedBox scales the whole content down so text stays fully visible
           child: FittedBox(
             fit: BoxFit.scaleDown,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 16, color: active ? Colors.white : _idle),
+                Icon(
+                  icon,
+                  size: 16,
+                  color: active ? Colors.white : _idle,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   label,
@@ -102,6 +124,7 @@ class _ServiceModeSelectorState extends State<ServiceModeSelector> {
 
   Widget _intlTab() {
     final active = _selected == ServiceMode.international;
+
     return GestureDetector(
       onTap: () => _select(ServiceMode.international),
       child: AnimatedContainer(
@@ -110,14 +133,21 @@ class _ServiceModeSelectorState extends State<ServiceModeSelector> {
         decoration: BoxDecoration(
           color: active ? _navy : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: active ? _navy : _border, width: 1.5),
+          border: Border.all(
+            color: active ? _navy : _border,
+            width: 1.5,
+          ),
         ),
         child: FittedBox(
           fit: BoxFit.scaleDown,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.public_rounded, size: 16, color: active ? Colors.white : _idle),
+              Icon(
+                Icons.public_rounded,
+                size: 16,
+                color: active ? Colors.white : _idle,
+              ),
               const SizedBox(width: 4),
               Text(
                 'International',

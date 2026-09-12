@@ -17,8 +17,10 @@ import '../../provider_service/driver_booing_request_provider.dart';
 import '../../provider_service/fare_calculate_provider.dart';
 import '../../provider_service/myrides_provider.dart';
 import '../../provider_service/near_by_vehicle_provider.dart';
+import '../../provider_service/pincode_city_provider.dart';
 import '../../provider_service/place_details_provider.dart';
 import '../../resource/Utils.dart';
+import '../dialogBox/pickup_location_dialog.dart';
 import '../widgets/selectable_scroll_box.dart';
 import '../auth/login_screen.dart';
 import '../dialogBox/driver_bottom_sheet.dart';
@@ -162,6 +164,7 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
       print(globalBookingRequest!.weight);
     }
   }
+
 
   Future<void> _checkArea(String pinCode) async {
     setState(() {
@@ -402,7 +405,27 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            ServiceModeSelector(
+            Consumer<PincodeCityProvider>(
+              builder: (context, pincodeProvider, _) {
+                return ServiceModeSelector(
+                  selectedMode: pincodeProvider.suggestedMode, // auto highlight
+                  onChanged: (mode) {
+                    setState(() {
+                      if (mode == ServiceMode.incity) {
+                        mButtonName = 'Find City Vehicles';
+                      } else if (mode == ServiceMode.outcity) {
+                        mButtonName = 'Find OutCity Vehicles';
+                      } else if (mode == ServiceMode.rental) {
+                        mButtonName = 'Find Rentals';
+                      } else if (mode == ServiceMode.international) {
+                        mButtonName = 'Get International Quote';
+                      }
+                    });
+                  },
+                );
+              },
+            ),
+           /* ServiceModeSelector(
               onChanged: (mode) {
                 debugPrint('Selected: $mode');
                 setState(() {
@@ -421,7 +444,7 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
                   }
                 });
               },
-            ),
+            ),*/
             const SizedBox(height: 16),
             // Location fields
             _locationRow(),
@@ -600,7 +623,7 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
                   ),
                 ),
                 const Spacer(),
-                Text(
+               /* Text(
                   serviceLabel,
                   style: TextStyle(
                     fontSize: 11,
@@ -609,7 +632,7 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
                             ? Colors.green
                             : Colors.red,
                   ),
-                ),
+                ),*/
               ],
             ),
           )
@@ -645,11 +668,12 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
   Widget _vehicleDropdownTile() {
     return GestureDetector(
       onTap: () {
-        if (sameCluster == true) {
-          showVehicleBottomSheet(context, mPincode1!, mPincode2!);
+       /* if (sameCluster == true) {
+
         } else {
           Utils.showCustomToast(context, "Service is not available");
-        }
+        }*/
+        showVehicleBottomSheet(context, mPincode1!, mPincode2!);
       },
       child: Container(
         height: 52,
@@ -1274,7 +1298,49 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
   }
 
   // ─── LOCATION BOTTOM SHEET (unchanged logic) ─────────────────────────────
-  void _openLocationBottomSheet(
+
+  Future<void> _openLocationBottomSheet(
+      String title,
+      TextEditingController controller,
+      ) async {
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) =>  PickupLocationDialog(title), // same dialog for both
+    );
+
+    if (result == null) return;
+
+    print("RanjeetTest $title =============>${result.toString()}");
+
+    setState(() {
+      if (title == 'Pickup Location') {
+        fromLatitude = result['latitude'].toString();
+        fromLongitude = result['longitude'].toString();
+        mPincode1 = result['pincode'].toString();
+
+        if (mPincode1 != null && mPincode2 != null) {
+          _checkArea(mPincode1!);
+        }
+      } else {
+        // Drop Location
+        toLatitude = result['latitude'].toString();
+        toLongitude = result['longitude'].toString();
+        mPincode2 = result['pincode'].toString();
+        if (mPincode1 != null && mPincode2 != null) {
+          _checkCluster(mPincode1!, mPincode2!);
+          _checkDistance(mPincode1!, mPincode2!);
+          final provider = Provider.of<PincodeCityProvider>(context, listen: false);
+          provider.checkCity(mPincode1!, mPincode2!);
+        }
+      }
+      // Update the text field so the UI reflects the selected address
+      controller.text = result['address'] ?? '';
+    });
+  }
+
+/*  void _openLocationBottomSheet(
     String label,
     TextEditingController controller,
   ) async {
@@ -1508,7 +1574,7 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
         );
       },
     );
-  }
+  }*/
 
   // ─── DATE / TIME PICKERS (unchanged) ─────────────────────────────────────
   Future<void> selectPickupDate() async {

@@ -7,7 +7,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:provider/provider.dart';
-import '../../../SocketService/driver_socket_service.dart';
 import '../../../provider_service/accept_reject_trip_provider.dart';
 import '../../../provider_service/booking_provider.dart';
 import '../../../provider_service/driver_booing_request_provider.dart';
@@ -18,6 +17,7 @@ import '../../../resource/Utils.dart';
 import '../../../resource/app_colors.dart';
 import '../../../resource/image_paths.dart';
 import '../../../resource/pref_utils.dart';
+import '../SocketService/driver_socket_service.dart';
 import '../widgetScreen/ride_action_buttons.dart';
 
 String GOOGLE_API_KEY = Utils.googleMapKey;

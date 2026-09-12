@@ -17,40 +17,39 @@ class CorproteBookingActivity with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final url = Uri.parse(URLS.normalCustomerBookingActivity+'5');
+    final url = Uri.parse("${URLS.normalCustomerBookingActivity}5");
 
     final headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Authorization': 'Bearer ${PrefUtils.getToken()}',
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "Authorization": "Bearer ${PrefUtils.getToken()}",
     };
-
-    // 🔹 PRINT REQUEST
-    print('----- API REQUEST -----');
-    print('URL: $url');
-    print('Headers: $headers');
-    print('Method: GET');
-    print('-----------------------');
 
     try {
       final response = await http.get(url, headers: headers);
 
-      // 🔹 PRINT RESPONSE
-      print('----- API RESPONSE -----');
-      print('Status Code: ${response.statusCode}');
-      print('Body: ${response.body}');
-      print('------------------------');
+      print("Status Code: ${response.statusCode}");
+      print("Response: ${response.body}");
 
-      final responseData = json.decode(response.body);
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
 
-      if (responseData['success'] == true) {
-        _bookingActivityData = responseData['data']['activities'];
+        if (responseData["success"] == true) {
+          _bookingActivityData = responseData["data"]?["activities"] ?? [];
+        } else {
+          _bookingActivityData = [];
+          print(responseData["message"]);
+        }
+      } else if (response.statusCode == 401) {
+        _bookingActivityData = [];
+        print("Unauthorized: Token expired or invalid.");
       } else {
-        _bookingActivityData = responseData['data']['activities'];
+        _bookingActivityData = [];
+        print("API Error ${response.statusCode}: ${response.body}");
       }
     } catch (e) {
-      print('❌ Error fetching booking: $e');
-      rethrow;
+      _bookingActivityData = [];
+      print("Error: $e");
     } finally {
       _isLoading = false;
       notifyListeners();

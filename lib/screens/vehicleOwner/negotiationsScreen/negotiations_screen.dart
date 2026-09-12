@@ -20,6 +20,9 @@ class _NegotiationsScreenState extends State<NegotiationsScreen> {
     Future.microtask(() {
       Provider.of<NegotiationsListProvider>(context, listen: false)
           .fetchNegotiationsList();
+
+      Provider.of<NegotiationsListProvider>(context, listen: false)
+          .fetchNegotiationsOpenList();
     });
   }
 
@@ -191,15 +194,17 @@ class _NegotiationsScreenState extends State<NegotiationsScreen> {
                 ],
 
                 // ===================== OPEN NEGOTIATIONS =====================
-                ...confirmed.map((item) {
+                ...open.map((item) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 16),
                     child: _ActiveNegotiationCard(
+                      myLatestOffer: item['myLatestOffer']==null?true:false,
                       bookingId: item['bookingCode'] ?? '—',
+                      yourOffer: item['myLatestOffer']==null?"--":item['myLatestOffer']['price'].toString(),
                       timeLeft: _getTimeLeft(item['negotiationExpiresAt']),
                       amount: _formatCurrency(item['customerOfferPrice']),
                       onAcceptCounter: () {
-                        showRespondToBooking(context,item['myLatestOffer']['fleetId'].toString());
+                        showRespondToBooking(context,item['vehicleTypeId'].toString());
                       },
                       onReject: () {
                         // TODO: reject logic
@@ -301,14 +306,18 @@ class _ConfirmedCard extends StatelessWidget {
 // ACTIVE NEGOTIATION CARD (amount section fixed)
 // ============================================================
 class _ActiveNegotiationCard extends StatelessWidget {
+  final bool myLatestOffer;
   final String bookingId;
+  final String yourOffer;
   final String timeLeft;
   final String amount;
   final VoidCallback? onAcceptCounter;
   final VoidCallback? onReject;
 
   const _ActiveNegotiationCard({
+    required this.myLatestOffer,
     required this.bookingId,
+    required this.yourOffer,
     required this.timeLeft,
     required this.amount,
     this.onAcceptCounter,
@@ -472,7 +481,7 @@ class _ActiveNegotiationCard extends StatelessWidget {
           const SizedBox(height: 16),
 
           // ========== BUTTONS ==========
-          Padding(
+          myLatestOffer?Padding(
             padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
             child: Row(
               children: [
@@ -516,7 +525,7 @@ class _ActiveNegotiationCard extends StatelessWidget {
                 ),
               ],
             ),
-          ),
+          ):Center(child: Text('You offered ₹${yourOffer}. Waiting on the customer to accept.'),),
         ],
       ),
     );

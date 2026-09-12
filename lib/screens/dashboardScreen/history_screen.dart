@@ -1,17 +1,12 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:gocarriage_universal/resource/pref_utils.dart';
 import 'package:provider/provider.dart';
+import 'package:gocarriage_universal/resource/pref_utils.dart';
 import '../../provider_service/URLS.dart';
 import '../../provider_service/myrides_provider.dart';
 import '../../resource/Utils.dart';
-import '../../resource/app_colors.dart';
-import '../widgets/common_btn.dart';
-import '../widgets/common_text.dart';
-import '../../resource/sized_box.dart';
-import 'driver_tracking_screen.dart';
+import '../dialogBox/booking_details_dialog.dart';
+
+enum BookingStatus { cancelled, driverAssigned, active, completed }
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({Key? key}) : super(key: key);
@@ -21,651 +16,799 @@ class HistoryScreen extends StatefulWidget {
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
-  bool isUpcoming = true;
-  bool isLoading = false;
   int currentPage = 1;
   final int limit = 10;
   final ScrollController _scrollController = ScrollController();
-  String? mDate;
-  String? mTime;
-  DateTime selectedDateTime = DateTime.now();
+  String selectedFilter = 'All'; // All | Active | Completed | Cancelled
 
   @override
   void initState() {
     super.initState();
-    if(PrefUtils.isLoggedIn()) {
+    if (PrefUtils.isLoggedIn()) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _bookingAllRideService(page: currentPage);
+        _loadRides(page: 1, isRefresh: true);
       });
       _scrollController.addListener(_onScroll);
     }
   }
 
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   void _onScroll() {
     final provider = Provider.of<MyridesProvider>(context, listen: false);
-    if (!isLoading &&
-        _scrollController.position.pixels >=
-            _scrollController.position.maxScrollExtent - 100) {
-      if (isUpcoming) {
-        if (provider.currentPagination != null &&
-            provider.currentPagination['next_page'] == true) {
-          _loadMoreRides();
-        }
-      } else {
-        if (provider.completedPagination != null &&
-            provider.completedPagination['next_page'] == true) {
-          _loadMoreRides();
-        }
+    if (provider.isLoading) return;
+
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 120) {
+      final hasNext = (selectedFilter == 'Completed' ||
+          selectedFilter == 'Cancelled')
+          ? provider.hasNextCompletedPage
+          : provider.hasNextCurrentPage;
+
+      if (hasNext) {
+        currentPage++;
+        _loadRides(page: currentPage, append: true);
       }
     }
   }
 
-  Future<void> _bookingAllRideService({
+  Future<void> _loadRides({
     int page = 1,
     bool isRefresh = false,
+    bool append = false,
   }) async {
     if (isRefresh) currentPage = 1;
-    setState(() => isLoading = true);
 
     try {
       await Provider.of<MyridesProvider>(context, listen: false).validateList(
         endpoint: URLS.bookingAllRide,
-        page: currentPage,
+        page: page,
         limit: limit,
-        append: !isRefresh && page > 1,
+        append: append && !isRefresh,
       );
     } catch (error) {
-      Utils.showErrorMessage(context, 'An error occurred: $error');
-    } finally {
-      setState(() => isLoading = false);
-    }
-  }
-
-  Future<void> _loadMoreRides() async {
-    currentPage++;
-    await _bookingAllRideService(page: currentPage);
-  }
-
-  void callDateTime(String defaultBookingHour, String mUrid) {
-    final result = Utils.convertMillisecondsToDateAndTime(
-      int.parse(defaultBookingHour),
-    );
-
-    mDate = result['date'];
-    mTime = result['time'];
-
-    try {
-      if (mDate != null && mTime != null) {
-        final dateParts = mDate!.split('-');
-        final timeParts = mTime!.split(':');
-
-        int year, month, day;
-        if (dateParts[0].length == 4) {
-          year = int.parse(dateParts[0]);
-          month = int.parse(dateParts[1]);
-          day = int.parse(dateParts[2]);
-        } else {
-          day = int.parse(dateParts[0]);
-          month = int.parse(dateParts[1]);
-          year = int.parse(dateParts[2]);
-        }
-
-        selectedDateTime = DateTime(
-          year,
-          month,
-          day,
-          int.parse(timeParts[0]),
-          int.parse(timeParts[1]),
-        );
-      } else {
-        selectedDateTime = DateTime.now();
+      if (mounted) {
+        Utils.showErrorMessage(context, 'Failed to load rides: $error');
       }
-    } catch (e) {
-      selectedDateTime = DateTime.now();
     }
-    _pickDateTime(mUrid);
   }
 
-  Future<void> _pickDateTime(String mUrid) async {
-    DateTime now = DateTime.now();
-    DateTime initialDateTime =
-        selectedDateTime.isBefore(now) ? now : selectedDateTime;
-
-    DateTime? pickedDate = await showDatePicker(
-      context: context,
-      initialDate: initialDateTime,
-      firstDate: DateTime.now(),
-      lastDate: DateTime(2100),
-    );
-
-    if (pickedDate == null) return;
-
-    TimeOfDay initialTime = TimeOfDay(
-      hour: initialDateTime.hour,
-      minute: initialDateTime.minute,
-    );
-
-    TimeOfDay? pickedTime = await showTimePicker(
-      context: context,
-      initialTime: initialTime,
-    );
-
-    if (pickedTime == null) return;
-
-    DateTime pickedDateTime = DateTime(
-      pickedDate.year,
-      pickedDate.month,
-      pickedDate.day,
-      pickedTime.hour,
-      pickedTime.minute,
-    );
-
-    if (pickedDate.year == now.year &&
-        pickedDate.month == now.month &&
-        pickedDate.day == now.day &&
-        pickedDateTime.isBefore(now)) {
-      Utils.showErrorToast(context, "Please select a future time today");
-      return;
-    }
-
-    setState(() {
-      selectedDateTime = pickedDateTime;
-      mDate =
-          "${selectedDateTime.day.toString().padLeft(2, '0')}-${selectedDateTime.month.toString().padLeft(2, '0')}-${selectedDateTime.year}";
-      mTime =
-          "${selectedDateTime.hour.toString().padLeft(2, '0')}:${selectedDateTime.minute.toString().padLeft(2, '0')}";
-    });
+  Future<void> _onRefresh() async {
+    await _loadRides(page: 1, isRefresh: true);
   }
 
+  // ---------- Status mapping ----------
+  BookingStatus _mapStatus(String? apiStatus) {
+    switch (apiStatus?.toUpperCase()) {
+      case 'CANCELLED':
+        return BookingStatus.cancelled;
+      case 'ACCEPTED':
+        return BookingStatus.driverAssigned;
+      case 'TENDERING':
+        return BookingStatus.active;
+      case 'COMPLETED':
+        return BookingStatus.completed;
+      default:
+        return BookingStatus.active;
+    }
+  }
+
+  // ---------- Filter helpers ----------
+  List<dynamic> _getFilteredList(MyridesProvider provider) {
+    final upcoming = provider.cureentRideListData;
+    final completed = provider.completeRideListData;
+
+    switch (selectedFilter) {
+      case 'Active':
+        return upcoming
+            .where((b) =>
+        b['status'] == 'ACCEPTED' || b['status'] == 'TENDERING')
+            .toList();
+      case 'Completed':
+        return completed
+            .where((b) => b['status'] == 'COMPLETED')
+            .toList();
+      case 'Cancelled':
+        return completed
+            .where((b) => b['status'] == 'CANCELLED')
+            .toList();
+      case 'All':
+      default:
+        return [...upcoming, ...completed];
+    }
+  }
+
+  Map<String, int> _getCounts(MyridesProvider provider) {
+    final upcoming = provider.cureentRideListData;
+    final completed = provider.completeRideListData;
+
+    final active = upcoming
+        .where((b) =>
+    b['status'] == 'ACCEPTED' || b['status'] == 'TENDERING')
+        .length;
+    final completedCount =
+        completed.where((b) => b['status'] == 'COMPLETED').length;
+    final cancelled =
+        completed.where((b) => b['status'] == 'CANCELLED').length;
+
+    return {
+      'All': upcoming.length + completed.length,
+      'Active': active,
+      'Completed': completedCount,
+      'Cancelled': cancelled,
+    };
+  }
+
+  // ---------- Date / Time formatting ----------
+  String _formatDate(String? iso) {
+    if (iso == null) return '-';
+    try {
+      final dt = DateTime.parse(iso).toLocal();
+      return '${dt.day.toString().padLeft(2, '0')} ${_month(dt.month)} ${dt.year}';
+    } catch (_) {
+      return iso;
+    }
+  }
+
+  String _formatTime(String? iso) {
+    if (iso == null) return '-';
+    try {
+      final dt = DateTime.parse(iso).toLocal();
+      final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
+      final ampm = dt.hour >= 12 ? 'PM' : 'AM';
+      return '${hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} $ampm';
+    } catch (_) {
+      return iso;
+    }
+  }
+
+  String _month(int m) {
+    const months = [
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sept',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    return months[m];
+  }
+
+  List<String> _buildTags(Map<String, dynamic> special) {
+    final tags = <String>[];
+    if (special['container'] == true) tags.add('Container');
+    if (special['extraLength'] == true) tags.add('Extra Length');
+    if (special['covered'] == true) tags.add('Covered');
+    if (special['hydraulic'] == true) tags.add('Hydraulic');
+    if (special['extraLarge'] == true) tags.add('Extra Large');
+    return tags;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.white, Color(0xFFDFF1FF), Colors.white],
+      backgroundColor: const Color(0xFFF5F6F8),
+      body: Consumer<MyridesProvider>(
+        builder: (context, provider, _) {
+          final counts = _getCounts(provider);
+          final filteredList = _getFilteredList(provider);
+
+          return Column(
+            children: [
+              // ---------- Filter Chips ----------
+              Container(
+                color: Colors.white,
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _FilterChip(
+                        label: 'All',
+                        count: counts['All'] ?? 0,
+                        isSelected: selectedFilter == 'All',
+                        onTap: () => setState(() => selectedFilter = 'All'),
+                      ),
+                      const SizedBox(width: 8),
+                      _FilterChip(
+                        label: 'Active',
+                        count: counts['Active'] ?? 0,
+                        isSelected: selectedFilter == 'Active',
+                        onTap: () => setState(() => selectedFilter = 'Active'),
+                      ),
+                      const SizedBox(width: 8),
+                      _FilterChip(
+                        label: 'Completed',
+                        count: counts['Completed'] ?? 0,
+                        isSelected: selectedFilter == 'Completed',
+                        onTap: () =>
+                            setState(() => selectedFilter = 'Completed'),
+                      ),
+                      const SizedBox(width: 8),
+                      _FilterChip(
+                        label: 'Cancelled',
+                        count: counts['Cancelled'] ?? 0,
+                        isSelected: selectedFilter == 'Cancelled',
+                        onTap: () =>
+                            setState(() => selectedFilter = 'Cancelled'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // ---------- List + Pull to Refresh ----------
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: _onRefresh,
+                  color: const Color(0xFFFF6B00),
+                  child: provider.isLoading && filteredList.isEmpty
+                      ? const Center(
+                    child: CircularProgressIndicator(
+                      color: Color(0xFFFF6B00),
+                    ),
+                  )
+                      : filteredList.isEmpty
+                      ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      SizedBox(
+                        height:
+                        MediaQuery.of(context).size.height * 0.6,
+                        child: const Center(
+                          child: Text(
+                            'No bookings found',
+                            style: TextStyle(
+                              color: Color(0xFF9CA3AF),
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                      : ListView.separated(
+                    controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    itemCount: filteredList.length +
+                        (provider.isLoading ? 1 : 0),
+                    separatorBuilder: (_, __) =>
+                    const SizedBox(height: 16),
+                    itemBuilder: (context, index) {
+                      if (index == filteredList.length) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: Color(0xFFFF6B00),
+                            ),
+                          ),
+                        );
+                      }
+
+                      final booking = filteredList[index];
+                      final special =
+                          booking['specialRequirements'] ?? {};
+                      final status = _mapStatus(booking['status']);
+
+                      return BookingCard(
+                        booking: booking,
+                        bookingId: booking['_id'] ??
+                            booking['bookingCode'] ??
+                            '-',
+                        status: status,
+                        from: booking['fromLocation']?['address'] ??
+                            '-',
+                        to: booking['toLocation']?['address'] ?? '-',
+                        pickupDate:
+                        _formatDate(booking['pickupDate']),
+                        pickupTime:
+                        _formatTime(booking['pickupDate']),
+                        vehicle: booking['vehicleType']?.toString() ??
+                            '-',
+                        weight:
+                        '${booking['weight'] ?? 0} ${booking['weightUnit'] ?? 'KG'}',
+                        material:
+                        booking['materialName'] ?? 'General',
+                        tags: _buildTags(
+                            Map<String, dynamic>.from(special)),
+                        showDriverSection: status ==
+                            BookingStatus.driverAssigned &&
+                            booking['assignedVehicleNumber'] != null,
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ============================================================
+// Booking Card
+// ============================================================
+class BookingCard extends StatelessWidget {
+  final Map<String, dynamic> booking;
+  final String bookingId;
+  final BookingStatus status;
+  final String from;
+  final String to;
+  final String pickupDate;
+  final String pickupTime;
+  final String vehicle;
+  final String weight;
+  final String material;
+  final List<String> tags;
+  final bool showDriverSection;
+
+  const BookingCard({
+    super.key,
+    required this.booking,
+    required this.bookingId,
+    required this.status,
+    required this.from,
+    required this.to,
+    required this.pickupDate,
+    required this.pickupTime,
+    required this.vehicle,
+    required this.weight,
+    required this.material,
+    this.tags = const [],
+    this.showDriverSection = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
           ),
-        ),
-        child: Consumer<MyridesProvider>(
-          builder: (context, provider, _) {
-            final upcomingRides = provider.cureentRideListData;
-            final completedRides = provider.completeRideListData;
-            final selectedList = isUpcoming ? upcomingRides : completedRides;
-
-            return Padding(
-              padding: const EdgeInsets.only(left: 15, right: 15, top: 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  /// Toggle Buttons
-                  Material(
-                    color: Colors.white,
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF3E0),
                     borderRadius: BorderRadius.circular(10),
-                    elevation: 1,
-                    child: Container(
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 8.0,
-                          horizontal: 5,
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () => setState(() => isUpcoming = true),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color:
-                                        isUpcoming
-                                            ? AppColors.primaryColor
-                                            : Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    "Upcoming Ride",
-                                    style: TextStyle(
-                                      color:
-                                          isUpcoming
-                                              ? Colors.white
-                                              : Colors.black,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () => setState(() => isUpcoming = false),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color:
-                                        !isUpcoming
-                                            ? AppColors.primaryColor
-                                            : Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    "Completed",
-                                    style: TextStyle(
-                                      color:
-                                          !isUpcoming
-                                              ? Colors.white
-                                              : Colors.black,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                  ),
+                  child: const Icon(Icons.local_shipping_rounded,
+                      color: Color(0xFFFF9800), size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Booking ID',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF9CA3AF),
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
+                      Text(
+                        bookingId,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1F2937),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                _StatusChip(status: status),
+              ],
+            ),
+          ),
+
+          // From → To
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFF9800),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    Container(
+                      width: 2,
+                      height: 28,
+                      color: const Color(0xFFE5E7EB),
+                    ),
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF3B82F6),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('From',
+                          style: TextStyle(
+                              fontSize: 11, color: Color(0xFF9CA3AF))),
+                      Text(from,
+                          style: const TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w500),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: 12),
+                      const Text('To',
+                          style: TextStyle(
+                              fontSize: 11, color: Color(0xFF9CA3AF))),
+                      Text(to,
+                          style: const TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w500),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Info grid
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _InfoTile(
+                    icon: Icons.calendar_today_rounded,
+                    label: 'Pickup',
+                    value: '$pickupDate\n$pickupTime',
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _InfoTile(
+                    icon: Icons.local_shipping_outlined,
+                    label: 'Vehicle',
+                    value: vehicle,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _InfoTile(
+                    icon: Icons.inventory_2_outlined,
+                    label: 'Weight',
+                    value: weight,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _InfoTile(
+                    icon: Icons.category_outlined,
+                    label: 'Material',
+                    value: material,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Tags
+          if (tags.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Wrap(
+                spacing: 8,
+                children: tags
+                    .map((tag) => Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3E8FF),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    tag,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF7C3AED),
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  SizedBox(height: 20),
+                ))
+                    .toList(),
+              ),
+            ),
+          ],
 
-                  /// Ride List with Pull-to-Refresh
-                  Expanded(
-                    child: RefreshIndicator(
-                      onRefresh: () async {
-                        await _bookingAllRideService(isRefresh: true);
-                      },
-                      child:
-                          selectedList.isEmpty
-                              ? Center(
-                                child: Text(
-                                  isUpcoming
-                                      ? 'No upcoming bookings available'
-                                      : 'No completed bookings found',
-                                  style: const TextStyle(color: Colors.black54),
-                                ),
-                              )
-                              : _rideCard(selectedList, isUpcoming),
+          // Driver section
+          if (showDriverSection) ...[
+            const SizedBox(height: 12),
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0F9FF),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.person_outline,
+                      color: Color(0xFF0EA5E9), size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    'Driver Assigned',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF0369A1),
                     ),
                   ),
-
-                  if (isLoading)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 10),
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
                 ],
               ),
-            );
-          },
+            ),
+          ],
+
+          const SizedBox(height: 16),
+
+          // Action button
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () {
+
+                  showDialog(
+                    context: context,
+                    barrierDismissible: true,
+                    builder: (context) => BookingDetailsDialog(booking: booking),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: status == BookingStatus.cancelled
+                      ? const Color(0xFFF3F4F6)
+                      : const Color(0xFFFF6B00),
+                  foregroundColor: status == BookingStatus.cancelled
+                      ? const Color(0xFF4B5563)
+                      : Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: Text(
+                  status == BookingStatus.cancelled
+                      ? '→ View Details'
+                      : '→ Track Booking',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================
+// Filter Chip
+// ============================================================
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final int count;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _FilterChip({
+    required this.label,
+    required this.count,
+    this.isSelected = false,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFF6B00) : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFFFF6B00)
+                : const Color(0xFFE5E7EB),
+          ),
+        ),
+        child: Text(
+          '$label  $count',
+          style: TextStyle(
+            color: isSelected ? Colors.white : const Color(0xFF4B5563),
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+          ),
         ),
       ),
     );
   }
+}
 
-  /// 🪪 Ride card
-  Widget _rideCard(List<dynamic> rides, bool isUpcoming) {
-    return ListView.builder(
-      controller: _scrollController,
-      itemCount: rides.length,
-      itemBuilder: (context, index) {
-        final ride = rides[index];
-        return InkWell(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => DriverTrackingScreen(ride!['fromLocation']['lat'],ride!['fromLocation']['lng'],ride!['toLocation']['lat'],ride!['toLocation']['lng']),
-              ),
-            );
-          },
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                /// 🚘 Top section
-                Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
+// ============================================================
+// Status Chip
+// ============================================================
+class _StatusChip extends StatelessWidget {
+  final BookingStatus status;
 
-                      child: Icon(
-                        Icons.local_shipping,
-                        size: 36,
-                        color: AppColors.primaryColor,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            ride['bookingMode'] ?? '',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            "#ID: ${ride['_id'] ?? '---'}",
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.black54,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          "₹${ride['estimated_price'] ?? '--'}",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const Divider(height: 28),
+  const _StatusChip({required this.status});
 
-                /// 👨‍✈️ Driver info
-                if (ride['show_driver_details']?? false)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        ride['driver_details'] != null
-                            ? ride['driver_details']['full_name']
-                            : "",
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        ride['driver_details']['cab_reg'],
-                        style: TextStyle(fontSize: 13, color: Colors.black),
-                      ),
-                      /*Row(
-                        children: [
-                          InkWell(
-                            onTap: () {
-                              openWhatsApp(
-                                ride['driver_details']['mobile'],
-                                ride['driver_details']['default_msg'],
-                              );
-                            },
-                            child: const CircleAvatar(
-                              radius: 18,
-                              backgroundColor: Color(0xFFEAF6FB),
-                              child: FaIcon(
-                                FontAwesomeIcons.whatsapp,
-                                color: Colors.teal,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          GestureDetector(
-                            onTap:
-                                () => makePhoneCall(
-                                  ride['driver_details']['mobile'],
-                                ),
-                            child: const CircleAvatar(
-                              radius: 18,
-                              backgroundColor: Color(0xFFEAF6FB),
-                              child: Icon(Icons.call, color: Colors.teal),
-                            ),
-                          ),
-                        ],
-                      ),*/
-                    ],
-                  ),
-                if (ride['show_driver_details']?? false)
-                  Column(
-                    children: [
-                      SizedBox(height: 10),
-                      const Divider(
-                        height: 1,
-                        color: Colors.grey,
-                        thickness: 1,
-                      ),
-                      SizedBox(height: 20),
-                    ],
-                  ),
-                if (ride['show_captain_details']??false)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          CustomText(
-                            textKey:
-                                ride['ride_captain_details'] != null
-                                    ? ride['ride_captain_details']['full_name']
-                                    : "",
-                            fontWeight: FontWeight.bold,
-                          ),
-                          CustomText(
-                            textKey: 'Captain',
-                            fontSize: 13,
-                            color: Colors.black,
-                          ),
-                        ],
-                      ),
-                      /*Row(
-                        children: [
-                          InkWell(
-                            onTap: () {
-                              openWhatsApp(
-                                ride['ride_captain_details']['mobile'],
-                                ride['ride_captain_details']['default_msg'],
-                              );
-                            },
-                            child: const CircleAvatar(
-                              radius: 18,
-                              backgroundColor: Color(0xFFEAF6FB),
-                              child: FaIcon(
-                                FontAwesomeIcons.whatsapp,
-                                color: Colors.teal,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          GestureDetector(
-                            onTap:
-                                () => makePhoneCall(
-                                  ride['ride_captain_details']['mobile'],
-                                ),
-                            child: const CircleAvatar(
-                              radius: 18,
-                              backgroundColor: Color(0xFFEAF6FB),
-                              child: Icon(Icons.call, color: Colors.teal),
-                            ),
-                          ),
-                        ],
-                      ),*/
-                    ],
-                  ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    CustomText(
-                      textKey: Utils.formatIsoDate(ride['createdAt']),
-                      fontSize: 16,
-                      color: Colors.black,
-                    ),
-                    const Spacer(),
-                    CustomText(
-                      textKey: ride['status'],
-                      fontSize: 16,
-                      color:
-                          ride['status'] == 'cancelled'
-                              ? Colors.red
-                              : Colors.black,
-                    ),
-                  ],
-                ),
-                const Divider(height: 24),
-                const Row(
-                  children: [
-                    Icon(Icons.circle, size: 12),
-                    SizedBox(width: 8),
-                    CustomText(
-                      textKey: "Pickup location",
-                      fontSize: 13,
-                      color: Colors.black54,
-                    ),
-                  ],
-                ),
-                CustomText(
-                  textKey: ride['fromLocation']['address'] ?? '---',
-                  maxLine: 2,
-                ),
-                const Divider(height: 20),
-                const Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.location_on, size: 14, color: Colors.green),
-                    SizedBox(width: 8),
-                    CustomText(
-                      textKey: "Drop off",
-                      fontSize: 13,
-                      color: Colors.black54,
-                    ),
-                  ],
-                ),
-                CustomText(
-                  textKey: ride['toLocation']['address'] ?? '---',
-                  maxLine: 2,
-                ),
-                height20,
-                if (isUpcoming &&
-                    (ride['is_cancellable'] == true ||
-                        ride['is_reschedule'] == true))
-                  Row(
-                    children: [
-                      if (ride['is_cancellable'] == true)
-                        Expanded(
-                          child: CommonBtn(
-                            text: 'Cancel',
-                            onPressed: () {
-                              /* Get.to(() =>
-                                  CancelBookingReasonScreen(ride['urid']));*/
-                            },
-                            bgColor: Colors.grey.shade100,
-                            textColor: Colors.black,
-                          ),
-                        ),
-                      if (ride['is_reschedule'] == true) ...[
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              callDateTime(
-                                ride['default_booking_hour'].toString(),
-                                ride['urid'],
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryColor,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                            child: const Text(
-                              "Reschedule",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                      if (ride['payment_required'] == true) ...[
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              /*
-                              Get.to(PaymentMethodScreen(
-                                  ride,
-                                  ride['payment_required'],
-                                  ride['urid'],
-                                  ride['advance_amt'].toString(),
-                                  ride['booking_source'],
-                                  ride['booking_destination'],false));
-                              */
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryColor,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                            child: Text(
-                              "Pay Now ₹${ride['advance_amt']}",
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-              ],
+  @override
+  Widget build(BuildContext context) {
+    late Color bg;
+    late Color text;
+    late String label;
+    late IconData icon;
+
+    switch (status) {
+      case BookingStatus.cancelled:
+        bg = const Color(0xFFFEE2E2);
+        text = const Color(0xFFDC2626);
+        label = 'Cancelled';
+        icon = Icons.cancel_outlined;
+        break;
+      case BookingStatus.driverAssigned:
+        bg = const Color(0xFFDBEAFE);
+        text = const Color(0xFF2563EB);
+        label = 'Driver Assigned';
+        icon = Icons.person_pin_circle_outlined;
+        break;
+      case BookingStatus.completed:
+        bg = const Color(0xFFDCFCE7);
+        text = const Color(0xFF16A34A);
+        label = 'Completed';
+        icon = Icons.check_circle_outline;
+        break;
+      default:
+        bg = const Color(0xFFFEF3C7);
+        text = const Color(0xFFD97706);
+        label = 'Active';
+        icon = Icons.access_time;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: text),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: text,
             ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
+}
 
-/*  void openWhatsApp(String mobileNo, String defaultMsg) async {
-    final message = Uri.encodeComponent(defaultMsg);
-    final url = 'https://wa.me/$mobileNo?text=$message';
+// ============================================================
+// Info Tile
+// ============================================================
+class _InfoTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
 
-    if (await canLaunch(url)) {
-      await launch(url);
-    } else {
-      throw 'Could not launch $url';
-    }
+  const _InfoTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 14, color: const Color(0xFF9CA3AF)),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFF9CA3AF),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1F2937),
+              height: 1.3,
+            ),
+          ),
+        ],
+      ),
+    );
   }
-
-  void makePhoneCall(String phoneNumber) async {
-    final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
-    if (await canLaunchUrl(launchUri)) {
-      await launchUrl(launchUri);
-    } else {
-      throw 'Could not launch $phoneNumber';
-    }
-  }*/
 }

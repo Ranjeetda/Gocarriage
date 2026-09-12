@@ -87,7 +87,9 @@ class URLS {
   static const String tenderBooking = '$bookingBaseUrl/booking/tenders';
   static const String fleetVehicleList = '$bookingBaseUrl/booking/owners/me/available-fleets?vehicle_type_id=';
   static const String negotiationsBookingList = '$bookingBaseUrl/booking/negotiations?scope=won';
+  static const String negotiationsOpenBookingList = '$bookingBaseUrl/booking/negotiations?scope=open';
   static const String instantTripList = '$bookingBaseUrl/booking/instant-requests';
+ // https://booking.api.gocarriage.com/booking/6a97d750c574949dd1448e5f/negotiation/offer
 
   /////////////Driver/////////////////////
   static const String registerDriver = '$baseUrl/drivers/register';

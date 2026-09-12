@@ -25,32 +25,23 @@ class CorproteOffer with ChangeNotifier {
       'Authorization': 'Bearer ${PrefUtils.getToken()}',
     };
 
-    // 🔹 PRINT REQUEST
-    print('----- API REQUEST -----');
-    print('URL: $url');
-    print('Headers: $headers');
-    print('Method: GET');
-    print('-----------------------');
-
     try {
       final response = await http.get(url, headers: headers);
 
-      // 🔹 PRINT RESPONSE
-      print('----- API RESPONSE -----');
-      print('Status Code: ${response.statusCode}');
-      print('Body: ${response.body}');
-      print('------------------------');
+      print("Status: ${response.statusCode}");
+      print("Body: ${response.body}");
 
-      final responseData = json.decode(response.body);
+      final responseData = jsonDecode(response.body);
 
-      if (responseData['success'] == true) {
-        _offerListData = responseData['data']['offers'];
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        _offerListData = responseData['data']?['offers'] ?? [];
       } else {
-        _offerListData = responseData['data']['offers'];
+        _offerListData = [];
+        print("API Error: ${responseData['message']}");
       }
     } catch (e) {
-      print('❌ Error fetching booking: $e');
-      rethrow;
+      print("Error: $e");
+      _offerListData = [];
     } finally {
       _isLoading = false;
       notifyListeners();
