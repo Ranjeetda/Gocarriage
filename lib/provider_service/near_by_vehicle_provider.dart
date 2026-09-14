@@ -73,4 +73,60 @@ class NearByVehicleProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<Map<String, dynamic>?> fetchVehicleType(
+      String bookingMode, String lat, String lng) async {
+
+    _isLoading = true;
+    notifyListeners();
+
+    final url = Uri.parse(URLS.vehicleTypes);
+
+    final headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': 'Bearer ${PrefUtils.getToken()}',
+    };
+
+
+    /// 🔵 PRINT REQUEST
+    debugPrint("========= API REQUEST =========");
+    debugPrint("URL: $url");
+    debugPrint("Headers: $headers");
+    debugPrint("================================");
+
+    try {
+      final response = await http.get(
+        url,
+        headers: headers,
+      );
+
+      /// 🟢 PRINT RESPONSE
+      debugPrint("========= API RESPONSE =========");
+      debugPrint("Status Code: ${response.statusCode}");
+      debugPrint("Body: ${response.body}");
+      debugPrint("================================");
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+
+        if (responseData['success'] == true) {
+          debugPrint("✅ SUCCESS DATA: ${responseData['data']}");
+          return responseData;
+        } else {
+          debugPrint("⚠️ API SUCCESS FALSE: ${responseData['message']}");
+          return null;
+        }
+      } else {
+        debugPrint("❌ SERVER ERROR: ${response.statusCode}");
+        return null;
+      }
+    } catch (e) {
+      debugPrint('❌ EXCEPTION: $e');
+      return null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 }

@@ -3,7 +3,6 @@ class URLS {
   static const String baseUrl = 'https://api.gocarriage.com/api';
   static const String imagBaseUrlOwner = 'https://zebraffeebucket2026.s3.ap-south-1.amazonaws.com/owners/';
   static const String bookingBaseUrl = 'https://booking.api.gocarriage.com';
-  static const String managementBaseUrl = 'https://management.api.gocarriage.com';
   static const String clusterBaseUrl = 'https://management.api.gocarriage.com/api';
   static const String fileUpload = 'https://api.gocarriage.com/api/upload';
   static const String imageUrlGet = 'https://api.gocarriage.com/api/upload/signed-url?key=';
@@ -38,7 +37,7 @@ class URLS {
   static const String bookingAllRide = '${bookingBaseUrl}/booking/history';
   static const String rescheduleApi = '${baseUrl}/bookings/reschedule';
   static const String nearByVehicle = '${bookingBaseUrl}/booking/nearby-vehicle-types';
-  static const String fareCalculate = '${managementBaseUrl}/api/fares/calculate/bulk-approximate';
+  static const String fareCalculate = '${baseUrl}/bookings/vehicle-types/priced';
 
   static const String fetchProfileCustomer = '$baseUrl/customers/';
   static const String clustersPinCheck = '$clusterBaseUrl/clusters/check-pincode?pincode=';
@@ -89,7 +88,6 @@ class URLS {
   static const String negotiationsBookingList = '$bookingBaseUrl/booking/negotiations?scope=won';
   static const String negotiationsOpenBookingList = '$bookingBaseUrl/booking/negotiations?scope=open';
   static const String instantTripList = '$bookingBaseUrl/booking/instant-requests';
- // https://booking.api.gocarriage.com/booking/6a97d750c574949dd1448e5f/negotiation/offer
 
   /////////////Driver/////////////////////
   static const String registerDriver = '$baseUrl/drivers/register';

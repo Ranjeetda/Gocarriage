@@ -17,18 +17,18 @@ class ServiceModeSelector extends StatefulWidget {
 }
 
 class _ServiceModeSelectorState extends State<ServiceModeSelector> {
-  ServiceMode? _selected; // ← nullable, no default
+  ServiceMode? _selected;
 
   @override
   void initState() {
     super.initState();
-    _selected = widget.selectedMode; // can be null
+    _selected = widget.selectedMode;
   }
 
   @override
   void didUpdateWidget(covariant ServiceModeSelector oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.selectedMode != _selected) {
+    if (widget.selectedMode != oldWidget.selectedMode) {
       setState(() => _selected = widget.selectedMode);
     }
   }

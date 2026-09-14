@@ -7,22 +7,32 @@ import 'package:gocarriage_universal/resource/pref_utils.dart';
 
 class FareCalculateProvider with ChangeNotifier {
   bool _isLoading = false;
+
   bool get isLoading => _isLoading;
 
   Map<String, dynamic>? _fareData;
+
   Map<String, dynamic>? get fareData => _fareData;
 
   String? _error;
+
   String? get error => _error;
 
   Future<Map<String, dynamic>?> fetchFareCalculate(
-      String clusterId, String totalDistance, List<int> vehicleTypeIds) async {
-
+    String from_lat,
+    String from_lng,
+    String to_lat,
+    String to_lng,
+    String weight_kg,
+    String cluster_id,
+    String service_type,
+    String booking_mode,
+  ) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
-    final url = Uri.parse(URLS.fareCalculate);
+    final url = Uri.parse(booking_mode=='NOW'?URLS.fareCalculate:'${URLS.fareCalculate}-range');
 
     final headers = {
       'Content-Type': 'application/json',
@@ -31,9 +41,14 @@ class FareCalculateProvider with ChangeNotifier {
     };
 
     final requestBody = {
-      "cluster_id": int.parse(clusterId),
-      "total_distance": double.parse(totalDistance),
-      "vehicle_type_ids": vehicleTypeIds
+      "from_lat": from_lat,
+      "from_lng": from_lng,
+      "to_lat": to_lat,
+      "to_lng": to_lng,
+      "weight_kg": weight_kg,
+      "cluster_id": cluster_id,
+      "service_type": service_type,
+      "booking_mode": booking_mode=='NOW'?booking_mode:'LATER',
     };
 
     try {
@@ -52,10 +67,7 @@ class FareCalculateProvider with ChangeNotifier {
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
 
-        debugPrint("📥 DECODED RESPONSE:");
-        debugPrint(const JsonEncoder.withIndent('  ').convert(responseData));
-
-        if (responseData['success'] == true) {
+        if (responseData['status'] == 'success') {
           _fareData = responseData;
 
           print("✅ SUCCESS: Fare fetched");

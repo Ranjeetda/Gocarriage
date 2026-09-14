@@ -713,6 +713,14 @@ class Utils {
     DateTime parsedDate = DateTime.parse(date);
     return "${parsedDate.year}-${parsedDate.month.toString().padLeft(2, '0')}-${parsedDate.day.toString().padLeft(2, '0')}";
   }
+
+  static String formatTime(TimeOfDay? time) {
+    if (time == null) return "--:--";
+    final hour = time.hourOfPeriod.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    final period = time.period == DayPeriod.am ? "AM" : "PM";
+    return "$hour:$minute $period";
+  }
   static  Future<void> openRechargeUrl(String mUrl) async {
     final uri = Uri.parse(mUrl);
     print("openRechargeUrl ============${uri}");

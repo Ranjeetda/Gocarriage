@@ -15,8 +15,11 @@ class VehicleTypeProvider with ChangeNotifier {
   List<VehicleType> get vehicleTypes => _vehicleTypes;
   bool get isLoading => _isLoading;
 
+  // ↓↓↓ Add these three getters
+  String? get selectedGroup => _selectedGroup;
   int? get selectedVehicleId => _selectedVehicleId;
   String? get selectedVehicleName => _selectedVehicleName;
+  // ↑↑↑
 
   void setSelectedGroup(String group) {
     _selectedGroup = group;

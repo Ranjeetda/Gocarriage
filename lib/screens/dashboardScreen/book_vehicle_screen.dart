@@ -3,10 +3,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gocarriage_universal/provider_service/cluster_check_provider.dart';
+import 'package:gocarriage_universal/resource/app_snack_bar.dart';
 import 'package:gocarriage_universal/resource/image_paths.dart';
 import 'package:gocarriage_universal/resource/pref_utils.dart';
 import 'package:gocarriage_universal/screens/dashboardScreen/vehicle_selection_sheet.dart';
 import 'package:google_places_flutter/google_places_flutter.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../provider_service/URLS.dart';
 import '../../provider_service/booking_trip.dart';
@@ -20,7 +22,14 @@ import '../../provider_service/near_by_vehicle_provider.dart';
 import '../../provider_service/pincode_city_provider.dart';
 import '../../provider_service/place_details_provider.dart';
 import '../../resource/Utils.dart';
+import '../dialogBox/app_message_dialog.dart';
 import '../dialogBox/pickup_location_dialog.dart';
+import '../dialogBox/select_vehicle_type_sheet.dart';
+import '../dialogBox/special_instructions_dialog.dart';
+import '../widgets/advance_payment_info_banner.dart';
+import '../widgets/material_details_form.dart';
+import '../widgets/mode_button.dart';
+import '../widgets/pickup_date_time_selector.dart';
 import '../widgets/selectable_scroll_box.dart';
 import '../auth/login_screen.dart';
 import '../dialogBox/driver_bottom_sheet.dart';
@@ -43,55 +52,52 @@ class BookVehicleScreen extends StatefulWidget {
 class _BookVehicleScreenState extends State<BookVehicleScreen> {
   final fromController = TextEditingController();
   final toController = TextEditingController();
-  final pickupDateController = TextEditingController();
-  final pickupTimeController = TextEditingController();
   final searchClusterController = TextEditingController();
-  final metrialController = TextEditingController();
-  final weightController = TextEditingController();
 
-  bool isWithinCity = true;
-  bool isBookingType = true;
-  bool isGettingLocation = false;
   bool isLoading = false;
   bool isBookingLoading = false;
   bool sameCluster = false;
-  bool isShow = false;
+
   String? fromLatitude;
   String? fromLongitude;
 
   String? toLatitude;
   String? toLongitude;
 
-  String bookingMode = "NOW";
+  String? fromAddress, toAddress;
+  String bookingMode = 'NOW';
   String clusterId = "";
   String distance = "";
   String mDistance = "";
   String mDuration = "";
+  String mServiceType = "";
+
   String vehicleType = "";
   String weightUnit = "";
+
   String mfromLable = "";
   String mtoLable = "";
+
   String? mPrice;
   String selectedRole = 'Customer';
   String mButtonName = 'Find City Vehicles';
-
   String mLocation = "";
+
   String? mPincode1;
   String? mPincode2;
-  BookingTripRequest? globalBookingRequest;
-  Map<String, dynamic>? nearbyData;
-  Map<String, dynamic>? fareData;
 
-  String? selectedRequirement;
-  final Map<String, bool> specialRequirements = {
-    "Container": false,
-    "Extra Length": false,
-    "Covered": false,
-    "Hydraulic": false,
-    "Extra Large": false,
-  };
-  String selectedUnit = "KG";
-  final List<String> units = ["KG", "TON", "GM"];
+  String? mDate;
+  String? mTime;
+
+  BookingTripRequest? globalBookingRequest;
+  Map<String, dynamic> materialData = {};
+  ServiceMode? _selectedMode;
+  bool _userHasSelected = false;
+  BookingMode selectedMode = BookingMode.now;
+
+  // Keys to force rebuild of selectors
+  Key _serviceModeKey = UniqueKey();
+  Key _bookingModeKey = UniqueKey();
 
   int currentPage = 1;
   final int limit = 10;
@@ -104,6 +110,36 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _bookingAllRideService(page: currentPage);
       });
+    }
+  }
+
+  // ─── HELPER METHODS ───────────────────────────────────────────────────────
+  void _onServiceModeChanged(ServiceMode mode) {
+    setState(() {
+      _userHasSelected = true;
+      _selectedMode = mode;
+      _applyServiceMode(mode);
+    });
+  }
+
+  void _applyServiceMode(ServiceMode mode) {
+    switch (mode) {
+      case ServiceMode.incity:
+        mServiceType = "in_city";
+        mButtonName = 'Find City Vehicles';
+        break;
+      case ServiceMode.outcity:
+        mServiceType = "out_city";
+        mButtonName = 'Find OutCity Vehicles';
+        break;
+      case ServiceMode.rental:
+        mServiceType = "rental";
+        mButtonName = 'Find Rentals';
+        break;
+      case ServiceMode.international:
+        mServiceType = "international";
+        mButtonName = 'Get International Quote';
+        break;
     }
   }
 
@@ -120,13 +156,11 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
         append: !isRefresh && page > 1,
       );
     } catch (error) {
-      showStatusDialog(
+      AppSnackBar.showDialogMessage(
         context,
-        type: StatusType.error,
         title: 'Something went wrong!',
         message: error.toString(),
-        primaryLabel: 'Recent booking failed',
-        onPrimary: () => Navigator.of(context).pop(),
+        isError: true,
       );
     }
   }
@@ -152,7 +186,7 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
       fromController.text = globalBookingRequest!.fromLocation.address;
       toController.text = globalBookingRequest!.toLocation.address;
       vehicleType = globalBookingRequest!.vehicleType;
-      weightUnit = globalBookingRequest!.weightUnit;
+      weightUnit = globalBookingRequest!.weightUnit!;
       toLatitude = globalBookingRequest!.toLocation.lat.toString();
       toLongitude = globalBookingRequest!.toLocation.lng.toString();
       fromLatitude = globalBookingRequest!.fromLocation.lat.toString();
@@ -161,10 +195,21 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
       mPincode2 = PrefUtils.getpinCode2();
       _checkCluster(PrefUtils.getpinCode1(), PrefUtils.getpinCode2());
       _checkDistance(PrefUtils.getpinCode1(), PrefUtils.getpinCode2());
+
+      if (mPincode1 != null &&
+          mPincode2 != null &&
+          mPincode1!.isNotEmpty &&
+          mPincode2!.isNotEmpty) {
+        final provider = Provider.of<PincodeCityProvider>(
+          context,
+          listen: false,
+        );
+        provider.checkCity(mPincode1!, mPincode2!);
+      }
+
       print(globalBookingRequest!.weight);
     }
   }
-
 
   Future<void> _checkArea(String pinCode) async {
     setState(() {
@@ -223,31 +268,26 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
       if (response.statusCode == 200) {
         setState(() {
           isLoading = false;
+          sameCluster = data['sameCluster'];
+          if (sameCluster == true) {
+            mtoLable = "Service is available";
+            mfromLable = "Service is available";
+            clusterId = data['cluster_id'].toString();
+          } else {
+            mtoLable = "Service is not available";
+            mfromLable = "Service is not available";
+          }
         });
-        sameCluster = data['sameCluster'];
-        isShow = true;
-        if (sameCluster == true) {
-          mtoLable = "Service is available";
-          mfromLable = "Service is available";
-          clusterId = data['cluster_id'].toString();
-          nearByVehicleData(
-            bookingMode,
-            toLatitude.toString(),
-            fromLongitude.toString(),
-          );
-        } else {
-          mtoLable = "Service is not available";
-          mfromLable = "Service is not available";
-        }
       } else {
         setState(() {
           isLoading = false;
         });
-        print("_checkCluster ${data['message']}");
       }
     } catch (e) {
       print("Exception${e.toString()}");
-      isLoading = false;
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
@@ -257,8 +297,6 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
         context,
         listen: false,
       ).fetchDistance(pinCode1, pinCode2);
-
-      print("Distance calculate ============>${response.toString()}");
       distance =
           double.parse(response['distance']!.replaceAll(" km", "")).toString();
       mDistance = response['distance']!;
@@ -269,79 +307,259 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
     }
   }
 
+  // ─── BOOKING TRIP (Full Screen Refresh) ───────────────────────────────────
   Future<void> _bookingTripe(BookingTripRequest bookingRequest) async {
     setState(() {
       isBookingLoading = true;
     });
 
-    http.Response response = await Provider.of<BookingTrip>(
-      context,
-      listen: false,
-    ).bookingTrip(bookingRequest);
-    var responseData = json.decode(response.body);
-    setState(() {
-      isBookingLoading = false;
-    });
-
-    if (responseData['success'] == true) {
-      setState(() {
-        fromController.text = "";
-        toController.text = "";
-        vehicleType = "";
-        weightUnit = "";
-        mtoLable = "";
-        mfromLable = "";
-        PrefUtils.setPinCode1("");
-        PrefUtils.setPinCode2("");
-        PrefUtils.clearBookingRequest();
-      });
-      showStatusDialog(
+    try {
+      http.Response response = await Provider.of<BookingTrip>(
         context,
-        type: StatusType.success,
-        title: 'Success',
-        message: responseData['message'],
-        primaryLabel: 'Close',
-        onPrimary: () => Navigator.of(context).pop(),
-      );
-    } else {
+        listen: false,
+      ).bookingTrip(bookingRequest);
+
+      var responseData = json.decode(response.body);
+
       setState(() {
         isBookingLoading = false;
       });
-      showStatusDialog(
+
+      if (responseData['success'] == true) {
+        // ── Full screen refresh ──────────────────────────────────────────────
+        setState(() {
+          // Controllers
+          fromController.clear();
+          toController.clear();
+          searchClusterController.clear();
+
+          // Location data
+          fromLatitude = null;
+          fromLongitude = null;
+          toLatitude = null;
+          toLongitude = null;
+          fromAddress = null;
+          toAddress = null;
+          mPincode1 = null;
+          mPincode2 = null;
+          mfromLable = "";
+          mtoLable = "";
+          mLocation = "";
+
+          // Booking Mode reset
+          bookingMode = 'NOW';
+          selectedMode = BookingMode.now;
+
+          // Service Type reset
+          mServiceType = "";
+          _selectedMode = null;
+          _userHasSelected = false;
+          mButtonName = 'Find City Vehicles';
+
+          // Force selectors to rebuild completely
+          _serviceModeKey = UniqueKey();
+          _bookingModeKey = UniqueKey();
+
+          // Other booking state
+          clusterId = "";
+          distance = "";
+          mDistance = "";
+          mDuration = "";
+          vehicleType = "";
+          weightUnit = "";
+          mPrice = null;
+          mDate = null;
+          mTime = null;
+          materialData = {};
+          globalBookingRequest = null;
+        });
+
+        // Clear persisted data
+        PrefUtils.setPinCode1("");
+        PrefUtils.setPinCode2("");
+        PrefUtils.clearBookingRequest();
+
+        // Refresh recent rides
+        if (PrefUtils.isLoggedIn()) {
+          _bookingAllRideService(page: 1, isRefresh: true);
+        }
+
+        showWaitingForDriver();
+      } else {
+        AppSnackBar.showDialogMessage(
+          context,
+          title: "Booking Failed",
+          message: responseData['message'] ?? "Something went wrong",
+          isError: true,
+        );
+      }
+    } catch (e) {
+      setState(() {
+        isBookingLoading = false;
+      });
+
+      AppSnackBar.showDialogMessage(
         context,
-        type: StatusType.error,
-        title: 'Something went wrong!',
-        message: responseData['message'],
-        primaryLabel: 'Booking failed',
-        onPrimary: () => Navigator.of(context).pop(),
+        title: "Error",
+        message: e.toString(),
+        isError: true,
       );
     }
   }
 
+  // ─── NEARBY VEHICLE ───────────────────────────────────────────────────────
   void nearByVehicleData(String bookingMode, String lat, String lng) async {
-    final response = await Provider.of<NearByVehicleProvider>(
-      context,
-      listen: false,
-    ).fetchNearByVehicle(bookingMode, lat, lng);
+    setState(() {
+      isBookingLoading = true;
+    });
 
-    nearbyData = response;
-    List<int> vehicleTypeIds = List<int>.from(
-      nearbyData?['data']['vehicleTypeIds'] ?? [],
-    );
-    fareCalculateData(clusterId, distance, vehicleTypeIds);
-    print(response);
-  }
+    try {
+      if (bookingMode == 'Schedule') {
+        final response = await Provider.of<NearByVehicleProvider>(
+          context,
+          listen: false,
+        ).fetchVehicleType(bookingMode, lat, lng);
 
-  void fareCalculateData(
-    String clusterId,
-    String totalDistance,
-    List<int> vehicleTypeIds,
-  ) async {
-    final response = await Provider.of<FareCalculateProvider>(
-      context,
-      listen: false,
-    ).fetchFareCalculate(clusterId, totalDistance, vehicleTypeIds);
-    fareData = response;
+        setState(() {
+          isBookingLoading = false;
+        });
+
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (context) {
+            return SelectVehicleTypeSheet(
+              from_lat: fromLatitude!,
+              from_lng: fromLongitude!,
+              to_lat: toLatitude!,
+              to_lng: toLongitude!,
+              weight_kg: materialData['weight'] ?? '0',
+              cluster_id: clusterId,
+              service_type: mServiceType,
+              booking_mode: bookingMode,
+              mDistance: mDistance,
+              mDuration: mDuration,
+              fromName: fromAddress!,
+              toName: toAddress!,
+            );
+          },
+        ).then((result) {
+          if (result != null) {
+            DateTime? pickupDate;
+
+            if (mDate != null && mDate!.isNotEmpty) {
+              final parts = mDate!.split('/');
+              pickupDate = DateTime(
+                int.parse(parts[2]),
+                int.parse(parts[1]),
+                int.parse(parts[0]),
+              );
+            }
+
+            globalBookingRequest = BookingTripRequest(
+              bookingMode: bookingMode == 'Schedule' ? 'LATER' : bookingMode,
+              tripType: "Single",
+              vehicleType: result['vehicleType'],
+              vehicleTypeId: result['vehicleId'].toString(),
+              serviceType: mServiceType,
+              pricingMode: result['mode'],
+              pickupDate: pickupDate,
+              pickupTime: mTime,
+              fromLocation: LocationModal(
+                address: fromController.text.trim(),
+                lat: double.parse(fromLatitude!),
+                lng: double.parse(fromLongitude!),
+              ),
+              toLocation: LocationModal(
+                address: toController.text.trim(),
+                lat: double.parse(toLatitude!),
+                lng: double.parse(toLongitude!),
+              ),
+              materialName: materialData['material_name'] ?? "General",
+              weight: double.tryParse(materialData['weight']?.toString() ?? "0") ?? 0,
+              weightUnit: materialData['unit'] ?? "KG",
+              customerId: int.parse(PrefUtils.getUserId()),
+              specialRequirements: SpecialRequirements.fromJson(
+                materialData['specialRequirements'] ?? {},
+              ),
+            );
+            if (PrefUtils.isLoggedIn()) {
+              _bookingTripe(globalBookingRequest!);
+            } else {
+              PrefUtils.saveBookingRequest(globalBookingRequest!);
+              PrefUtils.setRole('customer');
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => LoginPage()),
+              );
+            }
+          }
+        });
+      } else {
+        final response = await Provider.of<NearByVehicleProvider>(
+          context,
+          listen: false,
+        ).fetchNearByVehicle(bookingMode, lat, lng);
+
+        final vehicleTypeIds = List<int>.from(
+          response?['data']?['vehicleTypeIds'] ?? [],
+        );
+
+        setState(() {
+          isBookingLoading = false;
+        });
+
+        if (vehicleTypeIds.isEmpty) {
+          final message = response?['message'] ?? "No eligible nearby drivers";
+
+          AppSnackBar.showErrorWithRetry(
+            context,
+            title: "No Vehicles Found",
+            message: message,
+            onRetry: () {
+              nearByVehicleData(
+                bookingMode,
+                fromLatitude.toString(),
+                fromLongitude.toString(),
+              );
+            },
+          );
+          return;
+        }
+
+        showVehicleBottomSheet(
+          context,
+          fromLatitude!,
+          fromLongitude!,
+          toLatitude!,
+          toLongitude!,
+          materialData['weight'] ?? '0',
+          clusterId,
+          mServiceType,
+          bookingMode,
+          mDistance,
+          mDuration,
+        );
+      }
+    } catch (e) {
+      setState(() {
+        isBookingLoading = false;
+      });
+
+      AppSnackBar.showErrorWithRetry(
+        context,
+        title: "Something went wrong",
+        message: e.toString(),
+        onRetry: () {
+          nearByVehicleData(
+            bookingMode,
+            fromLatitude.toString(),
+            fromLongitude.toString(),
+          );
+        },
+      );
+    }
   }
 
   @override
@@ -353,7 +571,6 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // _buildTopRoleBar(),
             SelectableScrollBox(),
             Expanded(
               child: SingleChildScrollView(
@@ -404,61 +621,143 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const Text(
+              'Service Type',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1E293B),
+              ),
+            ),
+            const SizedBox(height: 10),
+
             Consumer<PincodeCityProvider>(
               builder: (context, pincodeProvider, _) {
-                return ServiceModeSelector(
-                  selectedMode: pincodeProvider.suggestedMode, // auto highlight
-                  onChanged: (mode) {
+                if (pincodeProvider.errorMessage != null) {
+                  return Column(
+                    children: [
+                      Text(
+                        pincodeProvider.errorMessage!,
+                        style: const TextStyle(color: Colors.red, fontSize: 13),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      ServiceModeSelector(
+                        key: _serviceModeKey,
+                        selectedMode: _selectedMode,
+                        onChanged: _onServiceModeChanged,
+                      ),
+                    ],
+                  );
+                }
+
+                if (!_userHasSelected &&
+                    pincodeProvider.suggestedMode != null &&
+                    _selectedMode != pincodeProvider.suggestedMode) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted || _userHasSelected) return;
                     setState(() {
-                      if (mode == ServiceMode.incity) {
-                        mButtonName = 'Find City Vehicles';
-                      } else if (mode == ServiceMode.outcity) {
-                        mButtonName = 'Find OutCity Vehicles';
-                      } else if (mode == ServiceMode.rental) {
-                        mButtonName = 'Find Rentals';
-                      } else if (mode == ServiceMode.international) {
-                        mButtonName = 'Get International Quote';
-                      }
+                      _selectedMode = pincodeProvider.suggestedMode;
+                      _applyServiceMode(_selectedMode!);
                     });
-                  },
+                  });
+                }
+
+                return ServiceModeSelector(
+                  key: _serviceModeKey,
+                  selectedMode: _selectedMode,
+                  onChanged: _onServiceModeChanged,
                 );
               },
             ),
-           /* ServiceModeSelector(
+
+            const SizedBox(height: 16),
+            BookingModeSelector(
+              key: _bookingModeKey,
+              initialMode: selectedMode,
               onChanged: (mode) {
-                debugPrint('Selected: $mode');
                 setState(() {
-                  if (mode.toString().replaceAll('ServiceMode.', '') ==
-                      'incity') {
-                    mButtonName = 'Find City Vehicles';
-                  } else if (mode.toString().replaceAll('ServiceMode.', '') ==
-                      'outcity') {
-                    mButtonName = 'Find OutCity Vehicles';
-                  } else if (mode.toString().replaceAll('ServiceMode.', '') ==
-                      'rental') {
-                    mButtonName = 'Find Rentals';
-                  } else if (mode.toString().replaceAll('ServiceMode.', '') ==
-                      'international') {
-                    mButtonName = 'Get International Quote';
-                  }
+                  selectedMode = mode;
+                  bookingMode =
+                  "${mode.name[0].toUpperCase()}${mode.name.substring(1)}";
+                  print(bookingMode);
                 });
               },
-            ),*/
-            const SizedBox(height: 16),
-            // Location fields
-            _locationRow(),
-            const SizedBox(height: 16),
-            // Vehicle + Schedule row
-            Row(
-              children: [
-                Expanded(child: _vehicleDropdownTile()),
-                const SizedBox(width: 12),
-                Expanded(child: _scheduleTile()),
-              ],
             ),
             const SizedBox(height: 16),
-            // Find Vehicles button
+
+            _locationRow(),
+
+            if (selectedMode == BookingMode.schedule) ...[
+              const SizedBox(height: 16),
+              PickupDateTimeSelector(
+                minHoursFromNow: 3,
+                onDateChanged: (date) {
+                  mDate = DateFormat('dd/MM/yyyy').format(date);
+                },
+                onTimeChanged: (time) {
+                  final now = DateTime.now();
+                  final dateTime = DateTime(
+                    now.year,
+                    now.month,
+                    now.day,
+                    time.hour,
+                    time.minute,
+                  );
+                  mTime = DateFormat('hh:mm a').format(dateTime);
+                },
+              ),
+              const SizedBox(height: 16),
+              const AdvancePaymentInfoBanner(),
+            ],
+
+            if (mServiceType == 'out_city') ...[
+              const SizedBox(height: 16),
+              MaterialDetailsForm(
+                onChanged: (values) {
+                  setState(() {
+                    materialData = values;
+                  });
+                },
+              ),
+            ],
+
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: openSpecialInstructionsDialog,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0F6FF),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFD6E4FF)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.edit_note_rounded,
+                      size: 20,
+                      color: Color(0xFF3B82F6),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      "Add Special Instructions (Optional)",
+                      style: const TextStyle(
+                        color: Color(0xFF3B82F6),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
             _findVehiclesButton(),
           ],
         ),
@@ -466,18 +765,39 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
     );
   }
 
+  Future<void> openSpecialInstructionsDialog() async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const SpecialInstructionsDialog(),
+    );
+
+    if (result != null) {
+      final int loadingTime = result['loadingTime'] as int;
+      final int unloadingTime = result['unloadingTime'] as int;
+      final TimeOfDay? noEntryFrom = result['noEntryFrom'] as TimeOfDay?;
+      final TimeOfDay? noEntryTo = result['noEntryTo'] as TimeOfDay?;
+      final String notes = result['notes'] as String;
+
+      print('Loading: $loadingTime hrs');
+      print('Unloading: $unloadingTime hrs');
+      print('No Entry From: ${Utils.formatTime(noEntryFrom)}');
+      print('No Entry To: ${Utils.formatTime(noEntryTo)}');
+      print('Notes: $notes');
+    }
+  }
+
   Widget _locationRow() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Icon column
         Column(
           children: [
             const SizedBox(height: 14),
             const Icon(Icons.location_on, color: Color(0xFF2563EB), size: 22),
             ...List.generate(
               5,
-              (_) => Container(
+                  (_) => Container(
                 width: 2,
                 height: 5,
                 margin: const EdgeInsets.symmetric(vertical: 2),
@@ -545,13 +865,10 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
           valueListenable: controller,
           builder: (context, TextEditingValue value, child) {
             return GestureDetector(
-              onTap:
-                  () => _openLocationBottomSheet(
-                    label == 'Pickup Location'
-                        ? 'Pickup Location'
-                        : 'Drop Location',
-                    controller,
-                  ),
+              onTap: () => _openLocationBottomSheet(
+                label == 'Pickup Location' ? 'Pickup Location' : 'Drop Location',
+                controller,
+              ),
               child: Container(
                 height: 44,
                 decoration: BoxDecoration(
@@ -569,8 +886,7 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
                             : value.text,
                         style: TextStyle(
                           fontSize: 13,
-                          color:
-                              value.text.isEmpty ? Colors.grey : Colors.black87,
+                          color: value.text.isEmpty ? Colors.grey : Colors.black87,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -597,263 +913,108 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
             );
           },
         ),
-        if (serviceLabel.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Row(
-              children: [
-                TextButton.icon(
-                  onPressed: null,
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  icon: Icon(
-                    Icons.my_location,
-                    size: 12,
-                    color: const Color(0xFF2563EB),
-                  ),
-                  label: Text(
-                    'Use Current',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: const Color(0xFF2563EB),
-                    ),
-                  ),
-                ),
-                const Spacer(),
-               /* Text(
-                  serviceLabel,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color:
-                        serviceLabel == 'Service is available'
-                            ? Colors.green
-                            : Colors.red,
-                  ),
-                ),*/
-              ],
-            ),
-          )
-        else
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Row(
-              children: [
-                TextButton.icon(
-                  onPressed: null,
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  icon: const Icon(
-                    Icons.my_location,
-                    size: 12,
-                    color: Color(0xFF2563EB),
-                  ),
-                  label: const Text(
-                    'Use Current',
-                    style: TextStyle(fontSize: 11, color: Color(0xFF2563EB)),
-                  ),
-                ),
-              ],
-            ),
-          ),
       ],
     );
   }
 
-  Widget _vehicleDropdownTile() {
-    return GestureDetector(
-      onTap: () {
-       /* if (sameCluster == true) {
-
-        } else {
-          Utils.showCustomToast(context, "Service is not available");
-        }*/
-        showVehicleBottomSheet(context, mPincode1!, mPincode2!);
-      },
-      child: Container(
-        height: 52,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF5F7FA),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.grey.shade200),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.local_shipping_outlined,
-              size: 18,
-              color: Colors.black54,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    'Select Vehicle Type',
-                    style: TextStyle(fontSize: 10, color: Colors.black45),
-                  ),
-                  Text(
-                    vehicleType.isNotEmpty ? vehicleType : 'Select Type',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.keyboard_arrow_down,
-              size: 18,
-              color: Colors.black54,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _scheduleTile() {
-    return GestureDetector(
-      onTap: () async {
-        setState(() {
-          isWithinCity = false;
-          bookingMode = "SCHEDULE";
-        });
-        await selectPickupDate();
-      },
-      child: Container(
-        height: 52,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF5F7FA),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.grey.shade200),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.calendar_today_outlined,
-              size: 16,
-              color: Colors.black54,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    'Schedule (Optional)',
-                    style: TextStyle(fontSize: 10, color: Colors.black45),
-                  ),
-                  Text(
-                    pickupDateController.text.isNotEmpty
-                        ? pickupDateController.text
-                        : 'Select Date',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.keyboard_arrow_down,
-              size: 18,
-              color: Colors.black54,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
+  // ─── FIND VEHICLES BUTTON ─────────────────────────────────────────────────
   Widget _findVehiclesButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 50,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF2563EB),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 0,
-        ),
-        onPressed: () {
-          if (fromController.text.isEmpty) {
-            Utils.showErrorMessage(context, 'Please search pickup location.');
-            return;
-          } else if (toController.text.isEmpty) {
-            Utils.showErrorMessage(context, 'Please search drop location.');
-            return;
-          } else if (vehicleType == "") {
-            Utils.showErrorMessage(context, 'Please select vehicle type.');
-            return;
-          }
-          globalBookingRequest = BookingTripRequest(
-            bookingMode: bookingMode,
-            tripType: "Single",
-            vehicleType: vehicleType!,
-            fromLocation: LocationModal(
-              address: fromController.text.trim(),
-              lat: double.parse(fromLatitude!),
-              lng: double.parse(fromLongitude!),
-            ),
-            toLocation: LocationModal(
-              address: toController.text.trim(),
-              lat: double.parse(toLatitude!),
-              lng: double.parse(toLongitude!),
-            ),
-            materialName: "General",
-            weight: double.parse(vehicleType),
-            weightUnit: 'KG',
-            customerId: int.parse(PrefUtils.getUserId()),
-            specialRequirements: SpecialRequirements(
-              container: false,
-              extraLength: false,
-              covered: false,
-              hydraulic: false,
-              extraLarge: false,
-            ),
-          );
+    return Consumer<PincodeCityProvider>(
+      builder: (context, pincodeProvider, _) {
+        final bool isPincodeLoading = pincodeProvider.isLoading;
+        final bool showLoader = isBookingLoading || isPincodeLoading;
 
-          if (PrefUtils.isLoggedIn()) {
-            showWaitingForDriver();
-            _bookingTripe(globalBookingRequest!);
-          } else {
-            PrefUtils.saveBookingRequest(globalBookingRequest!);
-            PrefUtils.setRole('customer');
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => LoginPage()),
-            );
-          }
-        },
-        child:
-            isBookingLoading
-                ? const CircularProgressIndicator(color: Colors.white)
+        final bool isEnabled =
+            mServiceType.isNotEmpty && !isPincodeLoading && !isBookingLoading;
+
+        return SizedBox(
+          width: double.infinity,
+          height: 50,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor:
+              isEnabled ? const Color(0xFF2563EB) : Colors.grey.shade400,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 0,
+            ),
+            onPressed: isEnabled
+                ? () {
+              if (fromController.text.isEmpty) {
+                AppSnackBar.showDialogMessage(
+                  context,
+                  title: "Missing Information",
+                  message: "Please search pickup location.",
+                  isError: true,
+                );
+                return;
+              }
+              if (toController.text.isEmpty) {
+                AppSnackBar.showDialogMessage(
+                  context,
+                  title: "Missing Information",
+                  message: "Please search drop location.",
+                  isError: true,
+                );
+                return;
+              }
+              if (bookingMode == 'Schedule' &&
+                  (mDate == null || mTime == null)) {
+                AppSnackBar.showDialogMessage(
+                  context,
+                  title: "Missing Information",
+                  message: "Please fill date and time",
+                  isError: true,
+                );
+                return;
+              }
+              if (mServiceType == 'out_city') {
+                final materialName =
+                (materialData['material_name'] ?? '')
+                    .toString()
+                    .trim();
+                final weight =
+                (materialData['weight'] ?? '').toString().trim();
+
+                if (materialName.isEmpty || weight.isEmpty) {
+                  AppSnackBar.showDialogMessage(
+                    context,
+                    title: "Missing Information",
+                    message: "Please fill Material Name and Weight",
+                    isError: true,
+                  );
+                  return;
+                }
+              }
+
+              nearByVehicleData(
+                bookingMode,
+                fromLatitude.toString(),
+                fromLongitude.toString(),
+              );
+            }
+                : null,
+            child: showLoader
+                ? const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2.5,
+              ),
+            )
                 : Text(
-                  mButtonName,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-      ),
+              mButtonName,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -908,63 +1069,56 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children:
-            actions.asMap().entries.map((entry) {
-              final index = entry.key;
-              final a = entry.value;
+        children: actions.asMap().entries.map((entry) {
+          final index = entry.key;
+          final a = entry.value;
 
-              return InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () {
-                  switch (index) {
-                    case 0:
-                      print("Quick Booking Clicked");
-                      // Navigator.push(...);
-                      break;
-
-                    case 1:
-                      print("My Bookings Clicked");
-                      context.read<BottomNavigationProvider>().changeIndex(1);
-
-                      break;
-
-                    case 2:
-                      print("Live Tracking Clicked");
-                      break;
-
-                    case 3:
-                      print("Rate Calculator Clicked");
-                      break;
-                  }
-                },
-                child: Column(
-                  children: [
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: a['bg'] as Color,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Icon(
-                        a['icon'] as IconData,
-                        color: a['color'] as Color,
-                        size: 28,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      a['label'] as String,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.black87,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+          return InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () {
+              switch (index) {
+                case 0:
+                  print("Quick Booking Clicked");
+                  break;
+                case 1:
+                  context.read<BottomNavigationProvider>().changeIndex(1);
+                  break;
+                case 2:
+                  print("Live Tracking Clicked");
+                  break;
+                case 3:
+                  print("Rate Calculator Clicked");
+                  break;
+              }
+            },
+            child: Column(
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: a['bg'] as Color,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(
+                    a['icon'] as IconData,
+                    color: a['color'] as Color,
+                    size: 28,
+                  ),
                 ),
-              );
-            }).toList(),
+                const SizedBox(height: 6),
+                Text(
+                  a['label'] as String,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Colors.black87,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -1027,41 +1181,40 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
             childAspectRatio: 3,
             crossAxisSpacing: 8,
             mainAxisSpacing: 8,
-            children:
-                items.map((item) {
-                  return Row(
-                    children: [
-                      Icon(
-                        item['icon'] as IconData,
-                        color: item['color'] as Color,
-                        size: 22,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              item['title'] as String,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            Text(
-                              item['sub'] as String,
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: Colors.black45,
-                              ),
-                            ),
-                          ],
+            children: items.map((item) {
+              return Row(
+                children: [
+                  Icon(
+                    item['icon'] as IconData,
+                    color: item['color'] as Color,
+                    size: 22,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          item['title'] as String,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                    ],
-                  );
-                }).toList(),
+                        Text(
+                          item['sub'] as String,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.black45,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
           ),
         ],
       ),
@@ -1110,13 +1263,6 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
             child: ListView.builder(
               itemCount: rides.length,
               itemBuilder: (context, index) {
-              /*  final result = Utils.convertMillisecondsToDateAndTime(
-                  int.parse(rides[index]['default_booking_hour'].toString()),
-                );
-
-                String mDate = result['date'].toString();
-                String mTime = result['time'].toString();*/
-
                 return _recentBookingTile(
                   from: rides[index]['fromLocation']['address'],
                   to: rides[index]['toLocation']['address'],
@@ -1297,8 +1443,7 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
     );
   }
 
-  // ─── LOCATION BOTTOM SHEET (unchanged logic) ─────────────────────────────
-
+  // ─── LOCATION BOTTOM SHEET ────────────────────────────────────────────────
   Future<void> _openLocationBottomSheet(
       String title,
       TextEditingController controller,
@@ -1307,15 +1452,17 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) =>  PickupLocationDialog(title), // same dialog for both
+      builder: (context) => PickupLocationDialog(title),
     );
 
     if (result == null) return;
 
-    print("RanjeetTest $title =============>${result.toString()}");
-
     setState(() {
       if (title == 'Pickup Location') {
+        fromAddress = result['address']?.toString() ??
+            result['formatted_address']?.toString() ??
+            result['name']?.toString() ??
+            "";
         fromLatitude = result['latitude'].toString();
         fromLongitude = result['longitude'].toString();
         mPincode1 = result['pincode'].toString();
@@ -1324,292 +1471,41 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
           _checkArea(mPincode1!);
         }
       } else {
-        // Drop Location
+        toAddress = result['address']?.toString() ??
+            result['formatted_address']?.toString() ??
+            result['name']?.toString() ??
+            "";
         toLatitude = result['latitude'].toString();
         toLongitude = result['longitude'].toString();
         mPincode2 = result['pincode'].toString();
         if (mPincode1 != null && mPincode2 != null) {
           _checkCluster(mPincode1!, mPincode2!);
           _checkDistance(mPincode1!, mPincode2!);
-          final provider = Provider.of<PincodeCityProvider>(context, listen: false);
+          final provider = Provider.of<PincodeCityProvider>(
+            context,
+            listen: false,
+          );
           provider.checkCity(mPincode1!, mPincode2!);
         }
       }
-      // Update the text field so the UI reflects the selected address
       controller.text = result['address'] ?? '';
     });
   }
 
-/*  void _openLocationBottomSheet(
-    String label,
-    TextEditingController controller,
-  ) async {
-    final TextEditingController searchController = TextEditingController(
-      text: controller.text,
-    );
-    final FocusNode searchFocusNode = FocusNode();
-    List<RecentLocation> recentLocations = await PrefUtils.getRecentLocations();
-
-    if (!mounted) return;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (BuildContext sheetContext) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
-            final bool showRecent =
-                searchController.text.isEmpty && recentLocations.isNotEmpty;
-
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!searchFocusNode.hasFocus && searchController.text.isEmpty) {
-                searchFocusNode.requestFocus();
-              }
-            });
-
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
-              ),
-              child: SizedBox(
-                height: MediaQuery.of(sheetContext).size.height * 0.85,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 12),
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Text(
-                            "Select $label",
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const Spacer(),
-                          IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed: () {
-                              FocusScope.of(sheetContext).unfocus();
-                              if (Navigator.of(sheetContext).canPop()) {
-                                Navigator.of(sheetContext).pop();
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: GooglePlaceAutoCompleteTextField(
-                        textEditingController: searchController,
-                        focusNode: searchFocusNode,
-                        googleAPIKey: Utils.googleMapKey,
-                        debounceTime: 600,
-                        countries: const ["in"],
-                        isLatLngRequired: false,
-                        inputDecoration: InputDecoration(
-                          hintText: "Search location",
-                          prefixIcon: const Icon(Icons.search),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey[50],
-                        ),
-                        itemBuilder: (context, index, prediction) {
-                          return Container(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 12,
-                              horizontal: 16,
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.location_on_outlined,
-                                  color: Colors.blueGrey,
-                                  size: 22,
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Text(
-                                    prediction.description ?? "",
-                                    style: const TextStyle(fontSize: 15),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                        seperatedBuilder: const Divider(height: 1),
-                        isCrossBtnShown: true,
-                        itemClick: (prediction) async {
-                          final selected = prediction.description ?? "";
-                          controller.text = selected;
-                          searchController.text = selected;
-                          if (!mounted) return;
-                          final provider = Provider.of<PlaceDetailsProvider>(
-                            context,
-                            listen: false,
-                          );
-                          await provider.fetchPlaceDetails(prediction.placeId!);
-                          if (!mounted) return;
-                          final details = provider.placeDetails;
-                          if (details != null) {
-                            await PrefUtils.addLocation(
-                              location: selected,
-                              postalCode: details.postalCode,
-                              lat: details.lat,
-                              lng: details.lng,
-                            );
-                            if (label == "Pickup Location") {
-                              mPincode1 = details.postalCode;
-                              PrefUtils.setPinCode1(mPincode1!);
-                              fromLatitude = details.lat.toString();
-                              fromLongitude = details.lng.toString();
-                            } else {
-                              mPincode2 = details.postalCode;
-                              PrefUtils.setPinCode2(mPincode2!);
-                              toLatitude = details.lat.toString();
-                              toLongitude = details.lng.toString();
-                            }
-                          }
-                          if (mPincode1 != null && mPincode2 != null) {
-                            _checkCluster(mPincode1!, mPincode2!);
-                            _checkDistance(mPincode1!, mPincode2!);
-                          } else if (mPincode1 != null) {
-                            _checkArea(mPincode1!);
-                          }
-                          if (Navigator.of(sheetContext).canPop()) {
-                            Navigator.of(sheetContext).pop();
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    if (showRecent) ...[
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          "Recent Searches",
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[700],
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: recentLocations.length,
-                          itemBuilder: (context, index) {
-                            final loc = recentLocations[index];
-                            return ListTile(
-                              leading: const Icon(
-                                Icons.history,
-                                color: Colors.grey,
-                              ),
-                              title: Text(
-                                loc.location,
-                                style: const TextStyle(fontSize: 15),
-                              ),
-                              onTap: () async {
-                                controller.text = loc.location;
-                                searchController.text = loc.location;
-                                await PrefUtils.addLocation(
-                                  location: loc.location,
-                                  postalCode: loc.postalCode,
-                                  lat: loc.lat,
-                                  lng: loc.lng,
-                                );
-                                if (label == "Pickup Location") {
-                                  mPincode1 = loc.postalCode;
-                                  PrefUtils.setPinCode1(mPincode1!);
-                                  fromLatitude = loc.lat.toString();
-                                  fromLongitude = loc.lng.toString();
-                                } else {
-                                  mPincode2 = loc.postalCode;
-                                  PrefUtils.setPinCode2(mPincode2!);
-                                  toLatitude = loc.lat.toString();
-                                  toLongitude = loc.lng.toString();
-                                }
-                                if (mPincode1 != null && mPincode2 != null) {
-                                  _checkCluster(mPincode1!, mPincode2!);
-                                  _checkDistance(mPincode1!, mPincode2!);
-                                } else if (mPincode1 != null) {
-                                  _checkArea(mPincode1!);
-                                }
-                                if (Navigator.of(sheetContext).canPop()) {
-                                  Navigator.of(sheetContext).pop();
-                                }
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                    ] else
-                      const Expanded(child: SizedBox()),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }*/
-
-  // ─── DATE / TIME PICKERS (unchanged) ─────────────────────────────────────
-  Future<void> selectPickupDate() async {
-    DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-    );
-    if (picked != null) {
-      pickupDateController.text =
-          "${picked.day.toString().padLeft(2, '0')}/"
-          "${picked.month.toString().padLeft(2, '0')}/"
-          "${picked.year}";
-      setState(() {});
-    }
-  }
-
-  Future<void> selectPickupTime() async {
-    TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-    );
-    if (picked != null) {
-      pickupTimeController.text = picked.format(context);
-      setState(() {});
-    }
-  }
-
-  // ─── VEHICLE BOTTOM SHEET (unchanged) ────────────────────────────────────
+  // ─── VEHICLE BOTTOM SHEET ─────────────────────────────────────────────────
   Future<void> showVehicleBottomSheet(
-    BuildContext context,
-    String pincode1,
-    String pincode2,
-  ) async {
+      BuildContext context,
+      final String from_lat,
+      final String from_lng,
+      final String to_lat,
+      final String to_lng,
+      final String weight_kg,
+      final String cluster_id,
+      final String service_type,
+      final String booking_mode,
+      final String mDistance,
+      final String mDuration,
+      ) async {
     final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
@@ -1617,11 +1513,18 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
         return FractionallySizedBox(
           heightFactor: 0.8,
           child: VehicleSelectionSheet(
-            pincode1,
-            pincode2,
-            mDistance,
-            mDuration,
-            fareData,
+            from_lat: from_lat,
+            from_lng: from_lng,
+            to_lat: to_lat,
+            to_lng: to_lng,
+            weight_kg: weight_kg,
+            cluster_id: cluster_id,
+            service_type: service_type,
+            booking_mode: booking_mode,
+            mDistance: mDistance,
+            mDuration: mDuration,
+            fromName: fromAddress!,
+            toName: toAddress!,
           ),
         );
       },
@@ -1631,6 +1534,40 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
       setState(() {
         vehicleType = result["vehicleType"] ?? "";
         mPrice = result["price"]?.toString() ?? "0";
+
+        globalBookingRequest = BookingTripRequest(
+          bookingMode: bookingMode,
+          tripType: "Single",
+          vehicleType: vehicleType,
+          fromLocation: LocationModal(
+            address: fromController.text.trim(),
+            lat: double.parse(fromLatitude!),
+            lng: double.parse(fromLongitude!),
+          ),
+          toLocation: LocationModal(
+            address: toController.text.trim(),
+            lat: double.parse(toLatitude!),
+            lng: double.parse(toLongitude!),
+          ),
+          materialName: materialData['material_name'] ?? "General",
+          weight:
+          double.tryParse(materialData['weight']?.toString() ?? "0") ?? 0,
+          weightUnit: materialData['unit'] ?? 'KG',
+          customerId: int.parse(PrefUtils.getUserId()),
+          specialRequirements: materialData['specialRequirements'] ?? {},
+          serviceType: mServiceType,
+        );
+
+        if (PrefUtils.isLoggedIn()) {
+          _bookingTripe(globalBookingRequest!);
+        } else {
+          PrefUtils.saveBookingRequest(globalBookingRequest!);
+          PrefUtils.setRole('customer');
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => LoginPage()),
+          );
+        }
       });
     }
   }
