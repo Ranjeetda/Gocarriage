@@ -463,7 +463,7 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
               vehicleType: result['vehicleType'],
               vehicleTypeId: result['vehicleId'].toString(),
               serviceType: mServiceType,
-              pricingMode: result['mode'],
+              pricingMode: result['mode']=='negotiate'?'negotiable':result['mode'],
               pickupDate: pickupDate,
               pickupTime: mTime,
               fromLocation: LocationModal(
@@ -707,7 +707,7 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
                     time.minute,
                   );
                   mTime = DateFormat('hh:mm a').format(dateTime);
-                },
+                }, txtMessage: 'Scheduled pickup must be at least 3 hours from now.',
               ),
               const SizedBox(height: 16),
               const AdvancePaymentInfoBanner(),

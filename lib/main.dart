@@ -13,6 +13,8 @@ import 'package:gocarriage_universal/provider_service/assign_bulk_vehicle_provid
 import 'package:gocarriage_universal/provider_service/assign_driver_provider.dart';
 import 'package:gocarriage_universal/provider_service/assign_vehicle_driver_provider.dart';
 import 'package:gocarriage_universal/provider_service/audio_provider.dart';
+import 'package:gocarriage_universal/provider_service/bluk_booking_trip_provider.dart';
+import 'package:gocarriage_universal/provider_service/bluk_order_list_provider.dart';
 import 'package:gocarriage_universal/provider_service/bottom_navigation_provider.dart';
 import 'package:gocarriage_universal/provider_service/corprote_booking_activity.dart';
 import 'package:gocarriage_universal/provider_service/corprote_booking_dashboard.dart';
@@ -51,6 +53,7 @@ import 'package:gocarriage_universal/provider_service/owner_reqest_provider.dart
 import 'package:gocarriage_universal/provider_service/owner_request_approve_provider.dart';
 import 'package:gocarriage_universal/provider_service/owner_un_assign_driver_provider.dart';
 import 'package:gocarriage_universal/provider_service/owner_unassign_driver_vehicle.dart';
+import 'package:gocarriage_universal/provider_service/past_order_list_provider.dart';
 import 'package:gocarriage_universal/provider_service/pincode_city_provider.dart';
 import 'package:gocarriage_universal/provider_service/reward_wallet_provider.dart';
 import 'package:gocarriage_universal/provider_service/search_driver_provider.dart';
@@ -212,6 +215,9 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => FreightComponetViewModelByProvider()),
         ChangeNotifierProvider(create: (_) => AddFleetFreightCostProvider()),
         ChangeNotifierProvider(create: (_) => VehicleClassProvider()),
+        ChangeNotifierProvider(create: (_) => BlukBookingTripProvider()),
+        ChangeNotifierProvider(create: (_) => BlukOrderListProvider()),
+        ChangeNotifierProvider(create: (_) => PastOrderListProvider()),
         ChangeNotifierProvider(
           create:
               (context) => DriverBooingRequestProvider(

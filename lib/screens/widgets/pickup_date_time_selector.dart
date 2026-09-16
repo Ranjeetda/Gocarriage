@@ -7,6 +7,7 @@ class PickupDateTimeSelector extends StatefulWidget {
   final ValueChanged<DateTime>? onDateChanged;
   final ValueChanged<TimeOfDay>? onTimeChanged;
   final int minHoursFromNow;
+  final String txtMessage;
 
   const PickupDateTimeSelector({
     super.key,
@@ -15,6 +16,7 @@ class PickupDateTimeSelector extends StatefulWidget {
     this.onDateChanged,
     this.onTimeChanged,
     this.minHoursFromNow = 3,
+    required this.txtMessage,
   });
 
   @override
@@ -286,8 +288,8 @@ class _PickupDateTimeSelectorState extends State<PickupDateTimeSelector> {
 
         const SizedBox(height: 10),
 
-        const Text(
-          'Scheduled pickup must be at least 3 hours from now.',
+         Text(
+          widget.txtMessage,
           style: TextStyle(
             fontSize: 13,
             color: Color(0xFF64748B),

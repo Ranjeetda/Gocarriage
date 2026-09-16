@@ -44,6 +44,7 @@ class URLS {
   static const String clustersCheckSame = '$clusterBaseUrl/clusters/check-same';
   static const String bookingTrip = '$bookingBaseUrl/booking';
   static const String customerBooking = '$bookingBaseUrl/booking/';
+  static const String bulkBooking = '$bookingBaseUrl/booking/bulk';
 
   static const String privacyPolicy = '${baseUrl}/privacy-policy';
   static const String termsCondition = '${baseUrl}/terms-condition';
