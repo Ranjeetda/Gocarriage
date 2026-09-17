@@ -108,7 +108,7 @@ class _BulkBookingScreenState extends State<BulkBookingScreen> {
   bool get _canConfirm {
     if (!_allLocationsSet) return false;
     if (selectedMode == BookingMode.schedule &&
-        (mDate == null || mTime == null)) {
+        (mDate == null || mTime == null || scheduledDateTime == null)) {
       return false;
     }
     return shipments.every(
@@ -266,11 +266,12 @@ class _BulkBookingScreenState extends State<BulkBookingScreen> {
           mPrice = null;
           mDate = null;
           mTime = null;
+          scheduledDateTime = null;
           materialData = {};
         });
         if (responseData['success'] == true) {
           final bulkId = responseData['data']?['bulkOrderId'];
-              showBulkWaitingSheet(bulkOrderId: bulkId,);
+          showBulkWaitingSheet(bulkOrderId: bulkId);
         }
       } else {
         AppSnackBar.showDialogMessage(
@@ -345,7 +346,7 @@ class _BulkBookingScreenState extends State<BulkBookingScreen> {
 
     // Schedule validation
     if (selectedMode == BookingMode.schedule &&
-        (mDate == null || mTime == null)) {
+        (mDate == null || mTime == null || scheduledDateTime == null)) {
       AppSnackBar.showDialogMessage(
         context,
         title: 'Missing Information',
@@ -440,9 +441,21 @@ class _BulkBookingScreenState extends State<BulkBookingScreen> {
       return;
     }
 
+    // Build schedule fields when booking mode is LATER
+    String? pickupDateIso;
+    String? pickupTimeHHmm;
+    if (selectedMode == BookingMode.schedule && scheduledDateTime != null) {
+      // ISO-8601 UTC, e.g. "2026-09-17T12:13:00.000Z"
+      pickupDateIso = scheduledDateTime!.toUtc().toIso8601String();
+      // 24h "HH:mm", e.g. "17:43"
+      pickupTimeHHmm = DateFormat('HH:mm').format(scheduledDateTime!);
+    }
+
     final request = BlukBookingTripRequest(
       bookingMode: selectedMode == BookingMode.schedule ? 'LATER' : 'NOW',
       rows: rows,
+      pickupDate: pickupDateIso,
+      pickupTime: pickupTimeHHmm,
     );
 
     if (PrefUtils.isLoggedIn()) {
@@ -530,19 +543,31 @@ class _BulkBookingScreenState extends State<BulkBookingScreen> {
                         onDateChanged: (date) {
                           setState(() {
                             mDate = DateFormat('dd/MM/yyyy').format(date);
+                            // Preserve existing time if already chosen; otherwise use now
+                            final timePart = scheduledDateTime ?? DateTime.now();
+                            scheduledDateTime = DateTime(
+                              date.year,
+                              date.month,
+                              date.day,
+                              timePart.hour,
+                              timePart.minute,
+                            );
                           });
                         },
                         onTimeChanged: (time) {
                           setState(() {
-                            final now = DateTime.now();
-                            final dateTime = DateTime(
-                              now.year,
-                              now.month,
-                              now.day,
+                            final base = scheduledDateTime ?? DateTime.now();
+                            scheduledDateTime = DateTime(
+                              base.year,
+                              base.month,
+                              base.day,
                               time.hour,
                               time.minute,
                             );
-                            mTime = DateFormat('hh:mm a').format(dateTime);
+                            mTime =
+                                DateFormat('hh:mm a').format(scheduledDateTime!);
+                            mDate ??= DateFormat('dd/MM/yyyy')
+                                .format(scheduledDateTime!);
                           });
                         },
                         txtMessage:
@@ -607,6 +632,7 @@ class _BulkBookingScreenState extends State<BulkBookingScreen> {
                     // clear schedule values when switching to Now
                     mDate = null;
                     mTime = null;
+                    scheduledDateTime = null;
                   }),
                   child: Container(
                     height: 48,
@@ -876,6 +902,34 @@ class _BulkBookingScreenState extends State<BulkBookingScreen> {
             const SizedBox(height: 12),
             Consumer<PincodeCityProvider>(
               builder: (context, pincodeProvider, _) {
+                // Show loader while checking service availability
+                if (pincodeProvider.isLoading) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Color(0xFFE85D04),
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'Checking service availability...',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF6B7280),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
                 if (pincodeProvider.errorMessage != null) {
                   return Column(
                     children: [

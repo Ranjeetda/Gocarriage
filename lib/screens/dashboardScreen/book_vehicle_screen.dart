@@ -53,6 +53,7 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
   final fromController = TextEditingController();
   final toController = TextEditingController();
   final searchClusterController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   bool isLoading = false;
   bool isBookingLoading = false;
@@ -111,6 +112,15 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
         _bookingAllRideService(page: currentPage);
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    fromController.dispose();
+    toController.dispose();
+    searchClusterController.dispose();
+    super.dispose();
   }
 
   // ─── HELPER METHODS ───────────────────────────────────────────────────────
@@ -574,6 +584,7 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
             SelectableScrollBox(),
             Expanded(
               child: SingleChildScrollView(
+                controller: _scrollController,
                 child: Column(
                   children: [
                     _buildBookingCard(),
@@ -635,6 +646,34 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
 
             Consumer<PincodeCityProvider>(
               builder: (context, pincodeProvider, _) {
+                // Show loader while checking service availability
+                if (pincodeProvider.isLoading) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Color(0xFFE85D04),
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'Checking service availability...',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF6B7280),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
                 if (pincodeProvider.errorMessage != null) {
                   return Column(
                     children: [
@@ -652,19 +691,18 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
                     ],
                   );
                 }
-
+                final suggested = pincodeProvider.suggestedMode;
                 if (!_userHasSelected &&
-                    pincodeProvider.suggestedMode != null &&
-                    _selectedMode != pincodeProvider.suggestedMode) {
+                    suggested != null &&
+                    _selectedMode != suggested) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (!mounted || _userHasSelected) return;
                     setState(() {
-                      _selectedMode = pincodeProvider.suggestedMode;
-                      _applyServiceMode(_selectedMode!);
+                      _selectedMode = suggested;
+                      _applyServiceMode(suggested);
                     });
                   });
                 }
-
                 return ServiceModeSelector(
                   key: _serviceModeKey,
                   selectedMode: _selectedMode,
@@ -707,7 +745,9 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
                     time.minute,
                   );
                   mTime = DateFormat('hh:mm a').format(dateTime);
-                }, txtMessage: 'Scheduled pickup must be at least 3 hours from now.',
+                },
+                txtMessage:
+                'Scheduled pickup must be at least 3 hours from now.',
               ),
               const SizedBox(height: 16),
               const AdvancePaymentInfoBanner(),
@@ -886,7 +926,8 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
                             : value.text,
                         style: TextStyle(
                           fontSize: 13,
-                          color: value.text.isEmpty ? Colors.grey : Colors.black87,
+                          color:
+                          value.text.isEmpty ? Colors.grey : Colors.black87,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -1077,11 +1118,15 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
             borderRadius: BorderRadius.circular(16),
             onTap: () {
               switch (index) {
-                case 0:
-                  print("Quick Booking Clicked");
+                case 0: // Quick Booking → scroll to top
+                  _scrollController.animateTo(
+                    0,
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeInOut,
+                  );
                   break;
                 case 1:
-                  context.read<BottomNavigationProvider>().changeIndex(1);
+                  context.read<BottomNavigationProvider>().changeIndex(3);
                   break;
                 case 2:
                   print("Live Tracking Clicked");
@@ -1222,6 +1267,7 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
   }
 
   // ─── RECENT BOOKINGS ──────────────────────────────────────────────────────
+  // ─── RECENT BOOKINGS ──────────────────────────────────────────────────────
   Widget _buildRecentBookings(List<dynamic> rides) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -1238,6 +1284,7 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1258,22 +1305,39 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          SizedBox(
-            height: 150,
-            child: ListView.builder(
-              itemCount: rides.length,
-              itemBuilder: (context, index) {
-                return _recentBookingTile(
-                  from: rides[index]['fromLocation']['address'],
-                  to: rides[index]['toLocation']['address'],
-                  date: '--',
-                  time: '--',
-                  status: rides[index]['status'],
-                  price: "₹${rides[index]['estimated_price'] ?? '--'}",
-                );
-              },
+          if (rides.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Text(
+                  'No recent bookings',
+                  style: TextStyle(color: Colors.black45, fontSize: 13),
+                ),
+              ),
+            )
+          else
+          // Height grows with data; scrolls if content is long
+            ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxHeight: 320, // optional max so the rest of the page stays usable
+              ),
+              child: ListView.separated(
+                shrinkWrap: true,
+                physics: const BouncingScrollPhysics(),
+                itemCount: rides.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  return _recentBookingTile(
+                    from: rides[index]['fromLocation']['address'] ?? '--',
+                    to: rides[index]['toLocation']['address'] ?? '--',
+                    date: '--',
+                    time: '--',
+                    status: rides[index]['status']?.toString() ?? '--',
+                    price: "₹${rides[index]['estimated_price'] ?? '--'}",
+                  );
+                },
+              ),
             ),
-          ),
         ],
       ),
     );

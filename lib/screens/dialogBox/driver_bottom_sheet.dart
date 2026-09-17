@@ -185,10 +185,10 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
                               context,
                               MaterialPageRoute(
                                 builder: (context) => DriverTrackingScreen(
-                                  provider.upcomingRide!['fromLocation']['lat'],
-                                  provider.upcomingRide!['fromLocation']['lng'],
-                                  provider.upcomingRide!['toLocation']['lat'],
-                                  provider.upcomingRide!['toLocation']['lng'],
+                                  fromLat: provider.upcomingRide!['fromLocation']['lat'],
+                                  fromLang: provider.upcomingRide!['fromLocation']['lng'],
+                                  toLat: provider.upcomingRide!['toLocation']['lat'],
+                                  toLang: provider.upcomingRide!['toLocation']['lng'],
                                 ),
                               ),
                             );

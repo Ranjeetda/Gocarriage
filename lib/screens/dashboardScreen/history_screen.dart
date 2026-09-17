@@ -5,6 +5,7 @@ import '../../provider_service/URLS.dart';
 import '../../provider_service/myrides_provider.dart';
 import '../../resource/Utils.dart';
 import '../dialogBox/booking_details_dialog.dart';
+import 'driver_tracking_screen.dart';
 
 enum BookingStatus { cancelled, driverAssigned, active, completed }
 
@@ -610,12 +611,27 @@ class BookingCard extends StatelessWidget {
               height: 48,
               child: ElevatedButton(
                 onPressed: () {
-
-                  showDialog(
-                    context: context,
-                    barrierDismissible: true,
-                    builder: (context) => BookingDetailsDialog(booking: booking),
-                  );
+                  if (status == BookingStatus.cancelled) {
+                    // Show booking details dialog for cancelled bookings
+                    showDialog(
+                      context: context,
+                      barrierDismissible: true,
+                      builder: (context) => BookingDetailsDialog(booking: booking),
+                    );
+                  } else {
+                    // Navigate to DriverTrackingScreen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DriverTrackingScreen(
+                          fromLat: booking['fromLocation']?['lat'],
+                          fromLang: booking['fromLocation']?['lng'],
+                          toLat: booking['toLocation']?['lat'],
+                          toLang: booking['toLocation']?['lng'],
+                        ),
+                      ),
+                    );
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: status == BookingStatus.cancelled
