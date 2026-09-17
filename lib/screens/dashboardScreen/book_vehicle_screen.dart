@@ -110,11 +110,6 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
     super.initState();
     localData();
     if (PrefUtils.isLoggedIn()) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _bookingAllRideService(page: currentPage);
-      });
-
-      // Attach BookingProvider + connect customer socket
       final bookingProvider = context.read<BookingProvider>();
       DriverSocketService().attachProvider(bookingProvider);
       DriverSocketService().connectAsCustomer(
@@ -486,7 +481,8 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
               vehicleType: result['vehicleType'],
               vehicleTypeId: result['vehicleId'].toString(),
               serviceType: mServiceType,
-              pricingMode: result['mode']=='negotiate'?'negotiable':result['mode'],
+              pricingMode:
+                  result['mode'] == 'negotiate' ? 'negotiable' : result['mode'],
               pickupDate: pickupDate,
               pickupTime: mTime,
               fromLocation: LocationModal(
@@ -500,7 +496,9 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
                 lng: double.parse(toLongitude!),
               ),
               materialName: materialData['material_name'] ?? "General",
-              weight: double.tryParse(materialData['weight']?.toString() ?? "0") ?? 0,
+              weight:
+                  double.tryParse(materialData['weight']?.toString() ?? "0") ??
+                  0,
               weightUnit: materialData['unit'] ?? "KG",
               customerId: int.parse(PrefUtils.getUserId()),
               specialRequirements: SpecialRequirements.fromJson(
@@ -732,7 +730,7 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
                 setState(() {
                   selectedMode = mode;
                   bookingMode =
-                  "${mode.name[0].toUpperCase()}${mode.name.substring(1)}";
+                      "${mode.name[0].toUpperCase()}${mode.name.substring(1)}";
                   print(bookingMode);
                 });
               },
@@ -760,7 +758,7 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
                   mTime = DateFormat('hh:mm a').format(dateTime);
                 },
                 txtMessage:
-                'Scheduled pickup must be at least 3 hours from now.',
+                    'Scheduled pickup must be at least 3 hours from now.',
               ),
               const SizedBox(height: 16),
               const AdvancePaymentInfoBanner(),
@@ -850,7 +848,7 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
             const Icon(Icons.location_on, color: Color(0xFF2563EB), size: 22),
             ...List.generate(
               5,
-                  (_) => Container(
+              (_) => Container(
                 width: 2,
                 height: 5,
                 margin: const EdgeInsets.symmetric(vertical: 2),
@@ -918,10 +916,13 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
           valueListenable: controller,
           builder: (context, TextEditingValue value, child) {
             return GestureDetector(
-              onTap: () => _openLocationBottomSheet(
-                label == 'Pickup Location' ? 'Pickup Location' : 'Drop Location',
-                controller,
-              ),
+              onTap:
+                  () => _openLocationBottomSheet(
+                    label == 'Pickup Location'
+                        ? 'Pickup Location'
+                        : 'Drop Location',
+                    controller,
+                  ),
               child: Container(
                 height: 44,
                 decoration: BoxDecoration(
@@ -940,7 +941,7 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
                         style: TextStyle(
                           fontSize: 13,
                           color:
-                          value.text.isEmpty ? Colors.grey : Colors.black87,
+                              value.text.isEmpty ? Colors.grey : Colors.black87,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -987,85 +988,86 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor:
-              isEnabled ? const Color(0xFF2563EB) : Colors.grey.shade400,
+                  isEnabled ? const Color(0xFF2563EB) : Colors.grey.shade400,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
               elevation: 0,
             ),
-            onPressed: isEnabled
-                ? () {
-              if (fromController.text.isEmpty) {
-                AppSnackBar.showDialogMessage(
-                  context,
-                  title: "Missing Information",
-                  message: "Please search pickup location.",
-                  isError: true,
-                );
-                return;
-              }
-              if (toController.text.isEmpty) {
-                AppSnackBar.showDialogMessage(
-                  context,
-                  title: "Missing Information",
-                  message: "Please search drop location.",
-                  isError: true,
-                );
-                return;
-              }
-              if (bookingMode == 'Schedule' &&
-                  (mDate == null || mTime == null)) {
-                AppSnackBar.showDialogMessage(
-                  context,
-                  title: "Missing Information",
-                  message: "Please fill date and time",
-                  isError: true,
-                );
-                return;
-              }
-              if (mServiceType == 'out_city') {
-                final materialName =
-                (materialData['material_name'] ?? '')
-                    .toString()
-                    .trim();
-                final weight =
-                (materialData['weight'] ?? '').toString().trim();
+            onPressed:
+                isEnabled
+                    ? () {
+                      if (fromController.text.isEmpty) {
+                        AppSnackBar.showDialogMessage(
+                          context,
+                          title: "Missing Information",
+                          message: "Please search pickup location.",
+                          isError: true,
+                        );
+                        return;
+                      }
+                      if (toController.text.isEmpty) {
+                        AppSnackBar.showDialogMessage(
+                          context,
+                          title: "Missing Information",
+                          message: "Please search drop location.",
+                          isError: true,
+                        );
+                        return;
+                      }
+                      if (bookingMode == 'Schedule' && (mDate == null || mTime == null)) {
+                        AppSnackBar.showDialogMessage(
+                          context,
+                          title: "Missing Information",
+                          message: "Please fill date and time",
+                          isError: true,
+                        );
+                        return;
+                      }
+                      if (mServiceType == 'out_city') {
+                        final materialName =
+                            (materialData['material_name'] ?? '')
+                                .toString()
+                                .trim();
+                        final weight =
+                            (materialData['weight'] ?? '').toString().trim();
 
-                if (materialName.isEmpty || weight.isEmpty) {
-                  AppSnackBar.showDialogMessage(
-                    context,
-                    title: "Missing Information",
-                    message: "Please fill Material Name and Weight",
-                    isError: true,
-                  );
-                  return;
-                }
-              }
+                        if (materialName.isEmpty || weight.isEmpty) {
+                          AppSnackBar.showDialogMessage(
+                            context,
+                            title: "Missing Information",
+                            message: "Please fill Material Name and Weight",
+                            isError: true,
+                          );
+                          return;
+                        }
+                      }
 
-              nearByVehicleData(
-                bookingMode,
-                fromLatitude.toString(),
-                fromLongitude.toString(),
-              );
-            }
-                : null,
-            child: showLoader
-                ? const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                color: Colors.white,
-                strokeWidth: 2.5,
-              ),
-            )
-                : Text(
-              mButtonName,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
+                      nearByVehicleData(
+                        bookingMode,
+                        fromLatitude.toString(),
+                        fromLongitude.toString(),
+                      );
+                    }
+                    : null,
+            child:
+                showLoader
+                    ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                    : Text(
+                      mButtonName,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
           ),
         );
       },
@@ -1123,60 +1125,61 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: actions.asMap().entries.map((entry) {
-          final index = entry.key;
-          final a = entry.value;
+        children:
+            actions.asMap().entries.map((entry) {
+              final index = entry.key;
+              final a = entry.value;
 
-          return InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () {
-              switch (index) {
-                case 0: // Quick Booking → scroll to top
-                  _scrollController.animateTo(
-                    0,
-                    duration: const Duration(milliseconds: 400),
-                    curve: Curves.easeInOut,
-                  );
-                  break;
-                case 1:
-                  context.read<BottomNavigationProvider>().changeIndex(3);
-                  break;
-                case 2:
-                  print("Live Tracking Clicked");
-                  break;
-                case 3:
-                  print("Rate Calculator Clicked");
-                  break;
-              }
-            },
-            child: Column(
-              children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: a['bg'] as Color,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Icon(
-                    a['icon'] as IconData,
-                    color: a['color'] as Color,
-                    size: 28,
-                  ),
+              return InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () {
+                  switch (index) {
+                    case 0: // Quick Booking → scroll to top
+                      _scrollController.animateTo(
+                        0,
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeInOut,
+                      );
+                      break;
+                    case 1:
+                      context.read<BottomNavigationProvider>().changeIndex(3);
+                      break;
+                    case 2:
+                      print("Live Tracking Clicked");
+                      break;
+                    case 3:
+                      print("Rate Calculator Clicked");
+                      break;
+                  }
+                },
+                child: Column(
+                  children: [
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: a['bg'] as Color,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(
+                        a['icon'] as IconData,
+                        color: a['color'] as Color,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      a['label'] as String,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.black87,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  a['label'] as String,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Colors.black87,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          );
-        }).toList(),
+              );
+            }).toList(),
       ),
     );
   }
@@ -1239,40 +1242,41 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
             childAspectRatio: 3,
             crossAxisSpacing: 8,
             mainAxisSpacing: 8,
-            children: items.map((item) {
-              return Row(
-                children: [
-                  Icon(
-                    item['icon'] as IconData,
-                    color: item['color'] as Color,
-                    size: 22,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          item['title'] as String,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
+            children:
+                items.map((item) {
+                  return Row(
+                    children: [
+                      Icon(
+                        item['icon'] as IconData,
+                        color: item['color'] as Color,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              item['title'] as String,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              item['sub'] as String,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Colors.black45,
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          item['sub'] as String,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.black45,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            }).toList(),
+                      ),
+                    ],
+                  );
+                }).toList(),
           ),
         ],
       ),
@@ -1329,10 +1333,11 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
               ),
             )
           else
-          // Height grows with data; scrolls if content is long
+            // Height grows with data; scrolls if content is long
             ConstrainedBox(
               constraints: const BoxConstraints(
-                maxHeight: 320, // optional max so the rest of the page stays usable
+                maxHeight:
+                    320, // optional max so the rest of the page stays usable
               ),
               child: ListView.separated(
                 shrinkWrap: true,
@@ -1522,9 +1527,9 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
 
   // ─── LOCATION BOTTOM SHEET ────────────────────────────────────────────────
   Future<void> _openLocationBottomSheet(
-      String title,
-      TextEditingController controller,
-      ) async {
+    String title,
+    TextEditingController controller,
+  ) async {
     final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
@@ -1536,7 +1541,8 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
 
     setState(() {
       if (title == 'Pickup Location') {
-        fromAddress = result['address']?.toString() ??
+        fromAddress =
+            result['address']?.toString() ??
             result['formatted_address']?.toString() ??
             result['name']?.toString() ??
             "";
@@ -1548,7 +1554,8 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
           _checkArea(mPincode1!);
         }
       } else {
-        toAddress = result['address']?.toString() ??
+        toAddress =
+            result['address']?.toString() ??
             result['formatted_address']?.toString() ??
             result['name']?.toString() ??
             "";
@@ -1571,18 +1578,18 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
 
   // ─── VEHICLE BOTTOM SHEET ─────────────────────────────────────────────────
   Future<void> showVehicleBottomSheet(
-      BuildContext context,
-      final String from_lat,
-      final String from_lng,
-      final String to_lat,
-      final String to_lng,
-      final String weight_kg,
-      final String cluster_id,
-      final String service_type,
-      final String booking_mode,
-      final String mDistance,
-      final String mDuration,
-      ) async {
+    BuildContext context,
+    final String from_lat,
+    final String from_lng,
+    final String to_lat,
+    final String to_lng,
+    final String weight_kg,
+    final String cluster_id,
+    final String service_type,
+    final String booking_mode,
+    final String mDistance,
+    final String mDuration,
+  ) async {
     final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
@@ -1628,12 +1635,14 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
           ),
           materialName: materialData['material_name'] ?? "General",
           weight:
-          double.tryParse(materialData['weight']?.toString() ?? "0") ?? 0,
+              double.tryParse(materialData['weight']?.toString() ?? "0") ?? 0,
           weightUnit: materialData['unit'] ?? 'KG',
           customerId: int.parse(PrefUtils.getUserId()),
           specialRequirements: SpecialRequirements.fromJson(
             materialData['specialRequirements'] is Map
-                ? Map<String, dynamic>.from(materialData['specialRequirements'] as Map)
+                ? Map<String, dynamic>.from(
+                  materialData['specialRequirements'] as Map,
+                )
                 : <String, dynamic>{},
           ),
           serviceType: mServiceType,
