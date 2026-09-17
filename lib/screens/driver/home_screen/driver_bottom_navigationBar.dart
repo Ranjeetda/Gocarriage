@@ -500,7 +500,7 @@ class _DriverBottomNavigationbarState extends State<DriverBottomNavigationbar> {
                                           final int driverId = int.parse(
                                               PrefUtils.getUserId());
 
-                                          DriverSocketService().connect(
+                                          DriverSocketService().connectAsDriver(
                                               driverId: driverId);
                                           debugPrint(
                                               '🟢 Socket connected after going Online');

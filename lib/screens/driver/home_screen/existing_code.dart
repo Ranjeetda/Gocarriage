@@ -58,7 +58,7 @@ class _ExistingCode extends State<ExistingCode> {
         listen: false,
       );
       DriverSocketService().attachProvider(bookingProvider);
-      DriverSocketService().connect(driverId: int.parse(PrefUtils.getUserId()));
+      DriverSocketService().connectAsDriver(driverId: int.parse(PrefUtils.getUserId()));
       // 4. Disconnect when needed (logout / app close)
       //DriverSocketService().disconnect();
       context.read<DriverBookingOngoingProvider>().fetchBooking();

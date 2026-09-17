@@ -23,14 +23,16 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
   @override
   void initState() {
     super.initState();
+
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat();
 
-    // Start elapsed timer
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() => _elapsedSeconds++);
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        setState(() => _elapsedSeconds++);
+      }
     });
   }
 
@@ -42,17 +44,26 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
   }
 
   String get _formattedTime {
-    final minutes = (_elapsedSeconds ~/ 60).toString().padLeft(1, '0');
+    final minutes = (_elapsedSeconds ~/ 60).toString();
     final seconds = (_elapsedSeconds % 60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
+    return "$minutes:$seconds";
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<BookingProvider>(
       builder: (context, provider, _) {
-        // ====================== ACCEPTED STATE ======================
-        if (provider.rideStatus == RideStatus.accepted) {
+
+        /// ================= ACCEPTED =================
+        if (provider.rideStatus == RideStatus.accepted &&
+            provider.upcomingRide != null) {
+
+          final ride = provider.upcomingRide!;
+
+          // Parse API response
+          final booking = ride["booking"] ?? {};
+          final driver = ride["driver"] ?? {};
+
           return Container(
             padding: const EdgeInsets.all(16),
             decoration: const BoxDecoration(
@@ -67,6 +78,7 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+
                       const SizedBox(height: 10),
 
                       /// Drag Handle
@@ -87,7 +99,7 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
                         children: [
                           Text(
                             Utils.formatIsoDate(
-                              provider.upcomingRide!["pickupDate"],
+                              booking["pickupDate"]!.toString(),
                             ),
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
@@ -96,7 +108,7 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
                           ),
                           const Spacer(),
                           Text(
-                            "OTP : ${provider.upcomingRide!["otp"]}",
+                            "OTP : ${ride["otp"] ?? "--"}",
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
@@ -107,66 +119,102 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
 
                       const SizedBox(height: 12),
 
-                      /// Locations
-                      Text(
-                        "📍 ${provider.upcomingRide!['fromLocation']['address']}",
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        "🏁 ${provider.upcomingRide!['toLocation']['address']}",
+                      /// Pickup
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.location_on,
+                              color: Colors.green, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              booking["fromLocation"]?["address"] ?? "--",
+                            ),
+                          ),
+                        ],
                       ),
 
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
+
+                      /// Drop
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.flag,
+                              color: Colors.red, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              booking["toLocation"]?["address"] ?? "--",
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 16),
 
                       /// Driver Info
-                      Text(
-                        "Name : ${provider.upcomingRide!['driverDetails']['name'] ?? "--"}",
+                      const Text(
+                        "Driver Details",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
-                      Text(
-                        "Phone : ${provider.upcomingRide!['driverDetails']['mobileNo'] ?? "--"}",
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                      const SizedBox(height: 12),
 
-                      /// Fare Row
+                      const SizedBox(height: 8),
+
+                      Text(
+                        "Name : ${driver["fullName"] ?? "--"}",
+                        style: const TextStyle(fontSize: 15),
+                      ),
+
+                      Text(
+                        "Phone : ${driver["mobileNo"] ?? "--"}",
+                        style: const TextStyle(fontSize: 15),
+                      ),
+
+                      Text(
+                        "Experience : ${driver["experienceYears"] ?? "--"} Years",
+                        style: const TextStyle(fontSize: 15),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      /// Pickup Time + Vehicle
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Row(
                             children: [
                               const Icon(Icons.access_time,
-                                  size: 16, color: Colors.grey),
-                              const SizedBox(width: 6),
+                                  size: 18, color: Colors.grey),
+                              const SizedBox(width: 5),
                               Text(
-                                provider.upcomingRide!['pickupTime'] ?? "--",
+                                booking["pickupTime"]?.toString() ?? "--",
                               ),
                             ],
                           ),
                           Row(
                             children: [
-                              const Icon(Icons.directions_car,
+                              const Icon(Icons.local_shipping,
                                   size: 18, color: Colors.black87),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 5),
                               Text(
-                                provider.upcomingRide!['driverDetails']
-                                ['vehicleNumber'] ??
-                                    "--",
+                                driver["vehicleNumber"] ?? "--",
                                 style: const TextStyle(
-                                  fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                               const SizedBox(width: 10),
                               Text(
-                                provider.upcomingRide!['driverDetails']
-                                ['vehicleColor'] ??
-                                    "--",
-                                style: const TextStyle(fontSize: 16),
+                                driver["vehicleColor"] ?? "--",
                               ),
                             ],
                           ),
                         ],
                       ),
+
                       const SizedBox(height: 20),
 
                       /// Track Button
@@ -181,23 +229,27 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
                             ),
                           ),
                           onPressed: () {
+
+                            final from = booking["fromLocation"];
+                            final to = booking["toLocation"];
+
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => DriverTrackingScreen(
-                                  fromLat: provider.upcomingRide!['fromLocation']['lat'],
-                                  fromLang: provider.upcomingRide!['fromLocation']['lng'],
-                                  toLat: provider.upcomingRide!['toLocation']['lat'],
-                                  toLang: provider.upcomingRide!['toLocation']['lng'],
+                                builder: (_) => DriverTrackingScreen(
+                                  fromLat: (from?["lat"] as num?)!.toDouble(),
+                                  fromLang: (from?["lng"] as num?)!.toDouble(),
+                                  toLat: (to?["lat"] as num?)!.toDouble(),
+                                  toLang: (to?["lng"] as num?)!.toDouble(),
                                 ),
                               ),
                             );
                           },
                           child: const Text(
-                            "Track",
+                            "Track Driver",
                             style: TextStyle(
-                              fontSize: 16,
                               color: Colors.white,
+                              fontSize: 16,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -206,13 +258,16 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
                     ],
                   ),
 
-                  /// Close Button
+                  /// Close
                   Positioned(
                     top: 0,
                     right: 0,
                     child: IconButton(
                       icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () {
+                        provider.clearRide();
+                        Navigator.pop(context);
+                      },
                     ),
                   ),
                 ],
@@ -221,7 +276,7 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
           );
         }
 
-        // ====================== SEARCHING STATE (NEW DESIGN) ======================
+        /// ================= SEARCHING =================
         return Container(
           width: double.infinity,
           padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
@@ -234,14 +289,13 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // ===== Pulsing Truck Icon =====
+
                 AnimatedBuilder(
                   animation: _pulseController,
                   builder: (context, child) {
                     return Stack(
                       alignment: Alignment.center,
                       children: [
-                        // Outer ring
                         Container(
                           width: 110 + (_pulseController.value * 18),
                           height: 110 + (_pulseController.value * 18),
@@ -251,7 +305,6 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
                                 .withOpacity(1 - _pulseController.value),
                           ),
                         ),
-                        // Middle ring
                         Container(
                           width: 90,
                           height: 90,
@@ -260,13 +313,12 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
                             color: Color(0xFFFED7AA),
                           ),
                         ),
-                        // Main circle
                         Container(
                           width: 70,
                           height: 70,
                           decoration: const BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Color(0xFFF97316), // orange
+                            color: Color(0xFFF97316),
                           ),
                           child: const Icon(
                             Icons.local_shipping_rounded,
@@ -279,44 +331,26 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
                   },
                 ),
 
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
 
-                // ===== Title =====
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.sync,
-                      size: 20,
-                      color: Color(0xFF64748B),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Finding Your Driver...',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF1E293B),
-                      ),
-                    ),
-                  ],
+                const Text(
+                  "Finding Your Driver...",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
 
                 const SizedBox(height: 8),
 
-                // ===== Subtitle =====
                 const Text(
-                  'Searching for nearby drivers in your area...',
+                  "Searching for nearby drivers in your area...",
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF64748B),
-                  ),
+                  style: TextStyle(color: Colors.grey),
                 ),
 
                 const SizedBox(height: 20),
 
-                // ===== Loading Dots =====
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(3, (index) {
@@ -326,7 +360,8 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
                         final delay = index * 0.2;
                         final value =
                         ((_pulseController.value + delay) % 1.0);
-                        final opacity = value < 0.5 ? value * 2 : 2 - value * 2;
+                        final opacity =
+                        value < 0.5 ? value * 2 : 2 - value * 2;
 
                         return Container(
                           margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -345,19 +380,16 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
 
                 const SizedBox(height: 20),
 
-                // ===== Time Elapsed =====
                 Text(
-                  'Time elapsed: $_formattedTime',
+                  "Time elapsed: $_formattedTime",
                   style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF64748B),
+                    color: Colors.grey,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
 
                 const SizedBox(height: 28),
 
-                // ===== Cancel Button =====
                 SizedBox(
                   width: double.infinity,
                   height: 48,
@@ -375,18 +407,13 @@ class _DriverBottomSheetState extends State<DriverBottomSheet>
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          Icons.close,
-                          size: 18,
-                          color: Color(0xFFEF4444),
-                        ),
-                        SizedBox(width: 6),
+                        Icon(Icons.close, color: Color(0xFFEF4444)),
+                        SizedBox(width: 8),
                         Text(
-                          'Cancel Search',
+                          "Cancel Search",
                           style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
                             color: Color(0xFFEF4444),
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ],

@@ -11,6 +11,7 @@ import 'package:google_places_flutter/google_places_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../provider_service/URLS.dart';
+import '../../provider_service/booking_provider.dart';
 import '../../provider_service/booking_trip.dart';
 import '../../provider_service/bottom_navigation_provider.dart';
 import '../../provider_service/check_area_provider.dart';
@@ -26,6 +27,7 @@ import '../dialogBox/app_message_dialog.dart';
 import '../dialogBox/pickup_location_dialog.dart';
 import '../dialogBox/select_vehicle_type_sheet.dart';
 import '../dialogBox/special_instructions_dialog.dart';
+import '../driver/SocketService/driver_socket_service.dart';
 import '../widgets/advance_payment_info_banner.dart';
 import '../widgets/material_details_form.dart';
 import '../widgets/mode_button.dart';
@@ -108,6 +110,17 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
     super.initState();
     localData();
     if (PrefUtils.isLoggedIn()) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _bookingAllRideService(page: currentPage);
+      });
+
+      // Attach BookingProvider + connect customer socket
+      final bookingProvider = context.read<BookingProvider>();
+      DriverSocketService().attachProvider(bookingProvider);
+      DriverSocketService().connectAsCustomer(
+        userId: int.parse(PrefUtils.getUserId()),
+      );
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _bookingAllRideService(page: currentPage);
       });
@@ -1618,7 +1631,11 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
           double.tryParse(materialData['weight']?.toString() ?? "0") ?? 0,
           weightUnit: materialData['unit'] ?? 'KG',
           customerId: int.parse(PrefUtils.getUserId()),
-          specialRequirements: materialData['specialRequirements'] ?? {},
+          specialRequirements: SpecialRequirements.fromJson(
+            materialData['specialRequirements'] is Map
+                ? Map<String, dynamic>.from(materialData['specialRequirements'] as Map)
+                : <String, dynamic>{},
+          ),
           serviceType: mServiceType,
         );
 

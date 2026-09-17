@@ -14,6 +14,7 @@ class BookingProvider extends ChangeNotifier {
 
   void startSearching() {
     rideStatus = RideStatus.searching;
+    upcomingRide = null;
     notifyListeners();
   }
 
@@ -33,6 +34,7 @@ class BookingProvider extends ChangeNotifier {
     upcomingRide = null;
     notifyListeners();
   }
+
   void clearRide() {
     upcomingRide = null;
     rideStatus = RideStatus.idle;

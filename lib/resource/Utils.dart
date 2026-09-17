@@ -444,6 +444,27 @@ class Utils {
     return DateFormat('dd-MMM-yyyy hh:mm a').format(dateTime);
   }
 
+  static String formatIsoDate1(String? isoDate) {
+    // Handle null or empty values
+    if (isoDate == null || isoDate.trim().isEmpty) {
+      return "--";
+    }
+
+    try {
+      // Parse ISO date
+      final DateTime date = DateTime.parse(isoDate).toLocal();
+
+      // Format date (17 Sep 2026)
+      return DateFormat("dd MMM yyyy").format(date);
+    } on FormatException {
+      // Handle invalid date string
+      return "--";
+    } catch (e) {
+      // Any other unexpected error
+      return "--";
+    }
+  }
+
   static String capitalizeFirst(String value) {
     if (value.isEmpty) return value;
     return value[0].toUpperCase() + value.substring(1);
