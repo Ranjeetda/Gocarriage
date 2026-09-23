@@ -27,7 +27,6 @@ class VechileOwnerDriverList with ChangeNotifier {
 
     final Map<String, dynamic> requestBody = {
       "ownerId": PrefUtils.getUserId(),
-      "service_type": serviceType.isEmpty ? "in_city" : serviceType
     };
 
     final String body = jsonEncode(requestBody);

@@ -17,7 +17,6 @@ import '../../../provider_service/file_upload_provider.dart';
 import '../../../provider_service/send_otp_email_provider.dart';
 import '../../../provider_service/send_otp_provider.dart';
 import '../../../provider_service/signup_provider.dart';
-import '../../../provider_service/vechile_owner_driver_list.dart';
 import '../../../provider_service/vehicle_type_provider.dart';
 import '../../../provider_service/verify_otp_provider..dart';
 import '../../../resource/Utils.dart';
@@ -34,7 +33,6 @@ class AddDriverScreen extends StatefulWidget {
 
 class _AddDriverScreenState extends State<AddDriverScreen> {
   final picker = ImagePicker();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // ---------------------- CONTROLLERS ------------------------
   final _nameController = TextEditingController();
@@ -92,21 +90,6 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
   bool isLoadingMobileOtp = false;
 
   List<String> selected = [];
-
-  List<Map<String, dynamic>> get _imageBoxes => [
-    {
-      'label': 'Profile Photo',
-      'file': profilePhotoFile,
-      'url': profilePhotoUrl,
-      'loading': isProfileLoading,
-    },
-    {
-      'label': 'Driver License',
-      'file': licenseFrontFile,
-      'url': licenseFrontUrl,
-      'loading': isLicenseLoading,
-    },
-  ];
 
   @override
   void initState() {
@@ -187,7 +170,7 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
       setState(() {
         if (mType == "Profile Photo") {
           profilePhotoUrl = fileKey;
-        } else if (mType == "License") {
+        } else if (mType == "License Document") {
           licenseFrontUrl = fileKey;
         }
       });
@@ -241,6 +224,7 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
     final pickedFile = await picker.pickImage(source: source);
     if (pickedFile != null) {
       final file = File(pickedFile.path);
+      onPicked(file); // Update local state to show filename
       _fileUpload('drivers', file, fileType);
     }
   }
@@ -534,6 +518,18 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
     );
   }
 
+  String _unmapLicenseType(String? label) {
+    if (label == null) return 'HMV';
+    if (label.contains('LMV')) return 'LMV';
+    if (label.contains('HMV')) return 'HMV';
+    if (label.contains('MCWG')) return 'MCWG';
+    if (label.contains('MCWOG')) return 'MCWOG';
+    if (label.contains('Transport')) return 'TRANSPORT';
+    if (label.contains('PSV')) return 'PSV';
+    if (label.contains('Hazardous')) return 'HAZARDOUS';
+    return 'OTHER';
+  }
+
   // ---------------------- UPDATE PROFILE ------------------------
   void addDriverService(String mDriverId) async {
     try {
@@ -550,6 +546,7 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
         driversLicenseUpload: licenseFrontUrl!,
         profile_picture: profilePhotoUrl!,
         driverId: mDriverId,
+        license_type: _unmapLicenseType(selectedLicense),
       );
 
       if (!mounted) return;
@@ -760,7 +757,7 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
       return;
     }
 
-    if (selectedLicense == null) {
+    if (selectedLicense.isEmpty) {
       Utils.showErrorMessage(context, 'Please select your license');
       return;
     }
@@ -787,7 +784,7 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
         state: "",
         pincode: "",
 
-        selectedLicense: selectedLicense ?? "",
+        selectedLicense: selectedLicense,
         mode: "",
 
         bankName: "",
@@ -857,378 +854,363 @@ class _AddDriverScreenState extends State<AddDriverScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.primaryColor,
-        elevation: 2,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Add Driver',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: 40),
-          child: Container(
-            margin: EdgeInsets.fromLTRB(20, 0, 20, 0),
-            color: Colors.white,
-            child: Column(
-              mainAxisSize: MainAxisSize.min, // Add this
-              crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: Colors.white,
+      body: Column(
+        children: [
+          // ── HEADER ────────────────────────────────────────────────
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(context).padding.top + 12,
+              bottom: 18,
+              left: 16,
+              right: 16,
+            ),
+            decoration: const BoxDecoration(
+              color: AppColors.primaryColor,
+            ),
+            child: Row(
               children: [
-                const SizedBox(height: 20),
-                SectionTitle(title: "Personal Information"),
-                SizedBox(height: 10),
-                CommonTextField(
-                  hint: 'Enter full name',
-                  controller: _nameController,
-                  icon: Icons.person,
-                  isRequired: true,
-                  label: 'Full Name',
-                ),
-                EmailSection(
-                  emailController: _emailController,
-                  otpControllers: emailOtpControllers,
-                  isEmailVerified: isEmailVerified,
-                  isEmailOtpSent: isEmailOtpSent,
-                  isLoadingEmail: isLoadingEmail,
-                  isLoadingEmailOtp: isLoadingEmailOtp,
-                  secondsRemaining: _secondsRemaining,
-                  isValidEmail: Utils.isEmail,
-                  onSendOtp: () {
-                    sendOtpOnEmail();
-                    _startCountdown();
-                  },
-                  onVerifyOtp: _verifyEmailOtp,
-                  onChanged: () => setState(() {}),
-                ),
-                SizedBox(height: 10),
-                MobileSection(
-                  mobileController: _mobileController,
-                  otpControllers: mobileOtpControllers,
-                  isMobileVerified: isMobileVerified,
-                  isMobileOtpSent: isMobileOtpSent,
-                  isLoadingMobile: isLoadingMobile,
-                  isLoadingMobileOtp: isLoadingMobileOtp,
-                  secondsRemaining: _secondsRemaining,
-                  onSendOtp: () {
-                    _sendMobileOtp();
-                    _startCountdown();
-                  },
-                  onVerifyOtp: _verifyMobileOtp,
-                  onChanged: () => setState(() {}),
-                  onChangeMobile: () {
-                    setState(() {
-                      isMobileVerified = false;
-                      isMobileOtpSent = false;
-                      _secondsRemaining = 0;
-
-                      for (var c in mobileOtpControllers) {
-                        c.clear();
-                      }
-                    });
-                  },
-                ),
-                SizedBox(height: 10),
-                CommonTextField(
-                  hint: 'Enter your password',
-                  controller: _passwordController,
-                  icon: Icons.lock,
-                  label: 'Password',
-                  isRequired: true,
-                  isObscure: true,
-                  keyboard: TextInputType.text,
-                  onChanged: () => setState(() {}),
-                  validator: (v) {
-                    if (v == null || v.isEmpty) {
-                      return 'Password is required';
-                    }
-
-                    if (v.length < 8) {
-                      return 'Password must be at least 8 characters';
-                    }
-
-                    if (!RegExp(r'[A-Z]').hasMatch(v)) {
-                      return 'Must contain at least one uppercase letter';
-                    }
-
-                    if (!RegExp(r'[a-z]').hasMatch(v)) {
-                      return 'Must contain at least one lowercase letter';
-                    }
-
-                    if (!RegExp(r'\d').hasMatch(v)) {
-                      return 'Must contain at least one number';
-                    }
-
-                    if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(v)) {
-                      return 'Must contain at least one special character';
-                    }
-
-                    return null;
-                  },
-                ),
-                SizedBox(height: 10),
-                CommonTextField(
-                  hint: 'Enter your confirm password',
-                  controller: _confirmPasswordController,
-                  icon: Icons.lock,
-                  label: 'Confirm Password',
-                  isRequired: true,
-                  isObscure: true,
-                  keyboard: TextInputType.text,
-                  onChanged: () => setState(() {}),
-                  validator: (v) {
-                    if (v == null || v.isEmpty) {
-                      return 'Confirm Password is required';
-                    }
-
-                    if (v != _passwordController.text) {
-                      return 'Passwords do not match';
-                    }
-
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 10),
-
-                SectionTitle(title: "License Details"),
-
-                SizedBox(height: 10),
-
-                CommonTextField(
-                  hint: 'Enter Driving License Number',
-                  controller: drivingLicenseController,
-                  icon: Icons.card_membership,
-                  label: 'Driving License Number',
-                  isRequired: true,
-                  formatters: [
-                    UpperCaseTextFormatter(),
-                    LengthLimitingTextInputFormatter(16),
-                  ],
-                  onChanged: () => setState(() {}),
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return null; // optional
-                    if (!RegExp(
-                      r'^[A-Z]{2}[0-9]{2}[0-9]{4}[0-9]{7}$',
-                    ).hasMatch(v))
-                      return 'Enter a valid license (e.g. MH0120240001234)';
-                    return null;
-                  },
-                ),
-                SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: CommonTextField(
-                        hint: "Select From Date",
-                        label: "From",
-                        controller: fromDateController,
-                        icon: Icons.calendar_month,
-                        onTap: () async {
-                          final date = await showDatePicker(
-                            context: context,
-                            initialDate: DateTime.now(),
-                            firstDate: DateTime(2000),
-                            lastDate: DateTime(2100),
-                          );
-                          if (date != null) {
-                            fromDateController.text = DateFormat(
-                              'yyyy-MM-dd',
-                            ).format(date);
-                          }
-                        },
-                      ),
-                    ),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: CommonTextField(
-                        hint: "Select To Date",
-                        label: "To",
-                        controller: toDateController,
-                        icon: Icons.calendar_month,
-                        onTap: () async {
-                          final date = await showDatePicker(
-                            context: context,
-                            initialDate: DateTime.now(),
-                            firstDate: DateTime(2000),
-                            lastDate: DateTime(2100),
-                          );
-                          if (date != null) {
-                            toDateController.text = DateFormat(
-                              'yyyy-MM-dd',
-                            ).format(date);
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 10),
-
-                CommonDropdown(
-                  hint: 'Driving License Type',
-                  label: 'Select DL Category',
-                  value: selectedLicense.isEmpty ? null : selectedLicense,
-                  items: Utils.licenseTypes,
-                  icon: Icons.directions_car,
-                  isRequired: true,
-                  onChanged: (v) => setState(() => selectedLicense = v ?? ''),
-                ),
-
-                SizedBox(height: 10),
-
-                SectionTitle(title: "Work Details"),
-
-                SizedBox(height: 10),
-                CommonTextField(
-                  hint: 'Enter experience',
-                  controller: _experienceController,
-                  icon: Icons.car_crash_rounded,
-                  keyboard: TextInputType.phone,
-                  isRequired: true,
-                  label: 'Experience',
-                ),
-                SizedBox(height: 10),
-                radioRow(
-                  "Service Type *",
-                  ["Within City", "Outside City"],
-                  service,
-                  (v) => setState(() => service = v),
-                ),
-                const SizedBox(height: 10),
-                /*Consumer<VehicleTypeProvider>(
-                  builder: (context, provider, _) {
-                    if (provider.isLoading) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 40),
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    }
-
-                    return Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children:
-                            provider.vehicleTypes.map((type) {
-                              final String typeId =
-                                  type.id?.toString() ?? ''; // Safe conversion
-                              final bool isSelected = selected.contains(typeId);
-
-                              return ChoiceChip(
-                                key: ValueKey(typeId),
-                                // Important for proper rebuild
-                                label: Text(type.name ?? 'Unknown'),
-                                selected: isSelected,
-                                onSelected: (value) {
-                                  setState(() {
-                                    if (value) {
-                                      if (!selected.contains(typeId)) {
-                                        selected.add(typeId);
-                                      }
-                                    } else {
-                                      selected.remove(typeId);
-                                    }
-                                  });
-                                },
-                                selectedColor: Colors.teal.shade100,
-                                backgroundColor: Colors.grey.shade200,
-                                labelStyle: TextStyle(
-                                  color:
-                                      isSelected
-                                          ? Colors.teal.shade800
-                                          : Colors.black54,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                shape: StadiumBorder(
-                                  side: BorderSide(
-                                    color:
-                                        isSelected
-                                            ? Colors.teal
-                                            : Colors.grey.shade400,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                      ),
-                    );
-                  },
-                ),*/
-                const SizedBox(height: 10),
-
-                // Document Uploads
-                SectionTitle(title: "Document Uploads"),
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  children: [
-                    buildUploadBox(
-                      "Profile Photo",
-                      profilePhotoFile,
-                      profilePhotoUrl,
-                      (f) => setState(() => profilePhotoFile = f),
-                      isProfileLoading,
-                      (loading) => setState(() => isProfileLoading = loading),
-                    ),
-                    buildUploadBox(
-                      "License",
-                      licenseFrontFile,
-                      licenseFrontUrl,
-                      (f) => setState(() => licenseFrontFile = f),
-                      isLicenseLoading,
-                      (loading) => setState(() => isLicenseLoading = loading),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 40),
-
-                // Update Button
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: isLoading ? null : _registerUser,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryColor,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'Add · driver',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      child:
-                          isLoading
-                              ? const CircularProgressIndicator(
-                                color: Colors.white,
-                              )
-                              : const Text(
-                                "Add Driver",
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.white,
-                                ),
-                              ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Register a new driver to your fleet',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(10),
                     ),
+                    child:
+                        const Icon(Icons.close, color: Colors.white, size: 20),
                   ),
                 ),
               ],
             ),
           ),
-        ),
+
+          // ── BODY ──────────────────────────────────────────────────
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── PERSONAL INFORMATION ─────────────────
+                  _sectionHeader(Icons.person_outline, 'PERSONAL INFORMATION'),
+                  const SizedBox(height: 14),
+
+                  CommonTextField(
+                    hint: 'Enter full name',
+                    controller: _nameController,
+                    icon: Icons.person_outline,
+                    isRequired: true,
+                    label: 'Full Name',
+                  ),
+                  const SizedBox(height: 10),
+
+                  EmailSection(
+                    emailController: _emailController,
+                    otpControllers: emailOtpControllers,
+                    isEmailVerified: isEmailVerified,
+                    isEmailOtpSent: isEmailOtpSent,
+                    isLoadingEmail: isLoadingEmail,
+                    isLoadingEmailOtp: isLoadingEmailOtp,
+                    secondsRemaining: _secondsRemaining,
+                    isValidEmail: Utils.isEmail,
+                    onSendOtp: () {
+                      sendOtpOnEmail();
+                      _startCountdown();
+                    },
+                    onVerifyOtp: _verifyEmailOtp,
+                    onChanged: () => setState(() {}),
+                  ),
+                  const SizedBox(height: 10),
+
+                  MobileSection(
+                    mobileController: _mobileController,
+                    otpControllers: mobileOtpControllers,
+                    isMobileVerified: isMobileVerified,
+                    isMobileOtpSent: isMobileOtpSent,
+                    isLoadingMobile: isLoadingMobile,
+                    isLoadingMobileOtp: isLoadingMobileOtp,
+                    secondsRemaining: _secondsRemaining,
+                    onSendOtp: () {
+                      _sendMobileOtp();
+                      _startCountdown();
+                    },
+                    onVerifyOtp: _verifyMobileOtp,
+                    onChanged: () => setState(() {}),
+                    onChangeMobile: () {
+                      setState(() {
+                        isMobileVerified = false;
+                        isMobileOtpSent = false;
+                        _secondsRemaining = 0;
+                        for (var c in mobileOtpControllers) {
+                          c.clear();
+                        }
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CommonTextField(
+                          hint: 'Enter password',
+                          controller: _passwordController,
+                          icon: Icons.lock_outline,
+                          label: 'Password',
+                          isRequired: true,
+                          isObscure: true,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: CommonTextField(
+                          hint: 'Confirm password',
+                          controller: _confirmPasswordController,
+                          icon: Icons.lock_outline,
+                          label: 'Confirm Password',
+                          isRequired: true,
+                          isObscure: true,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  // ── LICENSE DETAILS ──────────────────────
+                  _sectionHeader(Icons.badge_outlined, 'LICENSE DETAILS'),
+                  const SizedBox(height: 14),
+
+                  CommonTextField(
+                    hint: 'Enter Driving License Number',
+                    controller: drivingLicenseController,
+                    icon: Icons.card_membership_outlined,
+                    label: 'Driving License Number',
+                    isRequired: true,
+                    formatters: [
+                      UpperCaseTextFormatter(),
+                      LengthLimitingTextInputFormatter(16),
+                    ],
+                    onChanged: () => setState(() {}),
+                  ),
+                  const SizedBox(height: 12),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CommonTextField(
+                          hint: "Valid From",
+                          label: "License Valid From",
+                          controller: fromDateController,
+                          icon: Icons.calendar_today_outlined,
+                          isEditable: false,
+                          onTap: () async {
+                            final date = await showDatePicker(
+                              context: context,
+                              initialDate: DateTime.now(),
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime(2100),
+                            );
+                            if (date != null) {
+                              fromDateController.text = DateFormat(
+                                'yyyy-MM-dd',
+                              ).format(date);
+                              license_from_date = fromDateController.text;
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: CommonTextField(
+                          hint: "Valid Upto",
+                          label: "License Valid Upto",
+                          controller: toDateController,
+                          icon: Icons.calendar_today_outlined,
+                          isEditable: false,
+                          onTap: () async {
+                            final date = await showDatePicker(
+                              context: context,
+                              initialDate: DateTime.now(),
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime(2100),
+                            );
+                            if (date != null) {
+                              toDateController.text = DateFormat(
+                                'yyyy-MM-dd',
+                              ).format(date);
+                              license_to_date = toDateController.text;
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  CommonDropdown(
+                    hint: 'Select License Category',
+                    label: 'Driving License Type',
+                    value: selectedLicense.isEmpty ? null : selectedLicense,
+                    items: Utils.licenseTypes,
+                    icon: Icons.directions_car_outlined,
+                    isRequired: true,
+                    onChanged:
+                        (v) => setState(() => selectedLicense = v ?? ''),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  // ── WORK DETAILS ─────────────────────────
+                  _sectionHeader(
+                    Icons.local_shipping_outlined,
+                    'WORK DETAILS',
+                  ),
+                  const SizedBox(height: 14),
+
+                  CommonTextField(
+                    hint: 'Enter experience in years',
+                    controller: _experienceController,
+                    icon: Icons.history_outlined,
+                    keyboard: TextInputType.number,
+                    isRequired: true,
+                    label: 'Experience (Years)',
+                  ),
+                  const SizedBox(height: 12),
+
+                  radioRow(
+                    "Service Type *",
+                    ["Within City", "Outside City"],
+                    service,
+                    (v) => setState(() => service = v),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  // ── DOCUMENT UPLOADS ─────────────────────
+                  _sectionHeader(Icons.upload_file_outlined, 'DOCUMENT UPLOADS'),
+                  const SizedBox(height: 14),
+
+                  GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 1.1,
+                    children: [
+                      buildUploadBox(
+                        "Profile Photo",
+                        profilePhotoFile,
+                        profilePhotoUrl,
+                        (f) => setState(() => profilePhotoFile = f),
+                        isProfileLoading,
+                        (loading) => setState(() => isProfileLoading = loading),
+                      ),
+                      buildUploadBox(
+                        "License Document",
+                        licenseFrontFile,
+                        licenseFrontUrl,
+                        (f) => setState(() => licenseFrontFile = f),
+                        isLicenseLoading,
+                        (loading) => setState(() => isLicenseLoading = loading),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 40),
+
+                  // ── SUBMIT BUTTON ────────────────────────
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: isLoading ? null : _registerUser,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child:
+                          isLoading
+                              ? const SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2.5,
+                                ),
+                              )
+                              : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  Icon(Icons.person_add_outlined, size: 20),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    "Add Driver",
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _sectionHeader(IconData icon, String title) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: AppColors.primaryColor),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.5,
+            color: AppColors.primaryColor,
+          ),
+        ),
+      ],
     );
   }
 

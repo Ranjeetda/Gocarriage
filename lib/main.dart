@@ -62,6 +62,7 @@ import 'package:gocarriage_universal/provider_service/state_provider.dart';
 import 'package:gocarriage_universal/provider_service/subscriptions_owner_list_provider.dart';
 import 'package:gocarriage_universal/provider_service/tender_booking_service.dart';
 import 'package:gocarriage_universal/provider_service/transactions_history_provider.dart';
+import 'package:gocarriage_universal/provider_service/update_driver_provider.dart';
 import 'package:gocarriage_universal/provider_service/upload_vehicle_documents_bulk_provider.dart';
 import 'package:gocarriage_universal/provider_service/vehicle_brands_provider.dart';
 import 'package:gocarriage_universal/provider_service/vehicle_category_by.dart';
@@ -218,6 +219,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => BlukBookingTripProvider()),
         ChangeNotifierProvider(create: (_) => BlukOrderListProvider()),
         ChangeNotifierProvider(create: (_) => PastOrderListProvider()),
+        ChangeNotifierProvider(create: (_) => UpdateDriverProvider()),
         ChangeNotifierProvider(
           create:
               (context) => DriverBooingRequestProvider(

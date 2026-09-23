@@ -14,23 +14,39 @@ class NegotiationsListProvider with ChangeNotifier {
   List<dynamic> get listOpenData => _allOpenData;
   bool get isLoading => _isLoading;
 
-  List<dynamic> get confirmedList {
+  // ==================== FILTERED LISTS ====================
+
+  /// Active negotiations (still open for action)
+  List<dynamic> get openList {
+    return _allOpenData.where((item) {
+      return item['status'] != 'AWAITING_DRIVER_ASSIGNMENT' &&
+          item['status'] != 'COMPLETED' &&
+          item['won'] != true;
+    }).toList();
+  }
+
+  /// Accepted / Won (waiting for driver assignment)
+  List<dynamic> get acceptedList {
     return _allData.where((item) {
       return item['won'] == true ||
-          item['status'] == 'COMPLETED' ||
           item['status'] == 'AWAITING_DRIVER_ASSIGNMENT';
     }).toList();
   }
 
-  List<dynamic> get openList {
-    return _allOpenData.where((item) {
-      return item['status'] != 'AWAITING_DRIVER_ASSIGNMENT';
+  /// Fully completed negotiations
+  List<dynamic> get completedList {
+    return _allData.where((item) {
+      return item['status'] == 'COMPLETED';
     }).toList();
   }
 
+  /// Kept for backward compatibility
+  List<dynamic> get confirmedList => acceptedList;
+
   int get openCount => openList.length;
 
-  /// Fetch Confirmed / All Negotiations
+  // ==================== API CALLS ====================
+
   Future<void> fetchNegotiationsList() async {
     _isLoading = true;
     notifyListeners();
@@ -43,7 +59,6 @@ class NegotiationsListProvider with ChangeNotifier {
       'Authorization': 'Bearer ${PrefUtils.getToken()}',
     };
 
-    // REQUEST LOG
     debugPrint("========================================");
     debugPrint("API REQUEST");
     debugPrint("URL: $url");
@@ -57,7 +72,6 @@ class NegotiationsListProvider with ChangeNotifier {
     try {
       final response = await http.get(url, headers: headers);
 
-      // RESPONSE LOG
       debugPrint("========== API RESPONSE ==========");
       debugPrint("STATUS CODE: ${response.statusCode}");
       debugPrint("BODY:");
@@ -87,7 +101,6 @@ class NegotiationsListProvider with ChangeNotifier {
     }
   }
 
-  /// Fetch Open Negotiations
   Future<void> fetchNegotiationsOpenList() async {
     _isLoading = true;
     notifyListeners();
@@ -100,7 +113,6 @@ class NegotiationsListProvider with ChangeNotifier {
       'Authorization': 'Bearer ${PrefUtils.getToken()}',
     };
 
-    // REQUEST LOG
     debugPrint("========================================");
     debugPrint("OPEN API REQUEST");
     debugPrint("URL: $url");
@@ -114,7 +126,6 @@ class NegotiationsListProvider with ChangeNotifier {
     try {
       final response = await http.get(url, headers: headers);
 
-      // RESPONSE LOG
       debugPrint("======= OPEN API RESPONSE =======");
       debugPrint("STATUS CODE: ${response.statusCode}");
       debugPrint("BODY:");

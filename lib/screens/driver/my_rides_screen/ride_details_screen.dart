@@ -1,10 +1,44 @@
 import 'package:flutter/material.dart';
+import '../../../resource/Utils.dart'; // for formatIsoDate if needed
 
 class RideDetailsScreen extends StatelessWidget {
-  const RideDetailsScreen({super.key});
+  final Map<String, dynamic> rideData;
+
+  const RideDetailsScreen({
+    super.key,
+    required this.rideData,
+  });
 
   @override
   Widget build(BuildContext context) {
+    // Extract common fields (works for both normal & past-order data)
+    final bookingCode = rideData['bookingCode'] ??
+        rideData['bookingRef'] ??
+        rideData['_id'] ??
+        'N/A';
+
+    final status = (rideData['status'] ?? 'N/A').toString();
+    final bookingMode = (rideData['bookingMode'] ?? 'N/A').toString();
+    final vehicleType = (rideData['vehicleType'] ?? 'N/A').toString();
+    final customerName = rideData['customerName'] ?? 'N/A';
+    final customerPhone = rideData['customerPhone'] ?? 'N/A';
+
+    final fromAddress =
+        rideData['fromLocation']?['address']?.toString() ?? 'N/A';
+    final toAddress =
+        rideData['toLocation']?['address']?.toString() ?? 'N/A';
+
+    final pickupDateRaw =
+        rideData['pickupDate'] ?? rideData['bookingDate'] ?? rideData['createdAt'] ?? '';
+    final pickupTime = rideData['pickupTime']?.toString() ?? '';
+    final formattedPickup =
+        '${Utils.formatIsoDate(pickupDateRaw.toString())}${pickupTime.isNotEmpty ? ' $pickupTime' : ''}';
+
+    final weight = rideData['weight'] ?? rideData['weightKg'] ?? '';
+    final weightUnit = rideData['weightUnit'] ?? '';
+    final materialName = rideData['materialName'] ?? 'General';
+    final price = rideData['price']?.toString() ?? 'N/A';
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       body: SafeArea(
@@ -12,7 +46,7 @@ class RideDetailsScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // HEADER
+              // ================= HEADER =================
               Container(
                 decoration: const BoxDecoration(
                   color: Color(0xFFD9E9FF),
@@ -20,28 +54,34 @@ class RideDetailsScreen extends StatelessWidget {
                     bottom: Radius.circular(20),
                   ),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
                 child: Row(
                   children: [
                     IconButton(
                       icon: const Icon(Icons.arrow_back, color: Colors.black87),
                       onPressed: () => Navigator.pop(context),
                     ),
-                    const Text(
-                      '#145625983478',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                    Expanded(
+                      child: Text(
+                        bookingCode,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    const Spacer(),
-                    const Text(
-                      'Assigned',
+                    const SizedBox(width: 8),
+                    Text(
+                      status,
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: Colors.blue,
+                        color: status.toUpperCase() == 'COMPLETED'
+                            ? Colors.green
+                            : Colors.blue,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -49,135 +89,86 @@ class RideDetailsScreen extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 12),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  'Ride 2 Details',
-                  style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87),
-                ),
-              ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 16),
 
-              // EARNING DETAILS CARD
+              // ================= EARNING / FARE DETAILS =================
               _sectionCard(
                 title: 'YOUR EARNING DETAILS',
                 content: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    _infoRow('Total Fare:', '₹1500/-'),
-                    _infoRow('Total Distance:', '55 Km'),
-                    _infoRow('Cabsy fee:', '₹200/-'),
-                    _infoRow('Your earning:', '₹1300/-'),
+                  children: [
+                    _infoRow('Total Fare:', price == 'N/A' ? 'N/A' : '₹$price'),
+                    _infoRow('Weight:', '$weight $weightUnit'),
+                    _infoRow('Material:', materialName.toString()),
+                    _infoRow('Booking Mode:', bookingMode),
                   ],
                 ),
               ),
 
               const SizedBox(height: 16),
               _sectionTitle('PICKUP and DESTINATION'),
+
+              // ================= PICKUP / DROP =================
               _pickupCard(
-                pickupTime: '3 August 2025 07:30 AM',
-                pickupAddress:
-                'Somwarpet, Survey Layout\nChota Taj Bagh, Nagpur',
-                dropTime: '3 August 2025 10:30 AM',
-                dropAddress: 'Itwari Railway Station,\nItwari, Nagpur, India',
-                status: 'Started',
+                pickupTime: formattedPickup,
+                pickupAddress: fromAddress,
+                dropTime: '—', // not available in current API
+                dropAddress: toAddress,
+                status: status,
               ),
 
               const SizedBox(height: 16),
+
+              // ================= BASIC DETAILS =================
               _sectionCard(
                 title: 'BASIC DETAILS',
                 content: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    _infoRow('Trip ID:', '#14887851254'),
-                    _infoRow('Trip Type:', 'Oneway'),
-                    _infoRow('Trip Distance:', '89.36 km'),
-                    _infoRow('Trip Duration:', '3h 00min'),
-                    _infoRow('Vehicle Type:', 'Automatic - Sedan'),
+                  children: [
+                    _infoRow('Booking Code:', bookingCode),
+                    _infoRow('Status:', status),
+                    _infoRow('Booking Mode:', bookingMode),
+                    _infoRow('Vehicle Type:', vehicleType),
+                    _infoRow('Customer:', customerName),
+                    _infoRow('Phone:', customerPhone),
+                    _infoRow('Material:', materialName.toString()),
+                    _infoRow('Weight:', '$weight $weightUnit'),
                   ],
                 ),
               ),
 
               const SizedBox(height: 16),
-              _swipeButton(),
+
+              // Optional swipe / action button (only if not completed)
+              if (status.toUpperCase() != 'COMPLETED') _swipeButton(),
 
               const SizedBox(height: 16),
+
+              // ================= CUSTOMER DETAILS =================
               _sectionCard(
-                title: 'EARNING DETAILS',
+                title: 'CUSTOMER DETAILS',
                 content: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    _infoRow('Trip ID:', '#14887851254'),
-                    _infoRow('Trip Type:', 'Oneway'),
-                    _infoRow('Trip Distance:', '89.36 km'),
-                    _infoRow('Trip Duration:', '3h 00min'),
-                    _infoRow('Vehicle Type:', 'Automatic - Sedan'),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 8),
-              Center(
-                child: TextButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.keyboard_arrow_up),
-                  label: const Text(
-                    'View Complete Ride Details',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 8),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  'Ride 1 Details',
-                  style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87),
-                ),
-              ),
-
-              const SizedBox(height: 10),
-              _pickupCard(
-                pickupTime: '3 August 2025 07:30 AM',
-                pickupAddress:
-                'Somwarpet, Survey Layout\nChota Taj Bagh, Nagpur',
-                dropTime: '3 August 2025 10:30 AM',
-                dropAddress: 'Itwari Railway Station,\nItwari, Nagpur, India',
-                status: 'Completed',
-              ),
-
-              const SizedBox(height: 16),
-              _sectionCard(
-                title: 'BASIC DETAILS',
-                content: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    _infoRow('Trip ID:', '#14887851254'),
-                    _infoRow('Trip Type:', 'Oneway'),
-                    _infoRow('Trip Distance:', '89.36 km'),
-                    _infoRow('Trip Duration:', '3h 00min'),
-                    _infoRow('Vehicle Type:', 'Automatic - Sedan'),
+                  children: [
+                    _infoRow('Name:', customerName),
+                    _infoRow('Phone:', customerPhone),
                   ],
                 ),
               ),
 
               const SizedBox(height: 12),
+
               Center(
                 child: OutlinedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    // TODO: open final invoice if available
+                  },
                   style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 40, vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12))),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 40, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
                   child: const Text(
                     'View Final Invoice',
                     style: TextStyle(fontWeight: FontWeight.w600),
@@ -186,13 +177,14 @@ class RideDetailsScreen extends StatelessWidget {
               ),
 
               const SizedBox(height: 20),
-              _termsAndConditions(),
             ],
           ),
         ),
       ),
     );
   }
+
+  // ================= HELPERS (same as your original) =================
 
   Widget _pickupCard({
     required String pickupTime,
@@ -217,7 +209,6 @@ class RideDetailsScreen extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Timeline
           Column(
             children: [
               Container(
@@ -230,7 +221,7 @@ class RideDetailsScreen extends StatelessWidget {
               ),
               Container(
                 width: 2,
-                height: 30,
+                height: 40,
                 color: Colors.grey[300],
               ),
               Container(
@@ -249,21 +240,25 @@ class RideDetailsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _pickupRow('Pickup Time : $pickupTime', status),
+                _pickupRow('Pickup : $pickupTime', status),
+                const SizedBox(height: 4),
                 Text(pickupAddress,
-                    style: const TextStyle(fontSize: 13, color: Colors.black87)),
-                const SizedBox(height: 12),
-                Text('Drop Time : $dropTime',
+                    style:
+                    const TextStyle(fontSize: 13, color: Colors.black87)),
+                const SizedBox(height: 14),
+                Text('Drop : $dropTime',
                     style: const TextStyle(
                         fontSize: 13,
                         color: Colors.black87,
                         fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
                 Text(dropAddress,
-                    style: const TextStyle(fontSize: 13, color: Colors.black87)),
+                    style:
+                    const TextStyle(fontSize: 13, color: Colors.black87)),
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           const Icon(Icons.location_on, size: 34, color: Colors.red),
         ],
       ),
@@ -315,38 +310,6 @@ class RideDetailsScreen extends StatelessWidget {
         title,
         style: const TextStyle(
             fontWeight: FontWeight.w600, color: Colors.black87, fontSize: 15),
-      ),
-    );
-  }
-
-  Widget _termsAndConditions() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text(
-            'Terms & Conditions (नियम और नियम)',
-            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-          ),
-          SizedBox(height: 8),
-          Text(
-            '• ₹500 fine will apply if the trip is cancelled after 30 minutes of booking.\n'
-                '• Waiting time beyond 15 minutes will be charged at ₹100 per 15 mins.\n'
-                '• Toll, parking, and interstate charges (if any) are not included.\n'
-                '• Driver may cancel the ride if unreachable for more than 10 minutes.\n'
-                '• Total fare may vary based on actual kilometers traveled.\n'
-                '• No-show by customer will result in full booking amount being charged.\n\n'
-                'नियम और शर्तें\n'
-                '• अगर आप बुकिंग के 30 मिनट बाद यात्रा रद्द करते हैं, तो ₹500 का जुर्माना लगेगा।\n'
-                '• 15 मिनट से ज़्यादा इंतजार करने पर ₹100 प्रति 15 मिनट के हिसाब से चार्ज लिया जाएगा।\n'
-                '• टोल, पार्किंग और राज्य सीमा शुल्क (अगर हैं) के लिए शामिल नहीं हैं।\n'
-                '• अगर ड्राइवर से 10 मिनट तक संपर्क नहीं हो पाया, तो ड्राइवर यात्रा रद्द कर सकता है।\n'
-                '• कुल किराया यात्रा की वास्तविक दूरी के आधार पर बदल सकता है।\n'
-                '• यदि ग्राहक यात्रा पर नहीं आता है (No-show), तो पूरी बुकिंग राशि चार्ज की जाएगी।',
-            style: TextStyle(fontSize: 13, color: Colors.black87, height: 1.5),
-          ),
-        ],
       ),
     );
   }
@@ -422,11 +385,16 @@ class _infoRow extends StatelessWidget {
                   fontSize: 14,
                   color: Colors.black87,
                   fontWeight: FontWeight.w500)),
-          Text(value,
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
               style: const TextStyle(
                   fontSize: 14,
                   color: Colors.black87,
-                  fontWeight: FontWeight.w600)),
+                  fontWeight: FontWeight.w600),
+            ),
+          ),
         ],
       ),
     );

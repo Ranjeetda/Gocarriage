@@ -5,20 +5,25 @@ import 'package:flutter/material.dart';
 import 'package:gocarriage_universal/resource/Utils.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../provider_service/add_car_provider.dart';
 import '../../../provider_service/add_fleet_freight_cost_provider.dart';
 import '../../../provider_service/draft_vehicle_provider.dart';
 import '../../../provider_service/file_upload_provider.dart';
+import '../../../provider_service/fetch_image_url_provider.dart';
 import '../../../provider_service/freight_componet_view_model_by_provider.dart';
 import '../../../provider_service/vehicle_brands_provider.dart';
 import '../../../provider_service/vehicle_documents_bulk_provider.dart';
 import '../../../provider_service/vehicle_model_provider.dart';
 import '../../../provider_service/vehicle_type_provider.dart';
+import '../../../provider_service/check_area_provider.dart';
 import '../../../resource/app_colors.dart';
 import '../../../resource/pref_utils.dart';
+import '../home_screen/dashboard_vehicle_owner_screen.dart';
 import '../../widgets/card.dart';
 import '../../widgets/rate_card.dart';
+import '../../widgets/vehicle_image_upload_card.dart';
 
 class AddVehicleScreen extends StatefulWidget {
   AddVehicleScreen();
@@ -32,6 +37,8 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   final Map<String, TextEditingController> _rateControllers = {};
   final Map<String, bool> _componentEditable = {};
   String? vehicleFreightId;
+  final ImagePicker _picker = ImagePicker();
+
   /// CONTROLLERS
   final regNo = TextEditingController();
   final regDate = TextEditingController();
@@ -42,11 +49,14 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   final engine = TextEditingController();
   final insuranceCompany = TextEditingController();
   final policyNo = TextEditingController();
+  final homeBaseArea = TextEditingController();
   bool isUpdate = false;
   bool isLoading = false;
   String? selectedColorName;
   Color? selectedColor;
   bool? selected;
+  String? clusterName;
+  String? fleetImageUrl;
 
   /// DROPDOWN VALUES
   String? brand,
@@ -114,16 +124,54 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     engine.dispose();
     insuranceCompany.dispose();
     policyNo.dispose();
+    homeBaseArea.dispose();
     super.dispose();
   }
+
   /// ================= FUNCTIONS =================
 
   Future<void> pickFile(Function(File) onPicked, int position) async {
-    final result = await FilePicker.platform.pickFiles();
-    if (result != null && result.files.single.path != null) {
-      File pickedFile = File(result.files.single.path!);
-      onPicked(pickedFile);
-      _fileUpload('vehicle-documents', pickedFile, 'Pollution', position);
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text("Camera"),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickPollutionFromSource(
+                      ImageSource.camera, onPicked, position);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text("Gallery"),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickPollutionFromSource(
+                      ImageSource.gallery, onPicked, position);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickPollutionFromSource(
+    ImageSource source,
+    Function(File) onPicked,
+    int position,
+  ) async {
+    final pickedFile = await _picker.pickImage(source: source);
+    if (pickedFile != null) {
+      File file = File(pickedFile.path);
+      onPicked(file);
+      _fileUpload('vehicle-documents', file, 'Pollution', position);
     }
   }
 
@@ -173,7 +221,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                     ],
                   ),
                   DropdownButtonFormField<String>(
-                    value: item.state,
+                    value: Utils.indiaStates.contains(item.state) ? item.state : null,
                     hint: const Text("Select State"),
                     items:
                         Utils.indiaStates.map((e) {
@@ -218,14 +266,30 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                         onPressed: () {
                           pickFile((f) => setState(() => item.file = f), index);
                         },
-                        child: Text("Upload"),
+                        child: const Text("Upload"),
                       ),
-                      SizedBox(width: 10),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          item.file?.path.split('/').last ?? "No file",
+                          item.file != null
+                              ? item.file!.path.split('/').last
+                              : (item.fileUrl != null && item.fileUrl!.isNotEmpty
+                                  ? item.fileUrl!.split('/').last
+                                  : "No file"),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      if (item.file != null || (item.fileUrl != null && item.fileUrl!.isNotEmpty))
+                        IconButton(
+                          icon: const Icon(Icons.remove_red_eye, color: Colors.teal),
+                          onPressed: () {
+                            if (item.file != null) {
+                              _showLocalImagePreview(item.file!);
+                            } else if (item.fileUrl != null) {
+                              _showImage(item.fileUrl!);
+                            }
+                          },
+                        ),
                     ],
                   ),
                   SizedBox(height: 10),
@@ -437,15 +501,17 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                               provider.selectedModel!['payload_capacity_kg']
                                   .toString();
 
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            context
-                                .read<FreightComponetViewModelByProvider>()
-                                .fetchFreightComponent(
-                                  modelId:
-                                      provider.selectedModel!['id'].toString(),
-                                  modelName: provider.selectedModel?['model'],
-                                );
-                          });
+                          if (service == "Outside City") {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              context
+                                  .read<FreightComponetViewModelByProvider>()
+                                  .fetchFreightComponent(
+                                    modelId: provider.selectedModel!['id']
+                                        .toString(),
+                                    modelName: provider.selectedModel?['model'],
+                                  );
+                            });
+                          }
                         },
                       );
                     },
@@ -457,11 +523,62 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
           gap(),
           text('Vehicle Category *'),
           field(vehicleCategoryController),
+          gap(),
           text('Payload *'),
           field(payload),
           gap(),
           text("Service City *"),
           field(city),
+          gap(),
+          text("Home Base Area *"),
+          TextField(
+            controller: homeBaseArea,
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            decoration: InputDecoration(
+              border: OutlineInputBorder(),
+              counterText: "",
+            ),
+            onChanged: (val) async {
+              if (val.length == 6) {
+                final response = await Provider.of<CheckAreaProvider>(
+                  context,
+                  listen: false,
+                ).checkArea(val);
+                final data = json.decode(response.body);
+                if (data['success'] == true && data['exists'] == true) {
+                  setState(() {
+                    clusterName = data['cluster']['name'];
+                  });
+                } else {
+                  setState(() {
+                    clusterName = "Area not found";
+                  });
+                }
+              } else {
+                setState(() {
+                  clusterName = null;
+                });
+              }
+            },
+          ),
+          if (clusterName != null) ...[
+            const SizedBox(height: 4),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                clusterName!,
+                style: TextStyle(
+                  color:
+                      clusterName == "Area not found"
+                          ? Colors.red
+                          : Colors.teal,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
           gap(),
           text("Status"),
           dropdown(
@@ -478,12 +595,37 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
             "Service Type *",
             ["Within City", "Outside City"],
             service,
-            (v) => setState(() => service = v),
+            (v) => setState(() {
+              service = v;
+              if (v == "Outside City") {
+                final modelProvider =
+                    Provider.of<VehicleModelProvider>(context, listen: false);
+                if (modelProvider.selectedModel != null) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    context
+                        .read<FreightComponetViewModelByProvider>()
+                        .fetchFreightComponent(
+                          modelId:
+                              modelProvider.selectedModel!['id'].toString(),
+                          modelName: modelProvider.selectedModel?['model'],
+                        );
+                  });
+                }
+              }
+            }),
           ),
           gap(),
-
-          Consumer<FreightComponetViewModelByProvider>(
-            builder: (context, provider, _) {
+          VehicleImageUploadCard(
+            onImageUploaded: (url) {
+              setState(() {
+                fleetImageUrl = url;
+              });
+            },
+          ),
+          gap(),
+          if (service == "Outside City")
+            Consumer<FreightComponetViewModelByProvider>(
+              builder: (context, provider, _) {
               if (provider.isLoading) {
                 return const Padding(
                   padding: EdgeInsets.symmetric(vertical: 40),
@@ -498,8 +640,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
               // GET VEHICLE FREIGHT ID
               // ---------------------------------------------------------
               final Map<String, dynamic>? vehicleFreight =
-                  provider.freightData['vehicle_freight']
-                      as Map<String, dynamic>?;
+              provider.freightData['vehicle_freight'] as Map<String, dynamic>?;
 
               vehicleFreightId = vehicleFreight?['id']?.toString() ?? '';
 
@@ -508,6 +649,9 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
               // ---------------------------------------------------------
               final List<dynamic> components =
                   provider.freightData['components'] ?? [];
+
+              // 🔑 Initialize controllers only once (safe to call every build)
+              _ensureRateControllers(components, vehicleFreight);
 
               return Column(
                 children: [
@@ -540,7 +684,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                                   child: RateCard(
                                     title: 'FIXED / DAY',
                                     value:
-                                        '₹${Utils.format(provider.freightData['vehicle_freight']['base_fixed_per_day'])}',
+                                    '₹${Utils.format(provider.freightData['vehicle_freight']['base_fixed_per_day'])}',
                                   ),
                                 ),
                                 const SizedBox(width: 10),
@@ -548,7 +692,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                                   child: RateCard(
                                     title: 'PER KM',
                                     value:
-                                        '₹${Utils.format(provider.freightData['vehicle_freight']['base_per_km'])}',
+                                    '₹${Utils.format(provider.freightData['vehicle_freight']['base_per_km'])}',
                                   ),
                                 ),
                                 const SizedBox(width: 10),
@@ -556,7 +700,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                                   child: RateCard(
                                     title: 'PER TON',
                                     value:
-                                        '₹${Utils.format(provider.freightData['vehicle_freight']['base_per_ton'])}',
+                                    '₹${Utils.format(provider.freightData['vehicle_freight']['base_per_ton'])}',
                                   ),
                                 ),
                                 const SizedBox(width: 10),
@@ -564,7 +708,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                                   child: RateCard(
                                     title: 'FLAT / TRIP',
                                     value:
-                                        '₹${Utils.format(provider.freightData['vehicle_freight']['base_flat_per_trip'])}',
+                                    '₹${Utils.format(provider.freightData['vehicle_freight']['base_flat_per_trip'])}',
                                   ),
                                 ),
                               ],
@@ -618,33 +762,28 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: components.length,
-                    separatorBuilder:
-                        (_, __) =>
-                            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                    separatorBuilder: (_, __) =>
+                    const Divider(height: 1, color: Color(0xFFF1F5F9)),
                     itemBuilder: (context, index) {
                       final item = components[index];
-                      final String id =
-                          item['id']?.toString() ??
+                      final String id = item['id']?.toString() ??
                           item['component_master_id']?.toString() ??
                           '';
                       final String name = item['name']?.toString() ?? '';
                       final String unit = item['rate_unit']?.toString() ?? '';
-                      _componentEditable[id] =
-                          (item['is_operator_editable'] == 1 ||
-                              item['is_operator_editable'] == true);
 
                       final bool isEditable = _componentEditable[id] ?? false;
 
+                      // Admin rate display
                       String adminRate = item['admin_rate']?.toString() ?? '0';
                       if (index == 0 &&
-                          provider.freightData['vehicle_freight']['emi_per_day'] != null) {
+                          provider.freightData['vehicle_freight']?['emi_per_day'] != null) {
                         adminRate = provider
                             .freightData['vehicle_freight']['emi_per_day']
                             ?.toString() ??
                             adminRate;
                       }
 
-                      // Controller already exists from _ensureRateControllers
                       final controller = _rateControllers[id];
 
                       return Padding(
@@ -686,118 +825,118 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                               flex: 2,
                               child: Align(
                                 alignment: Alignment.center,
-                                child:
-                                    index == 0
-                                        ? Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const Icon(
-                                              Icons.calculate_outlined,
-                                              size: 16,
-                                              color: Color(0xFF6B7280),
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Flexible(
-                                              child: Text(
-                                                'EMI ₹${Utils.formatRate(adminRate)}',
-                                                style: const TextStyle(
-                                                  fontSize: 13,
-                                                  color: Color(0xFF6B7280),
-                                                ),
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
-                                        )
-                                        : Text(
-                                          '₹${Utils.formatRate(adminRate)}',
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            color: Color(0xFF6B7280),
-                                          ),
-                                          textAlign: TextAlign.right,
+                                child: index == 0
+                                    ? Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.calculate_outlined,
+                                      size: 16,
+                                      color: Color(0xFF6B7280),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text(
+                                        'EMI ₹${Utils.formatRate(adminRate)}',
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: Color(0xFF6B7280),
                                         ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                                    : Text(
+                                  '₹${Utils.formatRate(adminRate)}',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFF6B7280),
+                                  ),
+                                  textAlign: TextAlign.right,
+                                ),
                               ),
                             ),
+
                             // YOUR RATE
                             Expanded(
                               flex: 2,
                               child: Align(
                                 alignment: Alignment.centerRight,
-                                child:
-                                    isEditable
-                                        ? SizedBox(
-                                          width: 90,
-                                          child: TextFormField(
-                                            controller: _rateControllers[id],
-                                            keyboardType:
-                                                const TextInputType.numberWithOptions(
-                                                  decimal: true,
-                                                ),
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                            decoration: InputDecoration(
-                                              isDense: true,
-                                              contentPadding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 10,
-                                                    vertical: 8,
-                                                  ),
-                                              border: OutlineInputBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                borderSide: const BorderSide(
-                                                  color: Color(0xFFE5E7EB),
-                                                ),
-                                              ),
-                                              enabledBorder: OutlineInputBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                borderSide: const BorderSide(
-                                                  color: Color(0xFFE5E7EB),
-                                                ),
-                                              ),
-                                              focusedBorder: OutlineInputBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                borderSide: const BorderSide(
-                                                  color: Color(0xFF2563EB),
-                                                  width: 1.5,
-                                                ),
-                                              ),
-                                            ),
-                                            // ❌ NO onChanged that creates a new controller
-                                            onEditingComplete: () {
-                                              final formatted =
-                                              Utils.formatRate(controller?.text);
-                                              controller?.text = formatted;
-                                              controller?.selection = TextSelection.collapsed(
-                                                  offset: formatted.length);
-                                            },
-                                          ),
-                                        )
-                                        : Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const Icon(
-                                              Icons.lock_outline,
-                                              size: 14,
-                                              color: Color(0xFF9CA3AF),
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              'fixed',
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                color: Colors.grey.shade500,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          ],
+                                child: isEditable
+                                    ? SizedBox(
+                                  width: 90,
+                                  child: TextFormField(
+                                    controller: controller,
+                                    keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                    decoration: InputDecoration(
+                                      isDense: true,
+                                      contentPadding:
+                                      const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 8,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius:
+                                        BorderRadius.circular(8),
+                                        borderSide: const BorderSide(
+                                          color: Color(0xFFE5E7EB),
                                         ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius:
+                                        BorderRadius.circular(8),
+                                        borderSide: const BorderSide(
+                                          color: Color(0xFFE5E7EB),
+                                        ),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius:
+                                        BorderRadius.circular(8),
+                                        borderSide: const BorderSide(
+                                          color: Color(0xFF2563EB),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                    ),
+                                    onEditingComplete: () {
+                                      final formatted =
+                                      Utils.formatRate(controller?.text);
+                                      controller?.text = formatted;
+                                      controller?.selection =
+                                          TextSelection.collapsed(
+                                            offset: formatted.length,
+                                          );
+                                    },
+                                  ),
+                                )
+                                    : Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.lock_outline,
+                                      size: 14,
+                                      color: Color(0xFF9CA3AF),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'fixed',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey.shade500,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ],
@@ -814,6 +953,44 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     );
   }
 
+  void _ensureRateControllers(
+      List<dynamic> components,
+      Map<String, dynamic>? vehicleFreight,
+      ) {
+    for (final item in components) {
+      final id = item['id']?.toString() ??
+          item['component_master_id']?.toString() ??
+          '';
+
+      if (id.isEmpty) continue;
+
+      // Decide initial value
+      String initialValue;
+      if (item['operator_rate'] != null &&
+          item['operator_rate'].toString().trim().isNotEmpty) {
+        initialValue = item['operator_rate'].toString();
+      } else {
+        // Special case: first component is EMI
+        if (item['name']?.toString().toLowerCase().contains('emi') == true &&
+            vehicleFreight?['emi_per_day'] != null) {
+          initialValue = vehicleFreight!['emi_per_day'].toString();
+        } else {
+          initialValue = item['admin_rate']?.toString() ?? '0';
+        }
+      }
+
+      // Create controller only once
+      if (!_rateControllers.containsKey(id)) {
+        _rateControllers[id] = TextEditingController(
+          text: Utils.formatRate(initialValue),
+        );
+      }
+
+      _componentEditable[id] =
+          item['is_operator_editable'] == 1 ||
+              item['is_operator_editable'] == true;
+    }
+  }
   /// ================= Vehicle Details =================
 
   void _showMultiSelectStateBottomSheet() {
@@ -983,7 +1160,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
           gap(),
           dropdown(
             "Fuel Type *",
-            ["Diesel", "Petrol", "CNG", "Electric"],
+            ["Diesel", "Petrol", "CNG", "Electric","Hybrid"],
             fuel,
             (v) => setState(() => fuel = v),
           ),
@@ -1128,7 +1305,12 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
             child: Column(
               children: [
                 text("Insurance Company"),
-                field(insuranceCompany),
+                dropdown(
+                  "Select Insurance Company",
+                  Utils.insuranceCompanies,
+                  insuranceCompany.text.isEmpty ? null : insuranceCompany.text,
+                  (v) => setState(() => insuranceCompany.text = v),
+                ),
                 gap(),
                 text("Policy Number"),
                 field(policyNo),
@@ -1265,12 +1447,33 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   }) {
     return GestureDetector(
       onTap: () async {
-        FilePickerResult? r = await FilePicker.platform.pickFiles();
-        if (r != null && r.files.single.path != null) {
-          File pickedFile = File(r.files.single.path!);
-          onPick(pickedFile); // ✅ update UI
-          _fileUpload('vehicle-documents', pickedFile, fileType, 0);
-        }
+        showModalBottomSheet(
+          context: context,
+          builder: (context) {
+            return SafeArea(
+              child: Wrap(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.camera_alt),
+                    title: const Text("Camera"),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _pickFromSource(ImageSource.camera, onPick, fileType);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.photo_library),
+                    title: const Text("Gallery"),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _pickFromSource(ImageSource.gallery, onPick, fileType);
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+        );
       },
       child: Container(
         padding: const EdgeInsets.all(14),
@@ -1309,6 +1512,19 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   }
 
   /////////////////// Upload image /////////////////////////////////
+
+  Future<void> _pickFromSource(
+    ImageSource source,
+    Function(File) onPick,
+    String fileType,
+  ) async {
+    final pickedFile = await _picker.pickImage(source: source);
+    if (pickedFile != null) {
+      File file = File(pickedFile.path);
+      onPick(file);
+      _fileUpload('vehicle-documents', file, fileType, 0);
+    }
+  }
 
   Future<void> _fileUpload(
     String folderName,
@@ -1633,39 +1849,57 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
             child: Text("Back", style: TextStyle(color: Colors.white)),
           ),
         ElevatedButton(
-          onPressed: () {
-            if (regNo.text.isEmpty) {
-              Utils.showErrorMessage(context, 'Please enter registration no');
-              return;
-            } else if (regDate.text.isEmpty) {
-              Utils.showErrorMessage(context, 'Please enter registration date');
-              return;
-            } else if (brand == null) {
-              Utils.showErrorMessage(context, 'Please select brand');
-              return;
-            } else if (city.text.isEmpty) {
-              Utils.showErrorMessage(context, 'Please enter your city');
-              return;
-            } else if (service == null) {
-              Utils.showErrorMessage(context, 'Please select service type');
-              return;
-            }
-            if (step < 2) {
-              submit();
-              //setState(() => step++);
-            } else {
-              status = mStatus;
-              submit();
-              showUploadingDialog(context);
-            }
-          },
+          onPressed: isLoading
+              ? null
+              : () {
+                  if (regNo.text.isEmpty) {
+                    Utils.showErrorMessage(
+                        context, 'Please enter registration no');
+                    return;
+                  } else if (regDate.text.isEmpty) {
+                    Utils.showErrorMessage(
+                        context, 'Please enter registration date');
+                    return;
+                  } else if (brand == null) {
+                    Utils.showErrorMessage(context, 'Please select brand');
+                    return;
+                  } else if (city.text.isEmpty) {
+                    Utils.showErrorMessage(context, 'Please enter your city');
+                    return;
+                  } else if (homeBaseArea.text.isEmpty) {
+                    Utils.showErrorMessage(
+                        context, 'Please enter home base area');
+                    return;
+                  } else if (service == null) {
+                    Utils.showErrorMessage(
+                        context, 'Please select service type');
+                    return;
+                  }
+                  if (step < 2) {
+                    submit();
+                    //setState(() => step++);
+                  } else {
+                    status = mStatus;
+                    submit();
+                    showUploadingDialog(context);
+                  }
+                },
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primaryColor,
           ),
-          child: Text(
-            step == 2 ? "Add Vehicle" : "Next",
-            style: TextStyle(color: Colors.white),
-          ),
+          child: isLoading
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : Text(
+                  step == 2 ? "Add Vehicle" : "Next",
+                  style: const TextStyle(color: Colors.white),
+                ),
         ),
       ],
     );
@@ -1732,7 +1966,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
         owner_id: PrefUtils.getUserId(),
         fleetId: fleetId,
         current_city: city.text.trim(),
-        service_type: service == 'Within City' ? 'in_city' : service,
+        service_type: service == 'Within City' ? 'in_city' : service=='Outside City'?'out_city':'',
         status: step == 2 ? (status ?? "Active") : 'draft',
         registered_date: regDate.text.trim(),
         rto: city.text.trim(),
@@ -1746,7 +1980,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
         payload: payload.text.trim(),
         is_negotiable: isNegotiable == 'Yes',
         road_tax_paid: roadTax == "Yes",
-        road_tax_paid_period: selectedTaxPeriod,
+        road_tax_paid_period: selectedTaxPeriod=='Half-Yearly'?'half_yearly':selectedTaxPeriod,
         tax_paid_date: lastPaidDate,
         insurance_from_date: insFrom,
         insurance_upto: insTo,
@@ -1787,6 +2021,8 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
         fitnessCertificate: fitnessUrl,
         permitDocument: permitDocUrl,
         insurance: insuranceUrl,
+        fleet_image: fleetImageUrl,
+        home_base_area: homeBaseArea.text.trim(),
       );
 
       setState(() => isLoading = false);
@@ -1801,7 +2037,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
           isUpdate = true;
           vehicleTypeId = response?['data']?['VehicleType']['id']?.toString();
           fleetId = response?['data']?['id']?.toString();
-          if(step==0) {
+          if (step == 0) {
             uploadFleetCost(fleetId!);
           }
         });
@@ -1915,8 +2151,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
       if (response != null && response['success'] == true) {
         print("🎉 Success: ${response['message']}");
-        Navigator.pop(context);
-        Navigator.pop(context);
+        _showCongratulationDialog();
       } else {
         print("⚠️ Failed: ${response?['message']}");
       }
@@ -1952,6 +2187,320 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
           stepHeader(),
           Expanded(child: SingleChildScrollView(child: body())),
           Padding(padding: EdgeInsets.all(16), child: bottom()),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showImage(String fileName) async {
+    Utils.showLoader(context);
+
+    final response = await Provider.of<FetchImageUrlProvider>(
+      context,
+      listen: false,
+    ).fetchImagePath(fileName);
+
+    if (!mounted) return;
+    Utils.hideLoader();
+
+    final responseData = json.decode(response.body);
+
+    if (responseData['success'] == true &&
+        responseData['data']?['url'] != null) {
+      _showImagePreview(responseData['data']['url']);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(responseData['message'] ?? 'Failed to load image'),
+        ),
+      );
+    }
+  }
+
+  void _showImagePreview(String imageUrl) {
+    final size = MediaQuery.of(context).size;
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.9),
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.symmetric(
+          horizontal: size.width * 0.05,
+          vertical: size.height * 0.1,
+        ),
+        child: Container(
+          width: size.width * 0.9,
+          height: size.height * 0.75,
+          decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Stack(
+              children: [
+                InteractiveViewer(
+                  minScale: 0.5,
+                  maxScale: 5.0,
+                  child: Image.network(imageUrl, fit: BoxFit.contain),
+                ),
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.black.withOpacity(0.8),
+                          Colors.transparent,
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Text(
+                          "Preview",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showLocalImagePreview(File file) {
+    final size = MediaQuery.of(context).size;
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.9),
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.symmetric(
+          horizontal: size.width * 0.05,
+          vertical: size.height * 0.1,
+        ),
+        child: Container(
+          width: size.width * 0.9,
+          height: size.height * 0.75,
+          decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Stack(
+              children: [
+                InteractiveViewer(
+                  minScale: 0.5,
+                  maxScale: 5.0,
+                  child: Image.file(file, fit: BoxFit.contain),
+                ),
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.black.withOpacity(0.8),
+                          Colors.transparent,
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Text(
+                          "Local Preview",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showCongratulationDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF009688), Color(0xFF00796B)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+              child: Column(
+                children: [
+                  const Text("🏆", style: TextStyle(fontSize: 50)),
+                  const SizedBox(height: 10),
+                  const Text(
+                    "Congratulations!",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    "${regNo.text.toUpperCase()} has been added to your fleet",
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "REWARD POINTS EARNED",
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildRewardItem(
+                    icon: "🎁",
+                    title: "${vehicleCategoryController.text} added",
+                    points: "+₹100",
+                    color: Colors.teal.shade50,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildRewardItem(
+                    icon: "🏆",
+                    title: "Vehicle documents completed",
+                    points: "+₹75",
+                    color: Colors.orange.shade50,
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) =>
+                                  DashboardVehicleOwnerScreen()),
+                          (route) => false,
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF009688),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        "Awesome! 🚀",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRewardItem({
+    required String icon,
+    required String title,
+    required String points,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Row(
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 20)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Text(
+            points,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF00796B),
+            ),
+          ),
         ],
       ),
     );

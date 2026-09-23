@@ -132,25 +132,31 @@ class _DriverBottomNavigationbarState extends State<DriverBottomNavigationbar> {
               children: [
                 Row(
                   children: [
-                    Row(
-                      children: [
-                        Image.asset(ImagePaths.marker, height: 20, width: 20),
-                        const SizedBox(width: 6),
-                        Text(
-                          _selectedIndex == 0
-                              ? (PrefUtils.getName().isNotEmpty
-                              ? PrefUtils.getName()
-                              : "Home")
-                              : "Past Booking",
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Image.asset(ImagePaths.marker, height: 20, width: 20),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              _selectedIndex == 0
+                                  ? (PrefUtils.getName().isNotEmpty
+                                      ? PrefUtils.getName()
+                                      : "Home")
+                                  : "Past Booking",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: 8),
                     Transform.scale(
                       scale: 0.85,
                       child: Switch(

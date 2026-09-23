@@ -259,12 +259,28 @@ class DriverSocketService {
     required double lat,
     required double lng,
   }) {
-    if (_socket == null || !_socket!.connected) return;
+    debugPrint("📡 Attempting to emit DRIVER_LOCATION_UPDATE: lat=$lat, lng=$lng");
+    
+    if (_socket == null || !_socket!.connected) {
+      debugPrint("❌ Socket not connected. isConnected=${isConnected}");
+      return;
+    }
 
-    _socket!.emit("DRIVER_LOCATION_UPDATE", {
-      "lat": lat,
-      "lng": lng,
-    });
+    try {
+      _socket!.emitWithAck(
+        "DRIVER_LOCATION_UPDATE",
+        {
+          "lat": lat,
+          "lng": lng,
+        },
+        ack: (response) {
+          debugPrint("✅ Location update ACK received: ${json.encode(response)}");
+        },
+      );
+      debugPrint("🚀 DRIVER_LOCATION_UPDATE emitted (waiting for ACK)");
+    } catch (e) {
+      debugPrint("❌ Error emitting location update: $e");
+    }
   }
 
   // ================= DISCONNECT =================

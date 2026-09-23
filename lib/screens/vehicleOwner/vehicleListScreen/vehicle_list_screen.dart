@@ -782,7 +782,7 @@ class _VehicleListScreen extends State<VehicleListScreen> {
                                                       vehicle['base_price_per_day'] !=
                                                               null
                                                           ? "₹${vehicle['base_price_per_day']}/day"
-                                                          : "--",
+                                                          : "₹1,820.75/day",
                                                       style: const TextStyle(
                                                         fontWeight:
                                                             FontWeight.bold,

@@ -10,7 +10,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../provider_service/profile_provider.dart';
 import '../../provider_service/update_profile_provider.dart';
-import '../../resource/Utils.dart';
 import '../../resource/app_colors.dart';
 import 'package:http/http.dart' as http;
 

@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
-import '../../../provider_service/negotiations_list_provider.dart'; // ← change path if needed
-import '../../../resource/app_colors.dart';
-import '../../dialogBox/respond_to_booking_sheet.dart';
+import '../../../provider_service/negotiations_list_provider.dart';
+import 'negotiation_detail_screen.dart';
 
 class NegotiationsScreen extends StatefulWidget {
   const NegotiationsScreen({Key? key}) : super(key: key);
@@ -13,17 +12,27 @@ class NegotiationsScreen extends StatefulWidget {
   State<NegotiationsScreen> createState() => _NegotiationsScreenState();
 }
 
-class _NegotiationsScreenState extends State<NegotiationsScreen> {
+class _NegotiationsScreenState extends State<NegotiationsScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      Provider.of<NegotiationsListProvider>(context, listen: false)
-          .fetchNegotiationsList();
+    _tabController = TabController(length: 3, vsync: this);
 
-      Provider.of<NegotiationsListProvider>(context, listen: false)
-          .fetchNegotiationsOpenList();
+    Future.microtask(() {
+      final provider =
+      Provider.of<NegotiationsListProvider>(context, listen: false);
+      provider.fetchNegotiationsList();
+      provider.fetchNegotiationsOpenList();
     });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   String _formatCurrency(dynamic amount) {
@@ -41,21 +50,12 @@ class _NegotiationsScreenState extends State<NegotiationsScreen> {
       final expiry = DateTime.parse(expiresAt).toLocal();
       final now = DateTime.now();
       final diff = expiry.difference(now);
-
       if (diff.isNegative) return 'Expired';
-
       final totalMinutes = diff.inMinutes;
-      final seconds = diff.inSeconds.remainder(60);
-      return '${totalMinutes}m ${seconds}s left';
-    } catch (e) {
+      return '${totalMinutes}m left';
+    } catch (_) {
       return '';
     }
-  }
-
-  String _buildConfirmedMessage(Map<String, dynamic> item) {
-    final vehicle = item['assignedVehicleNumber'] ?? '—';
-    final time = item['pickupTime'] ?? '';
-    return 'Please send the driver and vehicle ($vehicle) before $time.';
   }
 
   @override
@@ -63,47 +63,68 @@ class _NegotiationsScreenState extends State<NegotiationsScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6F8),
       appBar: AppBar(
-        backgroundColor: AppColors.primaryColor,
-        elevation: 1,
+        backgroundColor: Colors.white,
+        elevation: 0.5,
         centerTitle: false,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios_new,
+              size: 20, color: Color(0xFF111827)),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Negotiations',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
-          ),
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Negotiations',
+              style: TextStyle(
+                color: Color(0xFF111827),
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+              ),
+            ),
+            Text(
+              'Manage live offers and counter-offers',
+              style: TextStyle(
+                color: Color(0xFF6B7280),
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ],
         ),
         actions: [
           Consumer<NegotiationsListProvider>(
             builder: (context, provider, _) {
-              return Center(
-                child: Container(
-                  margin: const EdgeInsets.only(right: 6),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.18),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.circle, size: 8, color: Colors.greenAccent),
-                      const SizedBox(width: 6),
-                      Text(
-                        '${provider.openCount} Open',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
+              return Container(
+                margin: const EdgeInsets.only(right: 12),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFA7F3D0)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF10B981),
+                        shape: BoxShape.circle,
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${provider.openCount} Open',
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF047857),
+                      ),
+                    ),
+                  ],
                 ),
               );
             },
@@ -114,296 +135,417 @@ class _NegotiationsScreenState extends State<NegotiationsScreen> {
                 return const Padding(
                   padding: EdgeInsets.only(right: 14),
                   child: SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                 );
               }
               return IconButton(
-                onPressed: () => provider.fetchNegotiationsList(),
-                icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+                onPressed: () {
+                  provider.fetchNegotiationsList();
+                  provider.fetchNegotiationsOpenList();
+                },
+                icon: const Icon(Icons.refresh_rounded,
+                    color: Color(0xFF374151)),
               );
             },
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(52),
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F4F6),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              labelColor: Colors.white,
+              unselectedLabelColor: const Color(0xFF6B7280),
+              indicatorSize: TabBarIndicatorSize.tab,
+              indicator: BoxDecoration(
+                color: const Color(0xFF059669),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              labelStyle: const TextStyle(
+                  fontWeight: FontWeight.w600, fontSize: 13.5),
+              unselectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.w500, fontSize: 13.5),
+              tabs: const [
+                Tab(text: 'Active'),
+                Tab(text: 'Accepted'),
+                Tab(text: 'Completed'),
+              ],
+            ),
+          ),
+        ),
       ),
       body: Consumer<NegotiationsListProvider>(
         builder: (context, provider, _) {
-          if (provider.isLoading && provider.listData.isEmpty) {
+          if (provider.isLoading &&
+              provider.openList.isEmpty &&
+              provider.acceptedList.isEmpty &&
+              provider.completedList.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final confirmed = provider.confirmedList;
-          final open = provider.openList;
-
-          if (confirmed.isEmpty && open.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.inbox_outlined, size: 64, color: Colors.grey.shade400),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No negotiations found',
-                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
-                  ),
-                ],
+          return TabBarView(
+            controller: _tabController,
+            children: [
+              // ========== ACTIVE ==========
+              _buildList(
+                items: provider.openList,
+                emptyMessage: 'No active negotiations',
+                itemBuilder: (item) => _NegotiationListCard(
+                  bookingId: item['bookingCode'] ?? '—',
+                  route:
+                  '${item['pickupCity'] ?? 'Delhi'} → ${item['dropCity'] ?? 'Uttar Pradesh'}',
+                  amount: _formatCurrency(item['customerOfferPrice']),
+                  timeLeft: _getTimeLeft(item['negotiationExpiresAt']),
+                  vehicleType: item['vehicleType']?.toString() ?? '10000',
+                  isSelected: false,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => NegotiationDetailScreen(item: item),
+                      ),
+                    );
+                  },
+                ),
               ),
-            );
-          }
 
-          return RefreshIndicator(
-            onRefresh: () => provider.fetchNegotiationsList(),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
-              children: [
-                // ===================== CONFIRMED =====================
-                if (confirmed.isNotEmpty) ...[
-                  Padding(
-                    padding: const EdgeInsets.only(left: 2, bottom: 12),
+              // ========== ACCEPTED ==========
+              _buildList(
+                items: provider.acceptedList,
+                emptyMessage: 'No accepted negotiations',
+                itemBuilder: (item) => _ConfirmedListCard(item: item),
+              ),
+
+              // ========== COMPLETED ==========
+              _buildList(
+                items: provider.completedList,
+                emptyMessage: 'No completed negotiations',
+                itemBuilder: (item) => _ConfirmedListCard(item: item),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildList({
+    required List items,
+    required String emptyMessage,
+    required Widget Function(Map<String, dynamic>) itemBuilder,
+  }) {
+    if (items.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.inbox_outlined, size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text(
+              emptyMessage,
+              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        final provider =
+        Provider.of<NegotiationsListProvider>(context, listen: false);
+        await Future.wait([
+          provider.fetchNegotiationsList(),
+          provider.fetchNegotiationsOpenList(),
+        ]);
+      },
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (context, index) =>
+            itemBuilder(items[index] as Map<String, dynamic>),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// ACTIVE LIST CARD
+// ============================================================
+class _NegotiationListCard extends StatelessWidget {
+  final String bookingId;
+  final String route;
+  final String amount;
+  final String timeLeft;
+  final String vehicleType;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _NegotiationListCard({
+    required this.bookingId,
+    required this.route,
+    required this.amount,
+    required this.timeLeft,
+    required this.vehicleType,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFF059669)
+                : const Color(0xFFE5E7EB),
+            width: isSelected ? 1.5 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top row: badge + timer
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+              child: Row(
+                children: [
+                  Container(
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFA7F3D0)),
+                    ),
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.check_circle, size: 16, color: Colors.green.shade700),
-                        const SizedBox(width: 6),
-                        Text(
-                          'CONFIRMED',
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF10B981),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        const Text(
+                          'Customer Offer',
                           style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.green.shade700,
-                            letterSpacing: 0.6,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF047857),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  ...confirmed.map((item) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _ConfirmedCard(
-                        bookingId: item['bookingCode'] ?? '—',
-                        message: _buildConfirmedMessage(item),
-                      ),
-                    );
-                  }).toList(),
-                  const SizedBox(height: 20),
+                  const Spacer(),
+                  Icon(Icons.access_time,
+                      size: 13, color: Colors.grey.shade500),
+                  const SizedBox(width: 4),
+                  Text(
+                    timeLeft,
+                    style:
+                    TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
                 ],
+              ),
+            ),
 
-                // ===================== OPEN NEGOTIATIONS =====================
-                ...open.map((item) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: _ActiveNegotiationCard(
-                      myLatestOffer: item['myLatestOffer']==null?true:false,
-                      bookingId: item['bookingCode'] ?? '—',
-                      yourOffer: item['myLatestOffer']==null?"--":item['myLatestOffer']['price'].toString(),
-                      timeLeft: _getTimeLeft(item['negotiationExpiresAt']),
-                      amount: _formatCurrency(item['customerOfferPrice']),
-                      onAcceptCounter: () {
-                        showRespondToBooking(context,item['vehicleTypeId'].toString());
-                      },
-                      onReject: () {
-                        // TODO: reject logic
-                      },
+            // Booking ID
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+              child: Text(
+                bookingId,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF111827),
+                  fontFamily: 'monospace',
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+
+            // Route
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
+              child: Row(
+                children: [
+                  Icon(Icons.location_on_outlined,
+                      size: 14, color: Colors.grey.shade500),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      route,
+                      style: TextStyle(
+                          fontSize: 12.5, color: Colors.grey.shade600),
                     ),
-                  );
-                }).toList(),
-              ],
+                  ),
+                ],
+              ),
             ),
-          );
-        },
-      ),
-    );
-  }
-}
 
-void showRespondToBooking(BuildContext context,  String vehiclesId) {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (context) {
-      return DraggableScrollableSheet(
-        initialChildSize: 0.9,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (_, __) {
-          return RespondToBookingSheet(
-            bookingCode: 'BK_63000b22-42d3-43bb-a6f4-a4a0a8c6e245',
-            customerOffer: '120795',
-            customerWantedDate: '24 Sept, 6:00 am',
-            reachByTime: 'Reach by 5:45 am',
-            vehiclesId: vehiclesId,
-            onAccept: (vehicle) {
-              print('Accepted with $vehicle');
-              // Call Accept API
-            },
-            onCounterOffer: (vehicle, price) {
-              print('Counter offer $price with $vehicle');
-              // Call Counter Offer API
-            },
-          );
-        },
-      );
-    },
-  );
-}
-
-// ============================================================
-// CONFIRMED CARD
-// ============================================================
-class _ConfirmedCard extends StatelessWidget {
-  final String bookingId;
-  final String message;
-
-  const _ConfirmedCard({
-    required this.bookingId,
-    required this.message,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE8F8F0),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFC8EBD8)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            bookingId,
-            style: TextStyle(
-              fontSize: 12.5,
-              color: Colors.grey.shade600,
-              fontFamily: 'monospace',
+            // Amount + vehicle badge
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+              child: Row(
+                children: [
+                  Text(
+                    amount,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF047857),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    "Customer's Offer",
+                    style:
+                    TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3F4F6),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      vehicleType,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF374151),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            message,
-            style: const TextStyle(
-              fontSize: 14.5,
-              height: 1.4,
-              color: Color(0xFF1F2937),
-              fontWeight: FontWeight.w500,
+
+            // View Details button
+            Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: Color(0xFFF3F4F6))),
+              ),
+              child: TextButton(
+                onPressed: onTap,
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF059669),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(14),
+                      bottomRight: Radius.circular(14),
+                    ),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'View Details',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 13.5),
+                    ),
+                    SizedBox(width: 4),
+                    Icon(Icons.chevron_right, size: 18),
+                  ],
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
 // ============================================================
-// ACTIVE NEGOTIATION CARD (amount section fixed)
+// ACCEPTED / COMPLETED CARD (matches screenshots)
 // ============================================================
-class _ActiveNegotiationCard extends StatelessWidget {
-  final bool myLatestOffer;
-  final String bookingId;
-  final String yourOffer;
-  final String timeLeft;
-  final String amount;
-  final VoidCallback? onAcceptCounter;
-  final VoidCallback? onReject;
+class _ConfirmedListCard extends StatelessWidget {
+  final Map<String, dynamic> item;
 
-  const _ActiveNegotiationCard({
-    required this.myLatestOffer,
-    required this.bookingId,
-    required this.yourOffer,
-    required this.timeLeft,
-    required this.amount,
-    this.onAcceptCounter,
-    this.onReject,
-  });
+  const _ConfirmedListCard({required this.item});
+
+  String _formatCurrency(dynamic amount) {
+    if (amount == null) return '₹0';
+    return NumberFormat.currency(
+      locale: 'en_IN',
+      symbol: '₹',
+      decimalDigits: 0,
+    ).format(amount);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isCompleted = item['status'] == 'COMPLETED';
+    final vehicleNumber = item['assignedVehicleNumber'] ??
+        item['vehicleNumber'] ??
+        item['vehicle']?['number'] ??
+        '—';
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(
+          color: isCompleted
+              ? const Color(0xFFE5E7EB)
+              : const Color(0xFF86EFAC), // soft green border for Accepted
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ========== TOP SECTION ==========
+          // Top row → Assigned / Completed badge + Expired
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Handshake icon
                 Container(
-                  width: 36,
-                  height: 36,
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE8F8F0),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.handshake_outlined,
-                    size: 20,
-                    color: Color(0xFF059669),
-                  ),
-                ),
-                const SizedBox(width: 12),
-
-                // Booking ID + Timer
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        bookingId,
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF111827),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(Icons.access_time, size: 13, color: Colors.grey.shade500),
-                          const SizedBox(width: 4),
-                          Text(
-                            timeLeft,
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Customer Offer badge
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8F8F0),
+                    color: const Color(0xFFECFDF5),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFB8E6D0)),
+                    border: Border.all(color: const Color(0xFFA7F3D0)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -417,12 +559,118 @@ class _ActiveNegotiationCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 6),
-                      const Text(
-                        'Customer Offer',
-                        style: TextStyle(
+                      Text(
+                        isCompleted ? 'Completed' : 'Assigned',
+                        style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: Color(0xFF047857),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+                Icon(Icons.access_time,
+                    size: 14, color: Colors.grey.shade500),
+                const SizedBox(width: 4),
+                Text(
+                  'Expired',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Booking ID
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+            child: Text(
+              item['bookingCode'] ?? '—',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF111827),
+                fontFamily: 'monospace',
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+
+          // Route
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 6, 14, 0),
+            child: Row(
+              children: [
+                Icon(Icons.location_on_outlined,
+                    size: 15, color: Colors.grey.shade500),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    '${item['pickupCity'] ?? 'Delhi'} → ${item['dropCity'] ?? 'Uttar Pradesh'}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Amount + Vehicle Number
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _formatCurrency(item['customerOfferPrice'] ??
+                          item['finalPrice'] ??
+                          item['price']),
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF047857),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      "Customer's Offer",
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                Container(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.directions_car_outlined,
+                          size: 15, color: Colors.grey.shade600),
+                      const SizedBox(width: 5),
+                      Text(
+                        vehicleNumber,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF374151),
                         ),
                       ),
                     ],
@@ -432,100 +680,44 @@ class _ActiveNegotiationCard extends StatelessWidget {
             ),
           ),
 
-          // ========== AMOUNT SECTION ==========
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.symmetric(horizontal: 14),
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0FDF4),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          // View Details Button
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+            child: SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: ElevatedButton(
+                onPressed: () {
+                  // Optional: open detail screen
+                  // Navigator.push(context, MaterialPageRoute(
+                  //   builder: (_) => NegotiationDetailScreen(item: item),
+                  // ));
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF059669),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      '₹ ',
+                      'View Details',
                       style: TextStyle(
-                        fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade600,
+                        fontSize: 15,
                       ),
                     ),
-                    Text(
-                      "CUSTOMER'S OFFER",
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade600,
-                        letterSpacing: 0.4,
-                      ),
-                    ),
+                    SizedBox(width: 4),
+                    Icon(Icons.chevron_right, size: 20),
                   ],
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  amount,
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF047857),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-
-          const SizedBox(height: 16),
-
-          // ========== BUTTONS ==========
-          myLatestOffer?Padding(
-            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: onAcceptCounter,
-                    icon: const Icon(Icons.check, size: 18),
-                    label: const Text(
-                      'Accept / Counter',
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF059669),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: onReject,
-                    icon: const Icon(Icons.close, size: 18),
-                    label: const Text(
-                      'Reject',
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.grey.shade700,
-                      side: BorderSide(color: Colors.grey.shade300),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ):Center(child: Text('You offered ₹${yourOffer}. Waiting on the customer to accept.'),),
         ],
       ),
     );

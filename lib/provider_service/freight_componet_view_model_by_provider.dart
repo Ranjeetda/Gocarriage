@@ -33,34 +33,89 @@ class FreightComponetViewModelByProvider with ChangeNotifier {
         },
       );
 
-      debugPrint("➡️ REQUEST URL: $uri");
+      // ================= REQUEST =================
+      debugPrint("========== API REQUEST ==========");
+      debugPrint("URL      : $uri");
+      debugPrint("Method   : GET");
+      debugPrint("Headers  : $headers");
+      debugPrint("Query    : ${uri.queryParameters}");
+      debugPrint("================================");
 
-      final response = await http.get(
-        uri,
-        headers: headers,
-      );
+      final response = await http.get(uri, headers: headers);
 
-      debugPrint("⬅️ STATUS CODE: ${response.statusCode}");
-      debugPrint("⬅️ RESPONSE BODY: ${response.body}");
+      // ================= RESPONSE =================
+      debugPrint("========== API RESPONSE ==========");
+      debugPrint("Status Code : ${response.statusCode}");
+      debugPrint("Body        : ${response.body}");
+      debugPrint("=================================");
 
       final dynamic decoded = jsonDecode(response.body);
 
       if (response.statusCode == 200 && decoded is Map<String, dynamic>) {
         if (decoded["success"] == true) {
-          // ALL API DATA
-          _freightData = decoded['data'];
+          _freightData = decoded["data"];
 
-          debugPrint("✅ Full data loaded");
-          debugPrint("DATA: $_freightData");
+          debugPrint("✅ Success");
+          debugPrint("Freight Data: $_freightData");
         } else {
           _freightData = {};
-          throw Exception(
-            decoded["message"] ?? "API returned success=false",
-          );
+          debugPrint("❌ API Message: ${decoded["message"]}");
+          throw Exception(decoded["message"] ?? "API returned success=false");
         }
       } else {
         _freightData = {};
         throw Exception("Invalid API response");
+      }
+    } catch (e, stackTrace) {
+      debugPrint("❌ Exception: $e");
+      debugPrint("StackTrace: $stackTrace");
+      _freightData = {};
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchFreightByFleetId({
+    required String fleetId,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+
+    final headers = {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer ${PrefUtils.getToken()}",
+    };
+
+    try {
+      final uri = Uri.parse("${URLS.baseUrl}/freight/fleet/$fleetId");
+
+      debugPrint("========== API REQUEST (BY FLEET ID) ==========");
+      debugPrint("URL      : $uri");
+      debugPrint("Method   : GET");
+      debugPrint("Headers  : $headers");
+      debugPrint("================================");
+
+      final response = await http.get(uri, headers: headers);
+
+      debugPrint("========== API RESPONSE (BY FLEET ID) ==========");
+      debugPrint("Status Code : ${response.statusCode}");
+      debugPrint("Body        : ${response.body}");
+      debugPrint("=================================");
+
+      final dynamic decoded = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && decoded is Map<String, dynamic>) {
+        if (decoded["success"] == true) {
+          _freightData = decoded["data"];
+          debugPrint("✅ Success");
+        } else {
+          _freightData = {};
+          debugPrint("❌ API Message: ${decoded["message"]}");
+        }
+      } else {
+        _freightData = {};
+        debugPrint("❌ Invalid response or status code");
       }
     } catch (e) {
       debugPrint("❌ Exception: $e");

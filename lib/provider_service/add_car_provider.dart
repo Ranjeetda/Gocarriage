@@ -72,6 +72,8 @@ class AddCarProvider with ChangeNotifier {
     required String? fitnessCertificate,
     required String? permitDocument,
     required String? insurance,
+    required String? fleet_image,
+    String? home_base_area,
   }) async {
 
     final Map<String, String> headers = {
@@ -122,7 +124,8 @@ class AddCarProvider with ChangeNotifier {
         "fitness_certificate": fitnessCertificate,
         "permit_document": permitDocument,
         "insurance": insurance,
-        'fleet_image': "",
+        'fleet_image': fleet_image,
+        "home_base_area": home_base_area,
       };
 
       final String body = jsonEncode(requestBody);

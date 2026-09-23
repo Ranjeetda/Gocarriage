@@ -1,8 +1,6 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-
 import '../resource/pref_utils.dart';
 import 'URLS.dart';
 
@@ -24,6 +22,7 @@ class AddDriverProvider with ChangeNotifier {
     required String licenseNumber,
     required String license_expiry_date,
     required String license_from_date,
+    required String license_type,
     required String experience_in_yrs,
     required String vehicle_type_preference,
     required String service_type,
@@ -38,7 +37,7 @@ class AddDriverProvider with ChangeNotifier {
       'Authorization': 'Bearer ${PrefUtils.getToken()}',
     };
 
-    debugPrint("🔵 ADD DRIVER REQUEST");
+    debugPrint("🔵 UPDATE DRIVER REQUEST");
     debugPrint("URL: $url");
     debugPrint("Headers: $headers");
 
@@ -49,12 +48,11 @@ class AddDriverProvider with ChangeNotifier {
       final Map<String, dynamic> requestBody = {
         "fullName": fullName,
         "email": email,
-        "mobileNo": mobileNo,
         "licenseNumber": licenseNumber,
-        "license_expiry_date": license_expiry_date,
         "license_from_date": license_from_date,
+        "license_expiry_date": license_expiry_date,
+        "license_type": license_type,
         "experience_in_yrs": experience_in_yrs,
-        "vehicle_type_preference": vehicle_type_preference,
         "service_type": service_type,
         "driversLicenseUpload": driversLicenseUpload,
         "profile_picture": profile_picture,
@@ -69,7 +67,7 @@ class AddDriverProvider with ChangeNotifier {
         headers: headers,
       );
 
-      debugPrint("🟢 ADD DRIVER RESPONSE");
+      debugPrint("🟢 UPDATE DRIVER RESPONSE");
       debugPrint("Status Code: ${response.statusCode}");
       debugPrint("Response Body: ${response.body}");
 
@@ -84,7 +82,7 @@ class AddDriverProvider with ChangeNotifier {
 
       return responseData;
     } catch (error) {
-      debugPrint("🔴 ADD DRIVER ERROR: $error");
+      debugPrint("🔴 UPDATE DRIVER ERROR: $error");
       _isUpdating = false;
       _message = 'Failed to update profile: $error';
       notifyListeners();
