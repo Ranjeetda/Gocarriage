@@ -1,6 +1,5 @@
 import UIKit
 import Flutter
-import Firebase
 import GoogleMaps
 import UserNotifications   // ✅ REQUIRED for notifications
 
@@ -11,9 +10,6 @@ import UserNotifications   // ✅ REQUIRED for notifications
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-
-    // Firebase init
-    FirebaseApp.configure()
 
     // Google Maps API
     GMSServices.provideAPIKey("AIzaSyDpH5LUm09CEiJX4cSan8SDp0vxuVLwCCQ")
