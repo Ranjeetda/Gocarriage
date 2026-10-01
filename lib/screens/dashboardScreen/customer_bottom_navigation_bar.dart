@@ -9,7 +9,6 @@ import '../../provider_service/version_control_provider.dart';
 import '../../resource/Utils.dart';
 import '../../resource/app_colors.dart';
 import 'bulk_booking_screen.dart';
-import 'customer_dashboard.dart';
 import 'book_vehicle_screen.dart';
 import 'history_screen.dart';
 import '../commanScreen/menu_screen.dart';
@@ -164,7 +163,6 @@ class _CustomerBottomNavigationBarState
 
         // Build screens dynamically
         final List<Widget> screens = [
-          const CustomerDashboard(),
           const BookVehicleScreen(),
           if (showBulkBooking) const BulkBookingScreen(),
           const HistoryScreen(),
@@ -176,11 +174,6 @@ class _CustomerBottomNavigationBarState
             icon: Icon(Icons.home_outlined),
             activeIcon: Icon(Icons.home),
             label: "Home",
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.directions_car_outlined),
-            activeIcon: Icon(Icons.directions_car),
-            label: "Book Vehicle",
           ),
           if (showBulkBooking)
             const BottomNavigationBarItem(
@@ -194,16 +187,12 @@ class _CustomerBottomNavigationBarState
             label: "Trips",
           ),
           const BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: "Profile",
+            icon: Icon(Icons.menu_outlined),
+            activeIcon: Icon(Icons.menu),
+            label: "Menu",
           ),
         ];
-
-        // Map the selected index correctly when Bulk Booking is hidden
         int currentIndex = navProvider.currentIndex;
-
-        // Safety: if Bulk Booking is hidden and the stored index is out of range
         if (!showBulkBooking && currentIndex >= 2) {
           // Shift index down by 1 for Trips / Profile
           currentIndex = currentIndex - 1;

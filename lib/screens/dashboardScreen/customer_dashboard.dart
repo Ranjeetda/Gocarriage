@@ -5,8 +5,8 @@ import 'package:intl/intl.dart';
 
 import '../../provider_service/corprote_booking_activity.dart';
 import '../../provider_service/corprote_booking_dashboard.dart';
-import '../../provider_service/corprote_me_service.dart';
 import '../../provider_service/corprote_offer.dart';
+import '../../resource/app_colors.dart';
 import '../dialogBox/corporate_benefits_dialog.dart';
 
 
@@ -32,6 +32,24 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.white),
+          // Back arrow icon
+          onPressed: () {
+            Navigator.pop(context); // Go back to the previous screen
+          },
+        ),
+        title: Text(
+          "Dashboard",
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: AppColors.primaryColor,
+      ),
       body: SafeArea(
         child: Consumer<CorproteBookingDashboard>(
           builder: (context, dashboard, _) {

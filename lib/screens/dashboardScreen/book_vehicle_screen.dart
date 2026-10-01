@@ -110,11 +110,14 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
     super.initState();
     localData();
     if (PrefUtils.isLoggedIn()) {
-      final bookingProvider = context.read<BookingProvider>();
-      DriverSocketService().attachProvider(bookingProvider);
-      DriverSocketService().connectAsCustomer(
-        userId: int.parse(PrefUtils.getUserId()),
-      );
+      final userId = int.tryParse(PrefUtils.getUserId());
+      if (userId != null && userId > 0) {
+        final bookingProvider = context.read<BookingProvider>();
+        DriverSocketService().attachProvider(bookingProvider);
+        DriverSocketService().connectAsCustomer(
+          userId: userId,
+        );
+      }
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _bookingAllRideService(page: currentPage);
@@ -500,7 +503,7 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
                   double.tryParse(materialData['weight']?.toString() ?? "0") ??
                   0,
               weightUnit: materialData['unit'] ?? "KG",
-              customerId: int.parse(PrefUtils.getUserId()),
+              customerId: int.tryParse(PrefUtils.getUserId()) ?? 0,
               specialRequirements: SpecialRequirements.fromJson(
                 materialData['specialRequirements'] ?? {},
               ),
@@ -1637,7 +1640,7 @@ class _BookVehicleScreenState extends State<BookVehicleScreen> {
           weight:
               double.tryParse(materialData['weight']?.toString() ?? "0") ?? 0,
           weightUnit: materialData['unit'] ?? 'KG',
-          customerId: int.parse(PrefUtils.getUserId()),
+          customerId: int.tryParse(PrefUtils.getUserId()) ?? 0,
           specialRequirements: SpecialRequirements.fromJson(
             materialData['specialRequirements'] is Map
                 ? Map<String, dynamic>.from(

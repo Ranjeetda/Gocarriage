@@ -503,13 +503,15 @@ class _DriverBottomNavigationbarState extends State<DriverBottomNavigationbar> {
                                       if (success) {
                                         // ===== SOCKET HANDLING =====
                                         if (desiredOnline) {
-                                          final int driverId = int.parse(
+                                          final int? driverId = int.tryParse(
                                               PrefUtils.getUserId());
 
-                                          DriverSocketService().connectAsDriver(
-                                              driverId: driverId);
-                                          debugPrint(
-                                              '🟢 Socket connected after going Online');
+                                          if (driverId != null && driverId > 0) {
+                                            DriverSocketService().connectAsDriver(
+                                                driverId: driverId);
+                                            debugPrint(
+                                                '🟢 Socket connected after going Online');
+                                          }
                                         } else {
                                           DriverSocketService()
                                               .disconnect();

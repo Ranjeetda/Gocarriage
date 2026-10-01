@@ -11,6 +11,7 @@ import '../auth/login_screen.dart';
 import '../dashboardScreen/corporateScreen/widget/corporate_account_active_card.dart';
 import '../dashboardScreen/corporateScreen/widget/corporate_services_card.dart';
 import '../dashboardScreen/customer_bottom_navigation_bar.dart';
+import '../dashboardScreen/customer_dashboard.dart';
 import '../operatorScreen/operator_profile_screen.dart';
 import '../vehicleOwner/profile_screen/owner_profile_screen.dart';
 import 'basic_details_form.dart';
@@ -63,6 +64,10 @@ class _MenuScreen extends State<MenuScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
         child: Column(
           children: [
+            PrefUtils.getRole() == "customer"?_buildMenuItem(
+              icon: Icons.dashboard,
+              text: 'Dashboard',
+              onTap: () => _navigateTo(CustomerDashboard(),),):SizedBox(),
             _buildMenuItem(
               icon: Icons.person_outline,
               text: 'Edit Profile',
